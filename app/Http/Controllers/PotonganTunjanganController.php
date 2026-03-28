@@ -445,104 +445,133 @@ class PotonganTunjanganController extends Controller
             'masaKerjaDisplay'
         ));
     }
+    
     private function runSyncFromAbsensi()
-{
-    $bulan = Carbon::now()->format('Y-m');
+    {
+        $now = Carbon::now();
 
-    PotonganTunjangan::where('bulan', $bulan)->delete();
+        // Hapus potongan untuk 3 bulan terakhir (agar selalu fresh)
+        $bulan1 = $now->format('Y-m');
+        $bulan2 = $now->copy()->subMonth()->format('Y-m');
+        $bulan3 = $now->copy()->subMonths(2)->format('Y-m');
 
-    $absensi = AbsensiRelawan::whereMonth('tanggal', Carbon::now()->month)
-        ->whereYear('tanggal', Carbon::now()->year)
-        ->get();
+        PotonganTunjangan::whereIn('bulan', [$bulan1, $bulan2, $bulan3])->delete();
 
-    $dataPotongan = [];
+        // Ambil absensi dari 4 bulan ke belakang (aman untuk data mundur)
+        $absensi = AbsensiRelawan::where('tanggal', '>=', $now->copy()->subMonths(4)->startOfMonth())
+                    ->get();
 
-    foreach ($absensi as $a) {
+        $dataPotongan = [];
 
-        $keyParts = [
-            $a->nik ? (string)$a->nik : '',
-            $a->nama_relawaan ? (string)Str::slug($a->nama_relawaan) : '',
-        ];
+        foreach ($absensi as $a) {
+            if (empty($a->tanggal)) continue;
 
-        $key = implode('|', $keyParts);
+            $tanggal = Carbon::parse($a->tanggal);
+            $bulanPotongan = $this->getPayPeriodMonth($tanggal);
 
-        if (!isset($dataPotongan[$key])) {
-            $dataPotongan[$key] = [
-                'nik'         => $a->nik ?? '-',
-                'nama'        => $a->nama_relawaan,
-                'jabatan'     => $a->posisi,
-                'departemen'  => $a->departemen,
-                'bulan'       => $bulan,
-                'sakit'       => 0,
-                'izin'        => 0,
-                'alpa'        => 0,
-                'tidak_aktif' => 0,
-                'kelebihan'   => 0,
-                'lain_lain'   => 0,
-                'total'       => 0,
-                'bimba_unit'  => null,
-                'no_cabang'   => null,
-            ];
+            // Key unik per orang + bulan potongan
+            $key = ($a->nik ?? '-') . '|' . Str::slug($a->nama_relawaan ?? '') . '|' . $bulanPotongan;
+
+            if (!isset($dataPotongan[$key])) {
+                $dataPotongan[$key] = [
+                    'nik'         => $a->nik ?? '-',
+                    'nama'        => $a->nama_relawaan,
+                    'jabatan'     => $a->posisi ?? null,
+                    'departemen'  => $a->departemen ?? null,
+                    'bulan'       => $bulanPotongan,
+                    'sakit'       => 0,
+                    'izin'        => 0,
+                    'alpa'        => 0,
+                    'tidak_aktif' => 0,
+                    'kelebihan'   => 0,
+                    'lain_lain'   => 0,
+                    'total'       => 0,
+                    'bimba_unit'  => $a->bimba_unit ?? null,
+                    'no_cabang'   => $a->no_cabang ?? null,
+                ];
+            }
+
+            $potonganPerHari = 24000;
+
+            switch ($a->status) {
+                case 'Sakit':
+                    $dataPotongan[$key]['sakit'] += $potonganPerHari;
+                    break;
+                case 'Izin':
+                    $dataPotongan[$key]['izin'] += $potonganPerHari;
+                    break;
+                case 'Alpa':
+                    $dataPotongan[$key]['alpa'] += $potonganPerHari;
+                    break;
+                case 'Tidak Aktif':
+                    $dataPotongan[$key]['tidak_aktif'] += $potonganPerHari;
+                    break;
+                default:
+                    $dataPotongan[$key]['lain_lain'] += $potonganPerHari;
+                    break;
+            }
         }
 
-        $potonganPerHari = 24000;
+        // Simpan ke database
+        foreach ($dataPotongan as $data) {
+            // Ambil data tambahan dari profile / pendapatan
+            $profile = Profile::where('nik', $data['nik'])
+                        ->orWhere('nama', $data['nama'])
+                        ->first();
 
-        switch ($a->status) {
+            $pendapatan = PendapatanTunjangan::where('nama', $data['nama'])
+                            ->where('bulan', $data['bulan'])
+                            ->first();
 
-            case 'Sakit':
-                $dataPotongan[$key]['sakit'] += $potonganPerHari;
-                break;
+            $data['pendapatan_id'] = $pendapatan->id ?? null;
+            $data['masa_kerja']    = $profile->masa_kerja ?? ($pendapatan->masa_kerja ?? 0);
+            $data['status']        = $pendapatan->status ?? ($profile->status_karyawan ?? '-');
 
-            case 'Izin':
-                $dataPotongan[$key]['izin'] += $potonganPerHari;
-                break;
+            $data['bimba_unit'] = $data['bimba_unit'] 
+                ?? ($pendapatan?->bimba_unit ?? $profile?->bimba_unit ?? $profile?->nama_unit ?? null);
 
-            case 'Alpa':
-                $dataPotongan[$key]['alpa'] += $potonganPerHari;
-                break;
+            $data['no_cabang'] = $data['no_cabang'] 
+                ?? ($pendapatan?->no_cabang ?? $profile?->no_cabang ?? $profile?->kode_cabang ?? null);
 
-            case 'Tidak Aktif':
-                $dataPotongan[$key]['tidak_aktif'] += $potonganPerHari;
-                break;
+            $data['total'] = 
+                $data['sakit'] + 
+                $data['izin'] + 
+                $data['alpa'] + 
+                $data['tidak_aktif'] + 
+                $data['kelebihan'] + 
+                $data['lain_lain'];
 
-            case 'Datang Terlambat':
-            default:
-                $dataPotongan[$key]['lain_lain'] += $potonganPerHari;
-                break;
+            PotonganTunjangan::updateOrCreate(
+                ['nama' => $data['nama'], 'bulan' => $data['bulan']],
+                $data
+            );
         }
     }
 
-    foreach ($dataPotongan as $potongan) {
+    /**
+     * Menentukan bulan potongan berdasarkan Pay Period 26 s.d. 25
+     * Berlaku untuk SEMUA bulan dan tahun
+     */
+    private function getPayPeriodMonth(Carbon $tanggal): string
+    {
+        $year  = (int) $tanggal->format('Y');
+        $month = (int) $tanggal->format('m');
+        $day   = (int) $tanggal->format('d');
 
-        $pendapatan = PendapatanTunjangan::where('nama', $potongan['nama'])->first();
+        // Jika tanggal 26 atau lebih → masuk bulan berikutnya
+        if ($day >= 26) {
+            $nextMonth = $month + 1;
+            $nextYear  = $year;
 
-        $profile = Profile::where('nik', $potongan['nik'])
-            ->orWhere('nama', $potongan['nama'])
-            ->first();
+            if ($nextMonth > 12) {
+                $nextMonth = 1;
+                $nextYear++;
+            }
 
-        $potongan['pendapatan_id'] = $pendapatan->id ?? null;
+            return sprintf('%04d-%02d', $nextYear, $nextMonth);
+        }
 
-        $potongan['nik'] = $profile->nik ?? $potongan['nik'];
-
-        $potongan['masa_kerja'] = $profile->masa_kerja ?? ($pendapatan->masa_kerja ?? 0);
-
-        $potongan['status'] = $pendapatan->status ?? '-';
-
-        $potongan['bimba_unit'] = $pendapatan->bimba_unit
-            ?? ($profile->bimba_unit ?? $profile->nama_unit ?? null);
-
-        $potongan['no_cabang'] = $pendapatan->no_cabang
-            ?? ($profile->no_cabang ?? $profile->kode_cabang ?? null);
-
-        $potongan['total'] =
-            $potongan['sakit'] +
-            $potongan['izin'] +
-            $potongan['alpa'] +
-            $potongan['tidak_aktif'] +
-            $potongan['kelebihan'] +
-            $potongan['lain_lain'];
-
-        PotonganTunjangan::create($potongan);
+        // Tanggal 1 sampai 25 → bulan yang sama
+        return sprintf('%04d-%02d', $year, $month);
     }
-}
 }
