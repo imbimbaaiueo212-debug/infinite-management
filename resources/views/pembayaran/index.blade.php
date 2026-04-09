@@ -5,9 +5,9 @@
 @section('content')
 <div class="card card-body shadow-sm">
 
-    <div class="mx-auto" style="max-width: 1400px;">
+    <div class="container-fluid px-0 px-md-3">
 
-        <h2 class="text-center mb-4 px-3 px-md-0">Daftar Pembayaran Tunjangan</h2>
+        <h2 class="text-center mb-4">Daftar Pembayaran Tunjangan</h2>
 
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show mx-3 mx-md-0" role="alert">
@@ -17,21 +17,21 @@
         @endif
 
         {{-- Form Filter --}}
-        <div class="bg-white border-bottom shadow-sm mb-3 card card-body">
-            <div class="p-3 px-3 px-md-0 card-body">
-                <form action="{{ route('pembayaran.index') }}" method="GET" class="row g-2">
-                    <div class="col-12 col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form action="{{ route('pembayaran.index') }}" method="GET" class="row g-3 align-items-end">
+                    <div class="col-12 col-lg-5">
                         <label class="form-label fw-medium small">Nama Relawan</label>
-                        <select name="nama" id="nama" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select name="nama" id="nama" class="form-select" onchange="this.form.submit()">
                             <option value="">-- Semua Relawan --</option>
                             @foreach($allNames as $n)
                                 <option value="{{ $n }}" {{ ($nama ?? '') == $n ? 'selected' : '' }}>{{ $n }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-5">
+                    <div class="col-12 col-lg-5">
                         <label class="form-label fw-medium small">Bulan</label>
-                        <select name="bulan" id="bulan" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select name="bulan" id="bulan" class="form-select" onchange="this.form.submit()">
                             <option value="">-- Semua Bulan --</option>
                             @foreach($allMonths as $b)
                                 <option value="{{ $b }}" {{ ($bulan ?? '') == $b ? 'selected' : '' }}>
@@ -40,70 +40,65 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-2 d-grid mt-3 mt-md-auto">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" 
+                    <div class="col-12 col-lg-2 d-grid">
+                        <button type="button" class="btn btn-outline-secondary" 
                                 onclick="window.location.href='{{ route('pembayaran.index') }}'">
-                            Reset
+                            Reset Filter
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        {{-- Desktop: Tabel Normal --}}
-        <div class="d-none d-md-block table-responsive px-3 px-md-0">
-            <table class="table table-bordered table-hover align-middle card-body">
-                <thead class="table-light text-center card-body">
-                    <tr>
-                        <th>NO</th>
-                        <th>NIK</th>
-                        <th>NAMA</th>
-
-                        {{-- KOLOM UNIT biMBA & NO. CABANG – HANYA UNTUK ADMIN --}}
-                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                            <th>UNIT biMBA</th>
-                            <th>NO. CABANG</th>
-                        @endif
-
-                        <th>JABATAN</th>
-                        <th>STATUS</th>
-                        <th>DEPT</th>
-                        <th>MASA KERJA</th>
-                        <th>NO REK</th>
-                        <th>BANK</th>
-                        <th>ATAS NAMA</th>
-                        <th>PENDAPATAN</th>
-                        <th>SAKIT</th>
-                        <th>IZIN</th>
-                        <th>ALPA</th>
-                        <th>TIDAK AKTIF</th>
-                        <th>KELEBIHAN</th>
-                        <th>LAIN-LAIN</th>
-                        <th>POTONGAN</th>
-                        <th>DIBAYARKAN</th>
+        {{-- Tabel Desktop / Tablet --}}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle table-sm">
+                <thead class="table-light">
+                    <tr class="text-center">
+                        <th style="width: 50px;">NO</th>
+                        <th style="min-width: 110px;">NIK</th>
+                        <th style="min-width: 180px;">NAMA</th>
+                        <th style="min-width: 130px;" class="text-center">INFO</th>
+                        <th style="min-width: 130px;">PENDAPATAN</th>
+                        <th style="min-width: 90px;">SAKIT</th>
+                        <th style="min-width: 90px;">IZIN</th>
+                        <th style="min-width: 90px;">ALPA</th>
+                        <th style="min-width: 110px;">TIDAK AKTIF</th>
+                        <th style="min-width: 110px;">KELEBIHAN</th>
+                        <th style="min-width: 100px;">LAIN-LAIN</th>
+                        <th style="min-width: 130px;">POTONGAN</th>
+                        <th style="min-width: 140px;">DIBAYARKAN</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($pembayaranTunjangans as $key => $p)
                         <tr>
                             <td class="text-center">{{ $key + 1 }}</td>
-                            <td class="text-center">{{ $p->nik ?? '-' }}</td>
+                            <td class="text-center font-monospace">{{ $p->nik ?? '-' }}</td>
                             <td class="fw-medium">{{ $p->nama }}</td>
 
-                            {{-- Hanya admin yang melihat kolom ini --}}
-                            @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                <td>{{ $p->bimba_unit ?? '-' }}</td>
-                                <td>{{ $p->no_cabang ?? '-' }}</td>
-                            @endif
+                            <!-- INFO Modal -->
+                            <td class="text-center">
+                                <button type="button" 
+                                        class="btn btn-outline-info btn-sm px-3 info-pegawai-btn"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#infoModal"
+                                        data-nama="{{ $p->nama ?? '-' }}"
+                                        data-nik="{{ $p->nik ?? '-' }}"
+                                        data-jabatan="{{ $p->jabatan ?? '-' }}"
+                                        data-status="{{ $p->status ?? '-' }}"
+                                        data-departemen="{{ $p->departemen ?? '-' }}"
+                                        data-unit="{{ $p->bimba_unit ?? '-' }}"
+                                        data-cabang="{{ $p->no_cabang ?? '-' }}"
+                                        data-masakerja="{{ filled($p->masa_kerja) ? $p->masa_kerja : '0 bln' }}"
+                                        data-no_rekening="{{ $p->no_rekening ?? '-' }}"
+                                        data-bank="{{ $p->bank ?? '-' }}"
+                                        data-atas_nama="{{ $p->atas_nama ?? '-' }}">
+                                    <i class="bi bi-info-circle me-1"></i>Info
+                                </button>
+                            </td>
 
-                            <td>{{ $p->jabatan ?? '-' }}</td>
-                            <td>{{ $p->status ?? '-' }}</td>
-                            <td>{{ $p->departemen ?? '-' }}</td>
-                            <td class="text-center">{{ filled($p->masa_kerja) ? $p->masa_kerja : '0 bln' }}</td>
-                            <td>{{ $p->no_rekening ?? '-' }}</td>
-                            <td>{{ $p->bank ?? '-' }}</td>
-                            <td>{{ $p->atas_nama ?? '-' }}</td>
-                            <td class="text-end fw-bold">{{ number_format($p->pendapatan, 0, ',', '.') }}</td>
+                            <td class="text-end fw-bold">{{ number_format($p->pendapatan ?? 0, 0, ',', '.') }}</td>
                             <td class="text-end">{{ number_format($p->sakit ?? 0, 0, ',', '.') }}</td>
                             <td class="text-end">{{ number_format($p->izin ?? 0, 0, ',', '.') }}</td>
                             <td class="text-end">{{ number_format($p->alpa ?? 0, 0, ',', '.') }}</td>
@@ -117,13 +112,12 @@
                                     0, ',', '.'
                                 ) }}
                             </td>
-                            <td class="text-end fw-bold text-success">{{ number_format($p->dibayarkan, 0, ',', '.') }}</td>
+                            <td class="text-end fw-bold text-success">{{ number_format($p->dibayarkan ?? 0, 0, ',', '.') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            {{-- Jumlah kolom disesuaikan dinamis --}}
-                            <td colspan="{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '21' : '19' }}" class="text-center py-5 text-muted">
-                                Belum ada data
+                            <td colspan="13" class="text-center py-5 text-muted">
+                                Belum ada data pembayaran tunjangan
                             </td>
                         </tr>
                     @endforelse
@@ -131,57 +125,153 @@
             </table>
         </div>
 
-        {{-- Mobile: Card Stacked --}}
-        <div class="d-block d-md-none">
+        {{-- Mobile View (Card) --}}
+        <div class="d-md-none mt-4">
             @forelse($pembayaranTunjangans as $key => $p)
-                <div class="bg-white border-bottom shadow-sm mb-3">
-                    <div class="p-3">
-                        <!-- Ringkasan di atas -->
-                        <div class="bg-light rounded-3 p-3 mb-3 text-center">
-                            <div class="small text-muted">Pendapatan</div>
-                            <div class="fs-5 fw-bold">{{ number_format($p->pendapatan, 0, ',', '.') }}</div>
-                            
-                            <div class="small text-danger mt-2">Total Potongan</div>
-                            <div class="fw-bold text-danger">
-                                {{ number_format(
-                                    ($p->sakit ?? 0) + ($p->izin ?? 0) + ($p->alpa ?? 0) +
-                                    ($p->tidak_aktif ?? 0) + ($p->kelebihan ?? 0) + ($p->lain_lain ?? 0),
-                                    0, ',', '.'
-                                ) }}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ $p->nama }}</h6>
+                                <small class="text-muted">{{ $p->nik ?? '-' }}</small>
                             </div>
-                            
-                            <div class="small text-success mt-2">Dibayarkan</div>
-                            <div class="fs-4 fw-bold text-success">{{ number_format($p->dibayarkan, 0, ',', '.') }}</div>
+                            <span class="badge bg-primary fs-6">{{ $key + 1 }}</span>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h6 class="fw-bold mb-0">{{ $p->nama }}</h6>
-                            <small class="text-muted">No. {{ $key + 1 }}</small>
-                        </div>
-                        
-                        <div class="small text-muted mb-3">
-                            {{ $p->nik ?? '-' }} • {{ $p->jabatan ?? '-' }}
-                            @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                • {{ $p->bimba_unit ?? '-' }} ({{ $p->no_cabang ?? '-' }})
-                            @endif
-                        </div>
+                        <button type="button" 
+                                class="btn btn-outline-info btn-sm w-100 mb-3 info-pegawai-btn"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#infoModal"
+                                data-nama="{{ $p->nama ?? '-' }}"
+                                data-nik="{{ $p->nik ?? '-' }}"
+                                data-jabatan="{{ $p->jabatan ?? '-' }}"
+                                data-status="{{ $p->status ?? '-' }}"
+                                data-departemen="{{ $p->departemen ?? '-' }}"
+                                data-unit="{{ $p->bimba_unit ?? '-' }}"
+                                data-cabang="{{ $p->no_cabang ?? '-' }}"
+                                data-masakerja="{{ filled($p->masa_kerja) ? $p->masa_kerja : '0 bln' }}"
+                                data-no_rekening="{{ $p->no_rekening ?? '-' }}"
+                                data-bank="{{ $p->bank ?? '-' }}"
+                                data-atas_nama="{{ $p->atas_nama ?? '-' }}">
+                            <i class="bi bi-info-circle"></i> Lihat Detail Info
+                        </button>
 
-                        <div class="row g-2 small text-muted">
-                            <div class="col-6"><strong>Status:</strong> {{ $p->status ?? '-' }}</div>
-                            <div class="col-6"><strong>Dept:</strong> {{ $p->departemen ?? '-' }}</div>
-                            <div class="col-6"><strong>Masa Kerja:</strong> {{ filled($p->masa_kerja) ? $p->masa_kerja : '0 bln' }}</div>
-                            <div class="col-6"><strong>Bank:</strong> {{ $p->bank ?? '-' }}</div>
-                            <div class="col-12"><strong>Rekening:</strong> {{ $p->no_rekening ?? '-' }} a.n. {{ $p->atas_nama ?? '-' }}</div>
+                        <div class="row g-2 small">
+                            <div class="col-6">
+                                <div class="text-muted">Pendapatan</div>
+                                <div class="fw-bold">{{ number_format($p->pendapatan ?? 0, 0, ',', '.') }}</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="text-muted">Dibayarkan</div>
+                                <div class="fw-bold text-success">{{ number_format($p->dibayarkan ?? 0, 0, ',', '.') }}</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-muted">Total Potongan</div>
+                                <div class="fw-bold text-danger">
+                                    {{ number_format(
+                                        ($p->sakit ?? 0) + ($p->izin ?? 0) + ($p->alpa ?? 0) +
+                                        ($p->tidak_aktif ?? 0) + ($p->kelebihan ?? 0) + ($p->lain_lain ?? 0),
+                                        0, ',', '.'
+                                    ) }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="text-center py-5 text-muted px-3">
-                    <em>Belum ada data pembayaran tunjangan</em>
+                <div class="text-center py-5 text-muted">
+                    Belum ada data pembayaran tunjangan
                 </div>
             @endforelse
         </div>
 
     </div>
 </div>
+
+<!-- ==================== MODAL INFO PEGAWAI ==================== -->
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold" id="infoModalLabel">Informasi Pegawai</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-12">
+                        <small class="text-muted">Nama</small>
+                        <h5 id="modal-nama" class="fw-bold mb-1"></h5>
+                        <small class="text-muted">NIK</small>
+                        <p id="modal-nik" class="fw-semibold text-primary mb-0"></p>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Jabatan</small>
+                        <div id="modal-jabatan" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Status</small>
+                        <div id="modal-status" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Departemen</small>
+                        <div id="modal-departemen" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Unit biMBA</small>
+                        <div id="modal-unit" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">No. Cabang</small>
+                        <div id="modal-cabang" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Masa Kerja</small>
+                        <div id="modal-masakerja" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">No Rekening</small>
+                        <div id="modal-no_rekening" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Bank</small>
+                        <div id="modal-bank" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <small class="text-muted">Atas Nama</small>
+                        <div id="modal-atas_nama" class="fw-semibold"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const infoModal = document.getElementById('infoModal');
+        if (!infoModal) return;
+
+        infoModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+
+            document.getElementById('modal-nama').textContent       = button.getAttribute('data-nama');
+            document.getElementById('modal-nik').textContent        = button.getAttribute('data-nik');
+            document.getElementById('modal-jabatan').textContent    = button.getAttribute('data-jabatan');
+            document.getElementById('modal-status').textContent     = button.getAttribute('data-status');
+            document.getElementById('modal-departemen').textContent = button.getAttribute('data-departemen');
+            document.getElementById('modal-unit').textContent       = button.getAttribute('data-unit');
+            document.getElementById('modal-cabang').textContent     = button.getAttribute('data-cabang');
+            document.getElementById('modal-masakerja').textContent  = button.getAttribute('data-masakerja');
+            document.getElementById('modal-no_rekening').textContent = button.getAttribute('data-no_rekening');
+            document.getElementById('modal-bank').textContent       = button.getAttribute('data-bank');
+            document.getElementById('modal-atas_nama').textContent  = button.getAttribute('data-atas_nama');
+        });
+    });
+</script>
+@endpush
 @endsection

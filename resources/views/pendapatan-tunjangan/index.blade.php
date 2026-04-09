@@ -49,16 +49,7 @@
                     <tr>
                         <th>NIK</th>
                         <th>NAMA</th>
-                        <th>JABATAN</th>
-                        <th>STATUS</th>
-                        <th>DEPARTEMEN</th>
-
-                        {{-- KOLOM BIMBA UNIT & NO CABANG – HANYA UNTUK ADMIN --}}
-                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                            <th>UNIT biMBA</th>
-                            <th>NO. CABANG</th>
-                        @endif
-
+                        <th class="text-center" style="min-width: 130px;">INFO</th>
                         <th>MASA KERJA</th>
                         <th>THP</th>
                         <th>KERAJINAN</th>
@@ -76,16 +67,24 @@
                     @forelse($pendapatans as $p)
                         <tr>
                             <td>{{ $p['nik'] ?? '-' }}</td>
-                            <td class="text-start">{{ $p['nama'] ?? '-' }}</td>
-                            <td>{{ $p['jabatan'] ?? '-' }}</td>
-                            <td>{{ $p['status'] ?? '-' }}</td>
-                            <td>{{ $p['departemen'] ?? '-' }}</td>
+                            <td class="text-start fw-semibold">{{ $p['nama'] ?? '-' }}</td>
 
-                            {{-- Hanya admin yang melihat kolom ini --}}
-                            @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                <td>{{ $p['bimba_unit'] ?? '-' }}</td>
-                                <td>{{ $p['no_cabang'] ?? '-' }}</td>
-                            @endif
+                            <!-- ==================== KOLOM INFO + MODAL ==================== -->
+                            <td class="text-center">
+                                <button type="button" 
+                                        class="btn btn-outline-info btn-sm info-pegawai-btn"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#infoModal"
+                                        data-nama="{{ $p['nama'] ?? '-' }}"
+                                        data-nik="{{ $p['nik'] ?? '-' }}"
+                                        data-jabatan="{{ $p['jabatan'] ?? '-' }}"
+                                        data-status="{{ $p['status'] ?? '-' }}"
+                                        data-departemen="{{ $p['departemen'] ?? '-' }}"
+                                        data-unit="{{ $p['bimba_unit'] ?? '-' }}"
+                                        data-cabang="{{ $p['no_cabang'] ?? '-' }}">
+                                    <i class="bi bi-info-circle"></i> Info
+                                </button>
+                            </td>
 
                             <td>
                                 @if(isset($p['masa_kerja_format']))
@@ -117,9 +116,7 @@
 
                             <td>
                                 @if($p['bulan_kekurangan'] ?? false)
-                                    <span class="badge bg-secondary">
-                                        {{ $p['bulan_kekurangan'] }}
-                                    </span>
+                                    <span class="badge bg-secondary">{{ $p['bulan_kekurangan'] }}</span>
                                 @else
                                     -
                                 @endif
@@ -144,13 +141,13 @@
                                         </form>
                                     @endif
                                 @else
-                                    <span class="badge bg-info text-dark">Otomatis (belum disimpan)</span>
+                                    <span class="badge bg-info text-dark">Otomatis</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '19' : '17' }}" class="text-center py-4">
+                            <td colspan="14" class="text-center py-4">
                                 Belum ada data untuk bulan ini
                             </td>
                         </tr>
@@ -159,4 +156,73 @@
             </table>
         </div>
     </div>
+
+<!-- ==================== MODAL INFO PEGAWAI ==================== -->
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title fw-bold" id="infoModalLabel">Informasi Pegawai</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <small class="text-muted">Nama</small>
+                        <h5 id="modal-nama" class="fw-bold mb-1"></h5>
+                        <small class="text-muted">NIK</small>
+                        <p id="modal-nik" class="fw-semibold text-primary mb-0"></p>
+                    </div>
+
+                    <div class="col-md-6">
+                        <small class="text-muted">Jabatan</small>
+                        <div id="modal-jabatan" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Status</small>
+                        <div id="modal-status" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Departemen</small>
+                        <div id="modal-departemen" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Unit biMBA</small>
+                        <div id="modal-unit" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">No. Cabang</small>
+                        <div id="modal-cabang" class="fw-semibold"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const infoModal = document.getElementById('infoModal');
+
+        if (infoModal) {
+            infoModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+
+                document.getElementById('modal-nama').textContent = button.getAttribute('data-nama');
+                document.getElementById('modal-nik').textContent = button.getAttribute('data-nik');
+                document.getElementById('modal-jabatan').textContent = button.getAttribute('data-jabatan');
+                document.getElementById('modal-status').textContent = button.getAttribute('data-status');
+                document.getElementById('modal-departemen').textContent = button.getAttribute('data-departemen');
+                document.getElementById('modal-unit').textContent = button.getAttribute('data-unit');
+                document.getElementById('modal-cabang').textContent = button.getAttribute('data-cabang');
+            });
+        }
+    });
+</script>
+@endpush
+
 @endsection

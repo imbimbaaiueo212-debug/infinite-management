@@ -3,275 +3,259 @@
 @section('title', 'Rekap Jadwal Guru biMBA')
 
 @section('content')
-    <main>
-        <div class="container-fluid px-4">
-            <h2 class="mt-4 mb-4 fw-bold">Rekap Jadwal & Absensi Guru biMBA</h2>
+<main>
+    <div class="container-fluid px-4">
+        <h2 class="mt-4 mb-4 fw-bold">Rekap Jadwal & Absensi Guru biMBA</h2>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
 
-                    <!-- Header + Tombol Sinkron -->
-                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                        <h5 class="mb-0 fw-semibold">Rekap Jadwal Guru</h5>
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('rekap.updateKodeJadwal') }}" 
-                               class="btn btn-outline-primary btn-sm"
-                               onclick="return confirm('Yakin sinkron semua data dari Profile?')">
-                                <i class="bi bi-arrow-repeat me-1"></i> Sinkron Data
-                            </a>
-
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary btn-sm px-3" type="button" data-bs-toggle="dropdown">
-                                    <i class="bi bi-three-dots-vertical"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('rekap.create') }}">
-                                            <i class="bi bi-arrow-clockwise me-2"></i> Sinkron Guru Aktif
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url()->current() }}">
-                                            <i class="bi bi-arrow-clockwise me-2"></i> Refresh Halaman
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                    <h5 class="mb-0 fw-semibold">Rekap Jadwal Guru</h5>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('rekap.updateKodeJadwal') }}" 
+                           class="btn btn-outline-primary btn-sm"
+                           onclick="return confirm('Yakin sinkron semua data dari Profile?')">
+                            <i class="bi bi-arrow-repeat me-1"></i> Sinkron Data
+                        </a>
                     </div>
+                </div>
 
-                    <!-- Filter -->
-                    <form id="filterForm" class="mb-4">
-                        <div class="row g-3 align-items-end">
-
-                            @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                <div class="col-md-4 col-lg-3">
-                                    <label class="form-label fw-bold small">Unit & Cabang</label>
-                                    <select id="filterUnitCabang" class="form-select form-select-sm">
-                                        <option value="">— Semua Unit & Cabang —</option>
-                                        @foreach(
-                                            $rekap
-                                                ->unique(fn($row) => ($row->bimba_unit ?? '').'|'.($row->no_cabang ?? ''))
-                                                ->sortBy(['bimba_unit', 'no_cabang']) as $row
-                                        )
-                                            @if($row->bimba_unit || $row->no_cabang)
-                                                <option value="{{ ($row->bimba_unit ?? '').'|'.($row->no_cabang ?? '') }}">
-                                                    {{ $row->bimba_unit ?? '—' }}
-                                                    @if($row->no_cabang) ({{ $row->no_cabang }}) @endif
-                                                </option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endif
-
-                            <div class="col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '5' : '8' }} col-lg-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '5' : '8' }}">
-                                <label class="form-label fw-bold small">Cari Nama / NIK</label>
-                                <select id="searchInput" class="form-select form-select-sm">
-                                    <option value="">— Semua —</option>
-                                    @foreach($rekap->sortBy('nama_relawan') as $row)
-                                        <option value="{{ strtolower($row->nama_relawan) }}|{{ strtolower($row->nik ?? '') }}">
-                                            {{ $row->nik ?? '—' }} | {{ $row->nama_relawan }}
+                <!-- Filter -->
+                <form id="filterForm" class="mb-4">
+                    <div class="row g-3 align-items-end">
+                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
+                            <div class="col-md-4 col-lg-3">
+                                <label class="form-label fw-bold small">Unit & Cabang</label>
+                                <select id="filterUnitCabang" class="form-select">
+                                    <option value="">— Semua Unit & Cabang —</option>
+                                    @foreach($rekap->unique(fn($r) => ($r->bimba_unit ?? '').'|'.($r->no_cabang ?? ''))->sortBy(['bimba_unit', 'no_cabang']) as $row)
+                                        <option value="{{ ($row->bimba_unit ?? '').'|'.($row->no_cabang ?? '') }}">
+                                            {{ $row->bimba_unit ?? '—' }} @if($row->no_cabang)({{ $row->no_cabang }})@endif
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
+                        @endif
 
-                            <div class="col-md-auto d-flex align-items-end gap-2">
-                                <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-                                </button>
-                            </div>
-
+                        <div class="col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '5' : '8' }}">
+                            <label class="form-label fw-bold small">Cari Nama / NIK</label>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Ketik nama atau NIK...">
                         </div>
-                    </form>
 
-                    <!-- Tabel -->
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm mb-0 text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th rowspan="2" class="fw-semibold align-middle">No</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">NIK</th>
-                                    <th rowspan="2" class="fw-semibold text-start align-middle ps-3">Nama Relawan</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Jabatan</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Departemen</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Unit biMBA</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Cabang</th>
-
-                                    <th colspan="8" class="bg-success-subtle text-success fw-bold">SRJ (Sen-Rab-Jum)</th>
-                                    <th colspan="4" class="bg-info-subtle text-info fw-bold">SKS (Sel-Kam-Sab)</th>
-                                    <th colspan="4" class="bg-warning-subtle text-warning-emphasis fw-bold">S6 (5-6 Hari)</th>
-
-                                    <th rowspan="2" class="fw-semibold align-middle">Murid</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Rombim</th>
-                                    <th rowspan="2" class="fw-semibold align-middle">Adj. RB</th>
-                                    <th rowspan="2" class="fw-semibold align-middle text-center">Aksi</th>
-                                </tr>
-                                <tr class="small fw-medium">
-                                    @foreach([108,109,110,111,112,113,114,115] as $k)
-                                        <th>{{ $k }}</th>
-                                    @endforeach
-                                    @foreach([208,209,210,211] as $k)
-                                        <th>{{ $k }}</th>
-                                    @endforeach
-                                    @foreach([308,309,310,311] as $k)
-                                        <th>{{ $k }}</th>
-                                    @endforeach
-                                </tr>
-                            </thead>
-
-                            <tbody id="rekapTable">
-                                @forelse($rekap->sortBy('bimba_unit')->sortBy('no_cabang') as $index => $row)
-                                    <tr data-unit="{{ $row->bimba_unit }}"
-                                        data-cabang="{{ $row->no_cabang }}"
-                                        data-nama="{{ strtolower($row->nama_relawan) }}"
-                                        data-nik="{{ $row->nik ?? '' }}">
-                                        <td class="fw-bold">{{ $loop->iteration }}</td>
-                                        <td class="font-monospace">{{ $row->nik ?? '—' }}</td>
-                                        <td class="text-start fw-semibold ps-3">{{ $row->nama_relawan }}</td>
-                                        <td>{{ $row->jabatan ?? '—' }}</td>
-                                        <td>{{ $row->departemen ?? '—' }}</td>
-                                        <td class="bg-light fw-medium">{{ $row->bimba_unit ?? '—' }}</td>
-                                        <td class="bg-light fw-bold text-primary">{{ $row->no_cabang ?? '—' }}</td>
-
-                                        @foreach([108,109,110,111,112,113,114,115] as $kode)
-                                            <td>{{ $row->{"srj_{$kode}"} ?? '' }}</td>
-                                        @endforeach
-                                        @foreach([208,209,210,211] as $kode)
-                                            <td>{{ $row->{"sks_{$kode}"} ?? '' }}</td>
-                                        @endforeach
-                                        @foreach([308,309,310,311] as $kode)
-                                            <td>{{ $row->{"s6_{$kode}"} ?? '' }}</td>
-                                        @endforeach
-
-                                        <td class="fw-medium">{{ $row->jumlah_murid ?? '—' }}</td>
-                                        <td class="fw-medium">{{ $row->jumlah_rombim ?? '—' }}</td>
-                                        <td class="fw-bold text-danger">{{ $row->penyesuaian_rb ?? 0 }}</td>
-                                        <td class="text-center text-nowrap">
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ route('rekap.edit', $row->id) }}" 
-                                                   class="btn btn-warning btn-sm" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-
-                                                @if(auth()->check() && auth()->user()->is_admin ?? false)
-                                                    <form action="{{ route('rekap.destroy', $row->id) }}" method="POST" class="d-inline">
-                                                        @csrf @method('DELETE')
-                                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                                onclick="return confirm('Yakin hapus {{ addslashes($row->nama_relawan) }}?')">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="35" class="text-center py-5 text-muted">
-                                            <div class="my-5">
-                                                <i class="bi bi-inbox fs-1 text-secondary"></i><br><br>
-                                                <h6 class="mb-3">Belum ada data rekap absensi</h6>
-                                                <a href="{{ route('rekap.create') }}" class="btn btn-primary btn-sm">
-                                                    <i class="bi bi-arrow-repeat me-1"></i> Sinkron Guru Aktif
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Footer Info -->
-                    <div class="d-flex justify-content-between align-items-center mt-4 text-muted small flex-wrap gap-3">
-                        <div>
-                            Total: <strong class="text-dark">{{ $rekap->count() }}</strong> guru
-                        </div>
-                        <div>
-                            Terakhir update: {{ now()->format('d M Y • H:i') }}
+                        <div class="col-md-auto">
+                            <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary">
+                                Reset
+                            </button>
                         </div>
                     </div>
+                </form>
 
+                <!-- TABEL -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm" id="rekapTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th rowspan="2" class="text-center">No</th>
+                                <th rowspan="2">NIK</th>
+                                <th rowspan="2" class="text-start">Nama Relawan</th>
+                                <th rowspan="2" class="text-center" style="width: 70px;">Info</th>
+                                <th colspan="8" class="bg-success-subtle text-success fw-bold">SRJ</th>
+                                <th colspan="4" class="bg-info-subtle text-info fw-bold">SKS</th>
+                                <th colspan="4" class="bg-warning-subtle text-warning-emphasis fw-bold">S6</th>
+                                <th rowspan="2">Murid</th>
+                                <th rowspan="2">Rombim</th>
+                                <th rowspan="2">Adj. RB</th>
+                                <th rowspan="2" class="text-center">Aksi</th>
+                            </tr>
+                            <tr class="small fw-medium">
+                                @foreach([108,109,110,111,112,113,114,115] as $k) <th>{{ $k }}</th> @endforeach
+                                @foreach([208,209,210,211] as $k) <th>{{ $k }}</th> @endforeach
+                                @foreach([308,309,310,311] as $k) <th>{{ $k }}</th> @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($rekap->sortBy('bimba_unit')->sortBy('no_cabang') as $row)
+                                @php
+                                    $masaKerja = $row->masa_kerja 
+                                        ? intdiv($row->masa_kerja, 12) . ' th ' . ($row->masa_kerja % 12) . ' bl' 
+                                        : '-';
+                                @endphp
+                                <tr data-nama="{{ strtolower($row->nama_relawan ?? '') }}"
+                                    data-nik="{{ strtolower($row->nik ?? '') }}"
+                                    data-unit="{{ $row->bimba_unit }}"
+                                    data-cabang="{{ $row->no_cabang }}">
+                                    
+                                    <td class="text-center fw-bold">{{ $loop->iteration }}</td>
+                                    <td class="font-monospace">{{ $row->nik ?? '—' }}</td>
+                                    <td class="fw-semibold">{{ $row->nama_relawan }}</td>
+
+                                    <!-- TOMBOL INFO -->
+                                    <td class="text-center">
+                                        <button class="btn btn-outline-primary btn-sm info-relawan-btn"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#infoModal"
+                                            data-nama="{{ $row->nama_relawan }}"
+                                            data-nik="{{ $row->nik ?? '-' }}"
+                                            data-jabatan="{{ $row->jabatan ?? '-' }}"
+                                            data-status="{{ $row->status_karyawan ?? 'Aktif' }}"
+                                            data-departemen="{{ $row->departemen ?? '-' }}"
+                                            data-unit="{{ $row->bimba_unit ?? '-' }}"
+                                            data-cabang="{{ $row->no_cabang ?? '-' }}"
+                                            data-masa-kerja="{{ $masaKerja }}"
+                                            data-murid="{{ $row->jumlah_murid ?? 0 }}"
+                                            data-rombim="{{ $row->jumlah_rombim ?? 0 }}">
+                                            <i class="bi bi-info-circle"></i>Info
+                                        </button>
+                                    </td>
+
+                                    
+
+                                    <!-- SRJ, SKS, S6 tetap sama seperti sebelumnya -->
+                                    @foreach([108,109,110,111,112,113,114,115] as $kode)
+                                        <td>{{ $row->{"srj_{$kode}"} ?? '' }}</td>
+                                    @endforeach
+                                    @foreach([208,209,210,211] as $kode)
+                                        <td>{{ $row->{"sks_{$kode}"} ?? '' }}</td>
+                                    @endforeach
+                                    @foreach([308,309,310,311] as $kode)
+                                        <td>{{ $row->{"s6_{$kode}"} ?? '' }}</td>
+                                    @endforeach
+
+                                    <td>{{ $row->jumlah_murid ?? '—' }}</td>
+                                    <td>{{ $row->jumlah_rombim ?? '—' }}</td>
+                                    <td class="fw-bold text-danger">{{ $row->penyesuaian_rb ?? 0 }}</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('rekap.edit', $row->id) }}" class="btn btn-warning btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="20" class="text-center py-5">Belum ada data</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</main>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const searchInput      = document.getElementById('searchInput');
-        const filterUnitCabang = document.getElementById('filterUnitCabang');
-        const rows             = document.querySelectorAll('#rekapTable tr[data-nama]');
+<!-- ==================== MODAL INFO FULL LENGKAP ==================== -->
+<div class="modal fade" id="infoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user-circle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="modal-title fw-bold" id="infoModalLabel">Detail Relawan</h5>
+                        <small id="modal-nama-header" class="opacity-90"></small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
 
-        function filterTable() {
-            let searchValue = (searchInput?.value || '').trim().toLowerCase();
-            if (searchValue.includes('|')) {
-                searchValue = searchValue.split('|')[0].trim(); // ambil nama saja
-            }
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <small class="text-muted">Nama Lengkap</small>
+                        <h5 id="modal-nama" class="fw-bold"></h5>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <small class="text-muted">NIK</small>
+                        <h6 id="modal-nik" class="fw-medium text-primary"></h6>
+                    </div>
 
-            const unitValue = (filterUnitCabang?.value || '').trim();
+                    <div class="col-md-6">
+                        <small class="text-muted">Jabatan</small>
+                        <div id="modal-jabatan" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Status</small>
+                        <div id="modal-status" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Departemen</small>
+                        <div id="modal-departemen" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Unit biMBA</small>
+                        <div id="modal-unit" class="fw-semibold"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Cabang</small>
+                        <div id="modal-cabang" class="fw-semibold"></div>
+                    </div>
+                </div>
 
-            let visibleCount = 0;
+                <hr class="my-4">
 
-            rows.forEach(row => {
-                const namaRaw   = (row.dataset.nama   || '').trim().toLowerCase();
-                const nikRaw    = (row.dataset.nik    || '').trim().toLowerCase();
-                const unit      = (row.dataset.unit   || '').trim();
-                const cabang    = (row.dataset.cabang || '').trim();
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">Jumlah Murid</small>
+                        <div id="modal-murid" class="fw-bold text-success fs-5"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Rombongan Belajar</small>
+                        <div id="modal-rombim" class="fw-bold"></div>
+                    </div>
+                </div>
+            </div>
 
-                const matchSearch = !searchValue || 
-                                    namaRaw.includes(searchValue) || 
-                                    nikRaw.includes(searchValue);
-
-                let matchUnit = true;
-                if (unitValue) {
-                    matchUnit = `${unit}|${cabang}` === unitValue;
-                }
-
-                const show = matchSearch && matchUnit;
-                row.style.display = show ? '' : 'none';
-
-                if (show) visibleCount++;
-            });
-
-            // Update total di footer
-            const totalEl = document.querySelector('.d-flex.justify-content-between strong.text-dark');
-            if (totalEl) {
-                totalEl.textContent = visibleCount;
-            }
-        }
-
-        if (searchInput) {
-            searchInput.addEventListener('change', filterTable);
-            searchInput.addEventListener('input', filterTable);
-        }
-
-        if (filterUnitCabang) {
-            filterUnitCabang.addEventListener('change', filterTable);
-        }
-
-        // Jalankan awal
-        filterTable();
-    });
-
-    function resetFilters() {
-        const searchInput      = document.getElementById('searchInput');
-        const filterUnitCabang = document.getElementById('filterUnitCabang');
-
-        if (searchInput)      searchInput.value = '';
-        if (filterUnitCabang) filterUnitCabang.value = '';
-
-        document.querySelectorAll('#rekapTable tr[data-nama]').forEach(row => {
-            row.style.display = '';
-        });
-
-        const totalEl = document.querySelector('.d-flex.justify-content-between strong.text-dark');
-        if (totalEl) {
-            totalEl.textContent = '{{ $rekap->count() }}';
-        }
-    }
-    </script>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Filter script (ringkas)
+    const searchInput = document.getElementById('searchInput');
+    const filterUnitCabang = document.getElementById('filterUnitCabang');
+    const rows = document.querySelectorAll('#rekapTable tbody tr');
+
+    function filterTable() {
+        const search = (searchInput.value || '').toLowerCase().trim();
+        const unitFilter = filterUnitCabang ? filterUnitCabang.value : '';
+
+        rows.forEach(row => {
+            const nama = (row.dataset.nama || '').toLowerCase();
+            const unitCabang = `${row.dataset.unit || ''}|${row.dataset.cabang || ''}`;
+
+            const matchSearch = !search || nama.includes(search);
+            const matchUnit = !unitFilter || unitCabang === unitFilter;
+
+            row.style.display = (matchSearch && matchUnit) ? '' : 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterTable);
+    if (filterUnitCabang) filterUnitCabang.addEventListener('change', filterTable);
+
+    // Modal Info
+    const infoModal = document.getElementById('infoModal');
+    infoModal.addEventListener('show.bs.modal', function (e) {
+        const button = e.relatedTarget;
+
+        document.getElementById('infoModalLabel').textContent = 'Detail Relawan';
+        document.getElementById('modal-nama-header').textContent = button.dataset.nama;
+        document.getElementById('modal-nama').textContent = button.dataset.nama;
+        document.getElementById('modal-nik').textContent = button.dataset.nik;
+        document.getElementById('modal-jabatan').textContent = button.dataset.jabatan;
+        document.getElementById('modal-status').textContent = button.dataset.status;
+        document.getElementById('modal-departemen').textContent = button.dataset.departemen;
+        document.getElementById('modal-unit').textContent = button.dataset.unit;
+        document.getElementById('modal-cabang').textContent = button.dataset.cabang;
+        document.getElementById('modal-murid').textContent = button.dataset.murid;
+        document.getElementById('modal-rombim').textContent = button.dataset.rombim;
+    });
+});
+</script>
+@endpush

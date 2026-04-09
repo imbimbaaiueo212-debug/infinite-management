@@ -48,75 +48,76 @@
                     </div>
                 @endif
 
-                {{-- FILTER FORM (sudah rapi) --}}
-                <form method="GET" action="{{ route('penerimaan.index') }}" id="filter-form" class="card shadow-sm border mb-4">
-                    <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                            <!-- Per Page -->
-                            <div class="col-auto">
-                                <label class="form-label small fw-medium text-muted mb-1">Per Page</label>
-                                <input type="number" name="per_page" value="{{ request('per_page', 10) }}" min="1" class="form-control form-control-sm" style="width: 90px;">
-                            </div>
+            <form method="GET" action="{{ route('penerimaan.index') }}" id="filter-form" class="card shadow-sm border mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <!-- Per Page -->
+                        <div class="col-auto">
+                            <label class="form-label small fw-medium text-muted mb-1">Per Page</label>
+                            <input type="number" name="per_page" value="{{ request('per_page', 10) }}" min="1" class="form-control form-control-sm" style="width: 90px;">
+                        </div>
 
-                            <!-- Nama Murid Search -->
-                            <div class="col-md-4 position-relative">
-                                <label class="form-label small fw-medium text-muted mb-1">Nama Murid</label>
-                                <input type="text" id="search" name="search" class="form-control form-control-sm" placeholder="Ketik atau pilih nama murid…" value="{{ request('search') }}" autocomplete="off">
-                                <!-- Dropdown murid (seperti sebelumnya) -->
-                                <div id="murid-dropdown" class="dropdown-menu p-2 shadow" style="width:100%; max-height:300px; overflow-y:auto; display:none;">
-                                    <!-- JS akan isi -->
-                                </div>
-                            </div>
+                        <!-- Nama Murid dengan Autocomplete -->
+                        <div class="col-md-4 position-relative">
+                            <label class="form-label small fw-medium text-muted mb-1">Nama Murid</label>
+                            <input type="text" id="search" name="search" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="Ketik nama murid..." 
+                                   value="{{ request('search') }}" 
+                                   autocomplete="off">
 
-                            <!-- Bulan -->
+                            <!-- Dropdown Suggestion -->
+                            <div id="murid-dropdown" class="dropdown-menu p-2 shadow" 
+                                 style="width:100%; max-height:320px; overflow-y:auto; display:none; z-index:1050;">
+                                <!-- Diisi oleh JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Bulan -->
+                        <div class="col-auto">
+                            <label class="form-label small fw-medium text-muted mb-1">Bulan</label>
+                            <select name="bulan" class="form-select form-select-sm" style="width:140px;">
+                                <option value="">Semua</option>
+                                @foreach(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $b)
+                                    <option value="{{ $b }}" {{ request('bulan') == $b ? 'selected' : '' }}>{{ $b }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Tahun -->
+                        <div class="col-auto">
+                            <label class="form-label small fw-medium text-muted mb-1">Tahun</label>
+                            <select name="tahun" class="form-select form-select-sm" style="width:120px;">
+                                <option value="">Semua</option>
+                                @for($y = date('Y') + 1; $y >= date('Y') - 5; $y--)
+                                    <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+
+                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
                             <div class="col-auto">
-                                <label class="form-label small fw-medium text-muted mb-1">Bulan</label>
-                                <select name="bulan" class="form-select form-select-sm" style="width:140px;">
-                                    <option value="">Semua</option>
-                                    @foreach(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $b)
-                                        <option value="{{ $b }}" {{ request('bulan') == $b ? 'selected' : '' }}>{{ $b }}</option>
+                                <label class="form-label small fw-medium text-muted mb-1">Bimba Unit</label>
+                                <select name="bimba_unit" class="form-select form-select-sm" style="min-width:220px;">
+                                    <option value="">-- Semua Unit --</option>
+                                    @foreach($unitList as $value => $label)
+                                        <option value="{{ $value }}" {{ request('bimba_unit') === $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
+                        @endif
 
-                            <!-- Tahun -->
-                            <div class="col-auto">
-                                <label class="form-label small fw-medium text-muted mb-1">Tahun</label>
-                                <select name="tahun" class="form-select form-select-sm" style="width:120px;">
-                                    <option value="">Semua</option>
-                                    @for($y = date('Y') + 1; $y >= date('Y') - 5; $y--)
-                                        <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>{{ $y }}</option>
-                                    @endfor
-                                </select>
-                            </div>
-
-                            <!-- BIMBA UNIT – HANYA UNTUK ADMIN -->
-                            @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                <div class="col-auto">
-                                    <label class="form-label small fw-medium text-muted mb-1">Bimba Unit</label>
-                                    <select name="bimba_unit" class="form-select form-select-sm" style="min-width:220px;">
-                                        <option value="">-- Semua Unit --</option>
-                                        @foreach($unitList as $value => $label)
-                                            <option value="{{ $value }}" {{ request('bimba_unit') === $value ? 'selected' : '' }}>
-                                                {{ $label }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endif
-
-                            <!-- Tombol Filter & Reset -->
-                            <div class="col-auto d-flex align-items-end gap-2">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-filter me-1"></i>Filter
-                                </button>
-                                <a href="{{ route('penerimaan.index') }}" class="btn btn-outline-secondary btn-sm">
-                                    Reset
-                                </a>
-                            </div>
+                        <div class="col-auto d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-filter me-1"></i>Filter
+                            </button>
+                            <a href="{{ route('penerimaan.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                         </div>
                     </div>
-                </form>
+                </div>
+            </form>
 
                 {{-- TABEL RINGKASAN TOTAL --}}
                 <div class="card shadow-sm border mb-4">
@@ -292,3 +293,63 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    const searchInput = $('#search');
+    const dropdown    = $('#murid-dropdown');
+    const muridList   = @json($muridList ?? []);   // ← Pastikan ini $muridList
+
+    function renderDropdown(items) {
+        dropdown.empty();
+
+        if (items.length === 0) {
+            dropdown.append('<div class="dropdown-item text-muted py-2">Tidak ditemukan</div>');
+            dropdown.show();
+            return;
+        }
+
+        items.forEach(item => {
+            const display = item.nim ? `${item.nim} — ${item.nama_murid}` : item.nama_murid;
+            const el = $(`<div class="dropdown-item py-2 border-bottom cursor-pointer">${display}</div>`);
+            
+            el.on('click', function() {
+                searchInput.val(item.nama_murid);
+                dropdown.hide();
+                $('#filter-form').submit();
+            });
+            
+            dropdown.append(el);
+        });
+        dropdown.show();
+    }
+
+    searchInput.on('input', function() {
+        const keyword = $(this).val().toLowerCase().trim();
+        
+        if (keyword.length < 1) {
+            dropdown.hide();
+            return;
+        }
+
+        const filtered = muridList.filter(item => 
+            (item.nama_murid && item.nama_murid.toLowerCase().includes(keyword)) ||
+            (item.nim && item.nim.toLowerCase().includes(keyword))
+        );
+
+        renderDropdown(filtered);
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#search, #murid-dropdown').length) {
+            dropdown.hide();
+        }
+    });
+
+    searchInput.on('keypress', function(e) {
+        if (e.which === 13) $('#filter-form').submit();
+    });
+});
+</script>
+@endpush

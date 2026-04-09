@@ -10,22 +10,26 @@ use Illuminate\Support\Facades\DB;
 
 class RekapAbsensiController extends Controller
 {
+    /**
+     * Halaman Utama Rekap Jadwal & Absensi
+     */
     public function index()
     {
-        // 1. Sinkron guru aktif dari Profile (termasuk update jumlah_rombim dari Profile)
+        // Sinkronisasi lengkap setiap kali halaman dibuka
         $this->syncGuruAktif();
-
-        // 2. Hitung ulang kolom jadwal & jumlah_murid dari Buku Induk
-        //    jumlah_rombim sudah di-set dari Profile di syncGuruAktif
         $this->hitungJadwalDariBukuInduk();
 
-        // 3. Ambil data rekap untuk ditampilkan
-        $rekap = RekapAbsensi::all();
+        $rekap = RekapAbsensi::orderBy('bimba_unit')
+                            ->orderBy('no_cabang')
+                            ->orderBy('nama_relawan')
+                            ->get();
 
         return view('rekap.index', compact('rekap'));
     }
 
-    // Sinkron guru aktif dari Profile + update jumlah_rombim dari Profile
+    /**
+     * Sinkronisasi Guru Aktif + jumlah_rombim dari Profile
+     */
     private function syncGuruAktif()
     {
         $guruProfiles = Profile::where('jabatan', 'Guru')
@@ -42,56 +46,51 @@ class RekapAbsensiController extends Controller
                     'bimba_unit'     => $guru->bimba_unit ?? null,
                     'no_cabang'      => $guru->no_cabang ?? null,
                     'penyesuaian_rb' => 0,
-                    'jumlah_rombim'  => $guru->jumlah_rombim ?? 0, // <-- AMBIL DARI PROFILE
+                    'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,     // ← PENTING
                 ]
             );
         }
     }
 
-    // Hitung otomatis kolom jadwal & jumlah_murid dari Buku Induk
-    // jumlah_rombim tetap dari Profile (tidak di-reset/diubah di sini)
+    /**
+     * Hitung Jadwal & Jumlah Murid dari Buku Induk
+     * (jumlah_rombim tidak direset)
+     */
     private function hitungJadwalDariBukuInduk()
     {
-        // Reset hanya kolom jadwal & jumlah_murid (jumlah_rombim tetap dari Profile)
+        // Reset hanya kolom perhitungan
         RekapAbsensi::query()->update([
             'srj_108' => 0, 'srj_109' => 0, 'srj_110' => 0, 'srj_111' => 0,
             'srj_112' => 0, 'srj_113' => 0, 'srj_114' => 0, 'srj_115' => 0,
             'sks_208' => 0, 'sks_209' => 0, 'sks_210' => 0, 'sks_211' => 0,
-            's6_308' => 0, 's6_309' => 0, 's6_310' => 0, 's6_311' => 0,
+            's6_308'  => 0, 's6_309'  => 0, 's6_310'  => 0, 's6_311'  => 0,
             'jumlah_murid' => 0,
-            // jumlah_rombim TIDAK di-reset agar tetap dari Profile
         ]);
 
-        // GANTI 'guru' jika nama kolomnya berbeda di buku_induk
-        $kolomGuru = 'guru';
-
         $data = BukuInduk::whereNotNull('kode_jadwal')
-            ->whereNotNull($kolomGuru)
+            ->whereNotNull('guru')
             ->where('status', 'aktif')
             ->select(
-                $kolomGuru,
+                'guru',
                 'bimba_unit',
                 'no_cabang',
                 'kode_jadwal',
                 DB::raw('COUNT(*) as total_murid')
             )
-            ->groupBy($kolomGuru, 'bimba_unit', 'no_cabang', 'kode_jadwal')
+            ->groupBy('guru', 'bimba_unit', 'no_cabang', 'kode_jadwal')
             ->get();
 
         foreach ($data as $item) {
-            $namaGuruDb = trim(strtoupper($item->{$kolomGuru}));
-            $unit       = $item->bimba_unit;
-            $cabang     = $item->no_cabang;
-            $kode       = $item->kode_jadwal;
-            $murid      = $item->total_murid;
+            $namaGuru = trim(strtoupper($item->guru));
 
-            $rekap = RekapAbsensi::whereRaw('UPPER(TRIM(nama_relawan)) = ?', [$namaGuruDb])
-                ->where('bimba_unit', $unit)
-                ->where('no_cabang', $cabang)
+            $rekap = RekapAbsensi::whereRaw('UPPER(TRIM(nama_relawan)) = ?', [$namaGuru])
+                ->where('bimba_unit', $item->bimba_unit)
+                ->where('no_cabang', $item->no_cabang)
                 ->first();
 
-            if ($rekap && $murid > 0) {
+            if ($rekap && $item->total_murid > 0) {
                 $kolom = null;
+                $kode  = $item->kode_jadwal;
 
                 if (in_array($kode, [108,109,110,111,112,113,114,115,116])) {
                     $kolom = 'srj_' . $kode;
@@ -102,17 +101,27 @@ class RekapAbsensiController extends Controller
                 }
 
                 if ($kolom) {
-                    // Kolom jadwal = jumlah murid di kode tersebut
-                    $rekap->increment($kolom, $murid);
-
-                    // Total murid semua jadwal
-                    $rekap->increment('jumlah_murid', $murid);
+                    $rekap->increment($kolom, $item->total_murid);
+                    $rekap->increment('jumlah_murid', $item->total_murid);
                 }
             }
         }
     }
 
-    // Method create, store, edit, update, destroy, updateKodeJadwal tetap sama
+    /**
+     * Tombol "Sinkron Data" di halaman Rekap
+     */
+    public function updateKodeJadwal()
+    {
+        $this->syncGuruAktif();
+        $this->hitungJadwalDariBukuInduk();
+
+        return redirect()->route('rekap.index')
+            ->with('success', '✅ Sinkronisasi berhasil! Jumlah Rombim sudah diupdate dari Profile.');
+    }
+
+    // ====================== CRUD ======================
+
     public function create()
     {
         $guruProfiles = Profile::where('jabatan', 'Guru')
@@ -129,11 +138,13 @@ class RekapAbsensiController extends Controller
                     'bimba_unit'     => $guru->bimba_unit ?? null,
                     'no_cabang'      => $guru->no_cabang ?? null,
                     'penyesuaian_rb' => 0,
+                    'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,
                 ]
             );
         }
 
-        return redirect()->route('rekap.index')->with('success', 'Rekap guru aktif berhasil dibuat & diperbarui!');
+        return redirect()->route('rekap.index')
+            ->with('success', 'Rekap guru aktif berhasil dibuat/diupdate.');
     }
 
     public function store(Request $request)
@@ -148,9 +159,11 @@ class RekapAbsensiController extends Controller
             'bimba_unit'     => $guru->bimba_unit ?? null,
             'no_cabang'      => $guru->no_cabang ?? null,
             'penyesuaian_rb' => $request->penyesuaian_rb ?? 0,
+            'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,
         ]);
 
-        return redirect()->route('rekap.index')->with('success', 'Data rekap berhasil ditambahkan.');
+        return redirect()->route('rekap.index')
+            ->with('success', 'Data rekap berhasil ditambahkan.');
     }
 
     public function edit(RekapAbsensi $rekap)
@@ -169,35 +182,17 @@ class RekapAbsensiController extends Controller
             'bimba_unit'     => $guru->bimba_unit ?? $rekap->bimba_unit,
             'no_cabang'      => $guru->no_cabang ?? $rekap->no_cabang,
             'penyesuaian_rb' => $request->penyesuaian_rb ?? $rekap->penyesuaian_rb,
-            'jumlah_rombim'     => $guru->jumlah_rombim,
+            'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,
         ]);
 
-        return redirect()->route('rekap.index')->with('success', 'Data rekap berhasil diperbarui.');
+        return redirect()->route('rekap.index')
+            ->with('success', 'Data rekap berhasil diperbarui.');
     }
 
     public function destroy(RekapAbsensi $rekap)
     {
         $rekap->delete();
-        return redirect()->route('rekap.index')->with('success', 'Data rekap berhasil dihapus.');
-    }
-
-    public function updateKodeJadwal()
-    {
-        $rekapGuru = RekapAbsensi::all();
-        foreach ($rekapGuru as $rekap) {
-            $guru = Profile::where('nama', $rekap->nama_relawan)->first();
-            if ($guru) {
-                $rekap->update([
-                    'nik'        => $guru->nik,
-                    'jabatan'    => $guru->jabatan,
-                    'departemen' => $guru->departemen,
-                    'bimba_unit'    => $guru->bimba_unit,
-                    'no_cabang'  => $guru->no_cabang,
-                    'jumlah_rombim'     => $guru->jumlah_rombim,
-                ]);
-            }
-        }
-
-        return redirect()->route('rekap.index')->with('success', 'Semua data rekap berhasil disinkronkan ulang!');
+        return redirect()->route('rekap.index')
+            ->with('success', 'Data rekap berhasil dihapus.');
     }
 }

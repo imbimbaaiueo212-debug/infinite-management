@@ -201,6 +201,7 @@
                                         data-unit="{{ $profile->bimba_unit ?? '-' }}"
                                         data-cabang="{{ $profile->no_cabang ?? '-' }}"
                                         data-tgl-masuk="{{ $tglMasuk }}"
+                                        data-tgl_selesai_magang="{{ $tglSelesaiMagang }}"
                                         data-masa-kerja="{{ $masaKerja }}"
                                         data-tgl-lahir="{{ $tglLahir }}"
                                         data-usia="{{ $profile->usia ?? '-' }}"
@@ -598,14 +599,22 @@
                 </div>
                 @endif
 
-                <!-- Tanggal & Masa Kerja -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="bg-light rounded-3 p-3">
-                            <small class="text-muted">Tanggal Masuk</small>
+                            <small class="text-muted">Tanggal Masuk Awal</small>
                             <div id="modal-tgl-masuk" class="fw-semibold mt-1"></div>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">Tanggal Selesai Magang</small>
+                            <div id="modal-tgl_selesai_magang" class="fw-semibold mt-1 text-success"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="bg-light rounded-3 p-3">
                             <small class="text-muted">Masa Kerja</small>
@@ -917,6 +926,7 @@ $('#infoModal').on('show.bs.modal', function (event) {
     $('#modal-unit').text(button.data('unit'));
     $('#modal-cabang').text(button.data('cabang'));
     $('#modal-tgl-masuk').text(button.data('tgl-masuk'));
+    $('#modal-tgl_selesai_magang').text(button.data('tgl_selesai_magang'));
     $('#modal-masa-kerja').text(button.data('masa-kerja'));
     $('#modal-tgl-lahir').text(button.data('tgl-lahir'));
     $('#modal-usia').text(button.data('usia'));

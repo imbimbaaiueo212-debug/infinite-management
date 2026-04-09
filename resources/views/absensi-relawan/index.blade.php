@@ -120,7 +120,7 @@
                                         <th class="text-center" style="width: 60px;">No</th>
                                         <th style="width: 120px;">NIK</th>
                                         <th>Nama Relawan</th>
-                                        <th style="min-width: 200px; text-align: center;">Info</th>
+                                        <th style="min-width: 20px; text-align: center;">Info</th>
                                         <th>Status Sistem</th>
                                         <th>Keterangan</th>
                                         <th>Alasan</th>
@@ -158,7 +158,7 @@
                                                         data-status-sistem="{{ $item->status }}"
                                                         data-keterangan="{{ $item->keterangan ?? '-' }}"
                                                         data-alasan="{{ $item->alasan ?? '-' }}">
-                                                    <i class="fas fa-info-circle me-1"></i> Detail
+                                                    <i class="bi bi-info-circle"></i> Info
                                                 </button>
                                             </td>                                           
                                             <td class="text-center">

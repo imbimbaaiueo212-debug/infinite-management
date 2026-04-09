@@ -220,24 +220,22 @@ public function create()
     // Di dalam method edit()
 public function edit(Profile $profile)
 {
+    // Hitung ulang semua data termasuk masa kerja dengan logic baru
     $this->recalculateProfileData($profile);
+    $this->calculateAndSaveMasaKerja($profile);        // ← Tambahkan ini (penting!)
+    $this->calculateAndSaveMasaKerjaJabatan($profile); // ← Sudah ada, tetap pertahankan
 
-    // ───────────────────────────────────────────────
-    // Ambil jabatan unik dari tabel skim
-    // ───────────────────────────────────────────────
+    // Ambil jabatan dari tabel Skim
     $jabatanOptions = \App\Models\Skim::query()
         ->distinct()
         ->orderBy('jabatan')
-        ->pluck('jabatan', 'jabatan')   // key = value (cocok untuk select)
+        ->pluck('jabatan', 'jabatan')
         ->toArray();
-
-    // kalau mau pakai pluck biasa (value saja)
-    // $jabatanOptions = \App\Models\Skim::distinct()->orderBy('jabatan')->pluck('jabatan')->toArray();
 
     $statusOptions     = $this->statusOptions;
     $departemenOptions = $this->departemenOptions;
 
-    // Ambil data unit sama seperti di create
+    // Unit
     $unitCollection = Unit::orderBy('no_cabang')->get();
 
     $units = $unitCollection->mapWithKeys(function ($unit) {
@@ -249,7 +247,7 @@ public function edit(Profile $profile)
 
     $unitNoCabang = $unitCollection->pluck('no_cabang', 'biMBA_unit')->toArray();
 
-    // Ambil RB dan KTR options (sudah ada)
+    // RB & KTR Options
     $rbOptions = \App\Models\Ktr::where('waktu', 'like', 'RB%')
         ->orderByRaw("CAST(SUBSTRING(waktu, 3) AS UNSIGNED)")
         ->pluck('waktu')
@@ -270,16 +268,13 @@ public function edit(Profile $profile)
         'jabatanOptions',
         'statusOptions',
         'departemenOptions',
-        'units',          // ← tambahkan ini
-        'unitNoCabang',   // ← tambahkan ini
+        'units',
+        'unitNoCabang',
         'rbOptions',
         'ktrOptions'
     ));
 }
 
-    // ===================================================================
-    // UPDATE
-    // ===================================================================
     public function update(Request $request, Profile $profile)
 {
     $validated = $this->validateProfileRequest($request, $profile);
@@ -299,11 +294,9 @@ public function edit(Profile $profile)
     // UPDATE PROFILE
     $profile->update($validated);
 
-    // Rekalkulasi masa kerja umum (sudah ada)
-    $this->calculateAndSaveMasaKerja($profile);
-
-    // TAMBAHKAN: Hitung masa kerja jabatan
-    $this->calculateAndSaveMasaKerjaJabatan($profile);   // ← baris baru ini
+    // REKALKULASI YANG PENTING
+    $this->calculateAndSaveMasaKerja($profile);        // ← Pastikan dipanggil setelah update
+    $this->calculateAndSaveMasaKerjaJabatan($profile);
 
     // Rekap imbalan
     $labelBulan = Carbon::now()->locale('id')->translatedFormat('F Y');
@@ -1110,33 +1103,38 @@ if (array_search($ktrOtomatis, $ktrList) < array_search('KTR 2A', $ktrList)) {
         return $raw && preg_match('/(\d+)/', (string) $raw, $m) ? (int) $m[1] : null;
     }
 
-    // ===================================================================
-    // HITUNG & SIMPAN MASA KERJA (DALAM BULAN)
-    // ===================================================================
-// Ubah dari private menjadi protected (atau public jika mau dipanggil dari luar controller)
-// Ubah dari private menjadi protected (atau public/static jika perlu)
+
 protected function calculateAndSaveMasaKerja($profile)
 {
-    if (!$profile->tgl_masuk) {
+    if ($profile->tgl_selesai_magang) {
+        $start = Carbon::parse($profile->tgl_selesai_magang);
+    } elseif ($profile->tgl_masuk) {
+        $start = Carbon::parse($profile->tgl_masuk);
+    } else {
         $profile->masa_kerja = 0;
-        $profile->save();
+        $profile->saveQuietly();
         return;
     }
 
-    $start = \Carbon\Carbon::parse($profile->tgl_masuk);
-
     if ($profile->tgl_resign) {
-        $end = \Carbon\Carbon::parse($profile->tgl_resign);
+        $end = Carbon::parse($profile->tgl_resign);
     } elseif ($profile->tgl_non_aktif) {
-        $end = \Carbon\Carbon::parse($profile->tgl_non_aktif);
+        $end = Carbon::parse($profile->tgl_non_aktif);
     } else {
-        $end = now();
+        $end = Carbon::today();
     }
 
     $months = $start->diffInMonths($end);
 
-    $profile->masa_kerja = $months;
-    $profile->save();
+    $startNextMonth = $start->copy()->addMonths($months);
+    $remainingDays = $end->diffInDays($startNextMonth);
+
+    if ($remainingDays >= 15) {
+        $months++;
+    }
+
+    $profile->masa_kerja = max(0, $months);
+    $profile->saveQuietly();
 }
 
     public function inlineUpdateField(Request $request, Profile $profile)
@@ -1149,86 +1147,49 @@ protected function calculateAndSaveMasaKerja($profile)
     $value = $request->input('value');
 
     $allowedFields = [
-        'mentor_magang',
-        'periode',
-        'tgl_selesai_magang',
-        'ukuran',
-        'tgl_ambil_seragam',
-        'status_lain',
-        'keterangan'
+        'mentor_magang', 'periode', 'tgl_selesai_magang',
+        'ukuran', 'tgl_ambil_seragam', 'status_lain', 'keterangan'
     ];
 
     if (!in_array($field, $allowedFields)) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'Field tidak diizinkan'
-        ], 422);
+        return response()->json(['status' => 'error', 'message' => 'Field tidak diizinkan'], 422);
     }
 
-    // Khusus tgl_selesai_magang: ubah status Magang → Aktif jika tanggal sudah lewat
     if ($field === 'tgl_selesai_magang') {
+        $newValue = $value === '' ? null : $value;
 
-    $newValue = $value === '' ? null : $value;
+        $profile->tgl_selesai_magang = $newValue;
 
-    $profile->tgl_selesai_magang = $newValue;
-
-    if ($newValue) {
-
-        $tglSelesai = Carbon::parse($newValue);
-        $today      = Carbon::today();
-
-        // 🔥 PENTING: isi tgl_masuk dari tgl_selesai_magang
-        $profile->tgl_masuk = $newValue;
-
-        // Ubah status jadi Aktif jika masih Magang
-        if ($profile->status_karyawan === 'Magang') {
+        // Ubah status jika perlu
+        if ($newValue && $profile->status_karyawan === 'Magang') {
             $profile->status_karyawan = 'Aktif';
         }
 
-        Log::info("Relawan {$profile->nama} otomatis aktif. 
-                   tgl_masuk diisi dari tgl_selesai_magang ({$newValue})");
-    }
+        // TIDAK MENGUBAH tgl_masuk sama sekali
+        Log::info("tgl_selesai_magang diupdate untuk {$profile->nama}: " . ($newValue ?? 'NULL'));
+    } 
     else {
-        // Jika tanggal dihapus
-        $profile->tgl_masuk = null;
-
-        if ($profile->status_karyawan === 'Aktif') {
-            $profile->status_karyawan = 'Magang';
-        }
-    }
-} else {
-        // Field lain: langsung set
         $profile->{$field} = $value === '' ? null : $value;
     }
 
-    // Simpan semua perubahan
     $profile->save();
 
-    // Hitung ulang masa kerja jika field yang berpengaruh berubah
-    if (
-        in_array($field, ['tgl_selesai_magang', 'status_karyawan']) ||
-        $profile->wasChanged(['tgl_selesai_magang', 'status_karyawan'])
-    ) {
+    // Hitung ulang masa kerja
+    if (in_array($field, ['tgl_selesai_magang', 'tgl_masuk', 'tgl_resign', 'tgl_non_aktif', 'status_karyawan'])) {
         $this->calculateAndSaveMasaKerja($profile);
     }
 
-    // Format response untuk tanggal
+    // Response
     $formattedValue = $value;
     if (in_array($field, ['tgl_selesai_magang', 'tgl_ambil_seragam']) && $value) {
-        try {
-            $formattedValue = Carbon::parse($value)->format('d-m-Y');
-        } catch (\Exception $e) {
-            $formattedValue = $value;
-        }
+        $formattedValue = Carbon::parse($value)->format('d-m-Y');
     }
 
     return response()->json([
         'status'          => 'ok',
         'field'           => $field,
         'value'           => $formattedValue,
-        'raw'             => $value,
         'status_karyawan' => $profile->status_karyawan ?? null,
-        'masa_kerja'      => $profile->masa_kerja,
         'masa_kerja_text' => $this->formatMasaKerjaText($profile->masa_kerja ?? 0)
     ]);
 }

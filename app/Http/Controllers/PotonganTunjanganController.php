@@ -526,23 +526,51 @@ class PotonganTunjanganController extends Controller
         }
 
         foreach ($dataPotongan as $data) {
-            $profile = Profile::where('nik', $data['nik'])->orWhere('nama', $data['nama'])->first();
-            $pendapatan = PendapatanTunjangan::where('nama', $data['nama'])->where('bulan', $data['bulan'])->first();
+    $profile = Profile::where('nik', $data['nik'])
+                      ->orWhere('nama', $data['nama'])
+                      ->first();
 
-            $data['pendapatan_id'] = $pendapatan?->id;
-            $data['masa_kerja']    = $profile?->masa_kerja ?? ($pendapatan?->masa_kerja ?? 0);
-            $data['status']        = $pendapatan?->status ?? ($profile?->status_karyawan ?? '-');
+    $pendapatan = PendapatanTunjangan::where('nama', $data['nama'])
+                                     ->where('bulan', $data['bulan'])
+                                     ->first();
 
-            $data['bimba_unit'] = $data['bimba_unit'] ?? $pendapatan?->bimba_unit ?? $profile?->bimba_unit ?? $profile?->nama_unit;
-            $data['no_cabang']  = $data['no_cabang']  ?? $pendapatan?->no_cabang  ?? $profile?->no_cabang ?? $profile?->kode_cabang;
+    $data['pendapatan_id'] = $pendapatan?->id;
 
-            $data['total'] = $data['sakit'] + $data['izin'] + $data['alpa'] + $data['tidak_aktif'] + $data['lain_lain'];
+    // Prioritas jabatan: Profile > Pendapatan > dari Absensi (posisi)
+    $data['jabatan']     = $profile?->jabatan 
+                        ?? $pendapatan?->jabatan 
+                        ?? $data['jabatan'] 
+                        ?? $a->posisi ?? 'Relawan';   // fallback terakhir
 
-            PotonganTunjangan::updateOrCreate(
-                ['nama' => $data['nama'], 'bulan' => $data['bulan']],
-                $data
-            );
-        }
+    $data['departemen']  = $profile?->departemen 
+                        ?? $pendapatan?->departemen 
+                        ?? $data['departemen'];
+
+    $data['status']      = $profile?->status_karyawan 
+                        ?? $pendapatan?->status 
+                        ?? $data['status'] 
+                        ?? '-';
+
+    $data['masa_kerja']  = $profile?->masa_kerja ?? ($pendapatan?->masa_kerja ?? 0);
+
+    // Unit & Cabang (sudah cukup bagus, tapi bisa diseragamkan)
+    $data['bimba_unit'] = $data['bimba_unit'] 
+                       ?? $pendapatan?->bimba_unit 
+                       ?? $profile?->bimba_unit 
+                       ?? $profile?->nama_unit;
+
+    $data['no_cabang']  = $data['no_cabang']  
+                       ?? $pendapatan?->no_cabang  
+                       ?? $profile?->no_cabang 
+                       ?? $profile?->kode_cabang;
+
+    $data['total'] = $data['sakit'] + $data['izin'] + $data['alpa'] + $data['tidak_aktif'] + $data['lain_lain'];
+
+    PotonganTunjangan::updateOrCreate(
+        ['nama' => $data['nama'], 'bulan' => $data['bulan']],
+        $data
+    );
+}
     }
 
     /**

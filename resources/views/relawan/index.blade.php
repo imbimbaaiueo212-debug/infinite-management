@@ -133,7 +133,7 @@
                 <th>Nama Relawan</th>
                 
                 <!-- Kolom Info dengan Tombol Modal -->
-                <th style="min-width: 180px; text-align: center;">Info</th>
+                <th style="min-width: 20px; text-align: center;">Info</th>
 
                 <th class="text-center">Tanggal</th>
                 <th class="text-center">Jam Masuk</th>
@@ -176,7 +176,7 @@
                                 data-status-absen="{{ $data->status }}"
                                 data-keterangan="{{ $data->keterangan ?? '-' }}"
                                 data-alasan="{{ $data->alasan ?? '-' }}">
-                            <i class="fas fa-info-circle me-1"></i> Detail
+                            <i class="bi bi-info-circle"></i> Info
                         </button>
                     </td>
 

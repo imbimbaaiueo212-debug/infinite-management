@@ -58,90 +58,90 @@
                 
 
                 <!-- PERHITUNGAN RB, KTR, RP – AKAN BERUBAH OTOMATIS SAAT JABATAN DIPILIH -->
-<div class="card border-primary mb-4">
-    <div class="card-header bg-primary text-white">
-        <strong>Perhitungan RB & KTR (Otomatis Berdasarkan Jabatan)</strong>
-    </div>
-    <div class="card-body">
-        @if($isAdmin ?? false)
-            <!-- Hanya admin yang bisa edit -->
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-primary">RB</label>
-                    <select name="rb" id="rb" class="form-select">
-                        <option value="">-- Otomatis / Manual --</option>
-                        @foreach($rbOptions as $rb)
-                            <option value="{{ $rb }}" {{ old('rb', $profile->rb ?? '') == $rb ? 'selected' : '' }}>
-                                {{ $rb }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">Kepala Unit → RB40</small>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-info">KTR</label>
-                    <select name="ktr" id="ktr" class="form-select">
-                        <option value="">-- Otomatis / Manual --</option>
-                        @foreach($ktrOptions as $ktrVal)
-                            <option value="{{ $ktrVal }}" {{ old('ktr', $profile->ktr ?? $profile->ktr_tambahan ?? '') == $ktrVal ? 'selected' : '' }}>
-                                {{ $ktrVal }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">Kepala Unit → KTR 1B</small>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-success">Imbalan Pokok (RP)</label>
-                    <input type="number" name="rp" id="rp" class="form-control" 
-                           value="{{ old('rp', $profile->rp ?? '') }}" 
-                           placeholder="Otomatis dihitung">
-                    <small class="form-text text-muted">Kepala Unit → Rp 1.350.000</small>
-                </div>
-            </div>
-
-            <div class="mt-3 alert alert-info small">
-                <strong>Info:</strong> 
-                Untuk <b>Kepala Unit</b>, nilai di atas akan otomatis terisi saat Anda memilih jabatan.<br>
-                Untuk <b>Guru</b>, kosongkan agar sistem hitung otomatis berdasarkan jumlah murid.
-            </div>
-
-        @else
-            <!-- User biasa: hanya tampil nilai (read-only) -->
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-primary">RB</label>
-                    <div class="form-control bg-light text-muted">
-                        {{ $profile->rb ?: '—' }}
+                <div class="card border-primary mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <strong>Perhitungan RB & KTR (Otomatis Berdasarkan Jabatan)</strong>
                     </div>
-                    <!-- Tetap kirim nilai ke server -->
-                    <input type="hidden" name="rb" value="{{ old('rb', $profile->rb ?? '') }}">
-                </div>
+                    <div class="card-body">
+                        @if($isAdmin ?? false)
+                            <!-- Hanya admin yang bisa edit -->
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">RB</label>
+                                    <select name="rb" id="rb" class="form-select">
+                                        <option value="">-- Otomatis / Manual --</option>
+                                        @foreach($rbOptions as $rb)
+                                            <option value="{{ $rb }}" {{ old('rb', $profile->rb ?? '') == $rb ? 'selected' : '' }}>
+                                                {{ $rb }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="form-text text-muted">Kepala Unit → RB40</small>
+                                </div>
 
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-info">KTR</label>
-                    <div class="form-control bg-light text-muted">
-                        {{ $profile->ktr ?: $profile->ktr_tambahan ?: '—' }}
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-info">KTR</label>
+                                    <select name="ktr" id="ktr" class="form-select">
+                                        <option value="">-- Otomatis / Manual --</option>
+                                        @foreach($ktrOptions as $ktrVal)
+                                            <option value="{{ $ktrVal }}" {{ old('ktr', $profile->ktr ?? $profile->ktr_tambahan ?? '') == $ktrVal ? 'selected' : '' }}>
+                                                {{ $ktrVal }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="form-text text-muted">Kepala Unit → KTR 1B</small>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-success">Imbalan Pokok (RP)</label>
+                                    <input type="number" name="rp" id="rp" class="form-control" 
+                                        value="{{ old('rp', $profile->rp ?? '') }}" 
+                                        placeholder="Otomatis dihitung">
+                                    <small class="form-text text-muted">Kepala Unit → Rp 1.350.000</small>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 alert alert-info small">
+                                <strong>Info:</strong> 
+                                Untuk <b>Kepala Unit</b>, nilai di atas akan otomatis terisi saat Anda memilih jabatan.<br>
+                                Untuk <b>Guru</b>, kosongkan agar sistem hitung otomatis berdasarkan jumlah murid.
+                            </div>
+
+                        @else
+                            <!-- User biasa: hanya tampil nilai (read-only) -->
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">RB</label>
+                                    <div class="form-control bg-light text-muted">
+                                        {{ $profile->rb ?: '—' }}
+                                    </div>
+                                    <!-- Tetap kirim nilai ke server -->
+                                    <input type="hidden" name="rb" value="{{ old('rb', $profile->rb ?? '') }}">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-info">KTR</label>
+                                    <div class="form-control bg-light text-muted">
+                                        {{ $profile->ktr ?: $profile->ktr_tambahan ?: '—' }}
+                                    </div>
+                                    <input type="hidden" name="ktr" value="{{ old('ktr', $profile->ktr ?? $profile->ktr_tambahan ?? '') }}">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-success">Imbalan Pokok (RP)</label>
+                                    <div class="form-control bg-light text-muted">
+                                        {{ number_format($profile->rp ?? 0) ?: '—' }}
+                                    </div>
+                                    <input type="hidden" name="rp" value="{{ old('rp', $profile->rp ?? '') }}">
+                                </div>
+                            </div>
+
+                            <div class="mt-3 alert alert-warning small">
+                                <strong>Perhatian:</strong> Bagian ini hanya dapat diubah oleh Admin.
+                            </div>
+                        @endif
                     </div>
-                    <input type="hidden" name="ktr" value="{{ old('ktr', $profile->ktr ?? $profile->ktr_tambahan ?? '') }}">
                 </div>
-
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-success">Imbalan Pokok (RP)</label>
-                    <div class="form-control bg-light text-muted">
-                        {{ number_format($profile->rp ?? 0) ?: '—' }}
-                    </div>
-                    <input type="hidden" name="rp" value="{{ old('rp', $profile->rp ?? '') }}">
-                </div>
-            </div>
-
-            <div class="mt-3 alert alert-warning small">
-                <strong>Perhatian:</strong> Bagian ini hanya dapat diubah oleh Admin.
-            </div>
-        @endif
-    </div>
-</div>
 
                 <!-- STATUS KARYAWAN -->
                 <div class="mb-3">
@@ -175,15 +175,15 @@
                         Unit biMBA <span class="text-danger">*</span>
                     </label>
                     <select name="biMBA_unit" id="biMBA_unit" class="form-select fw-bold @error('biMBA_unit') is-invalid @enderror" required>
-    <option value="">-- Pilih Unit biMBA --</option>
-    @foreach($units as $value => $label)
-        <option value="{{ $value }}" 
-                {{ old('biMBA_unit', $profile->bimba_unit ?? '') === $value ? 'selected' : '' }}>
-            {{ $label }}
-        </option>
-    @endforeach
-</select>
-@error('biMBA_unit') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <option value="">-- Pilih Unit biMBA --</option>
+                        @foreach($units as $value => $label)
+                            <option value="{{ $value }}" 
+                                    {{ old('biMBA_unit', $profile->bimba_unit ?? '') === $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('biMBA_unit') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
                 <!-- NO CABANG -->
@@ -193,17 +193,37 @@
                            value="{{ old('no_cabang', $profile->no_cabang ?? '') }}" readonly style="background-color:#f8f9fa;">
                 </div>
 
-                <!-- TGL MASUK & MASA KERJA -->
-                <div class="mb-3">
-                    <label class="form-label">Tanggal Masuk</label>
-                    <input type="date" name="tgl_masuk" id="tgl_masuk" class="form-control"
-                           value="{{ old('tgl_masuk', $profile->tgl_masuk?->format('Y-m-d')) }}">
+                <!-- TANGGAL MASUK & TANGGAL SELESAI MAGANG -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tanggal Masuk Awal</label>
+                        <input type="date" name="tgl_masuk" id="tgl_masuk" class="form-control"
+                               value="{{ old('tgl_masuk', optional($profile)->tgl_masuk?->format('Y-m-d')) }}">
+                        <small class="text-muted">Tanggal pertama kali masuk (tidak akan diubah otomatis)</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tanggal Selesai Magang</label>
+                        <input type="date" name="tgl_selesai_magang" id="tgl_selesai_magang" class="form-control"
+                               value="{{ old('tgl_selesai_magang', optional($profile)->tgl_selesai_magang?->format('Y-m-d')) }}">
+                        <small class="text-muted">Jika diisi, masa kerja akan dihitung dari tanggal ini</small>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Masa Kerja</label>
-                    <input type="text" id="masa_kerja_display" class="form-control" readonly>
-                    <input type="hidden" name="masa_kerja" id="masa_kerja">
-                </div>
+
+                <!-- MASA KERJA -->
+            <div class="mb-3">
+                <label class="form-label">Masa Kerja (Otomatis)</label>
+
+                <input type="text" 
+                    id="masa_kerja_display" 
+                    class="form-control bg-light fw-bold" 
+                    value="{{ isset($profile) ? $profile->masa_kerja_format : '' }}"
+                    readonly>
+
+                <input type="hidden" 
+                    name="masa_kerja" 
+                    id="masa_kerja"
+                    value="{{ old('masa_kerja', $profile->masa_kerja ?? 0) }}">
+            </div>
 
             </div>
 
@@ -247,143 +267,143 @@
                 </div>
 
                 <!-- DETAIL SERAGAM -->
-<div class="card border-info mt-4">
-    <div class="card-header bg-info text-white">
-        <strong>Detail Pengambilan Seragam</strong>
-    </div>
-    <div class="card-body">
-        <div class="row g-3">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Tanggal Ambil Seragam</label>
-                <input type="date" name="tgl_ambil_seragam" class="form-control"
-                       value="{{ old('tgl_ambil_seragam', $profile->tgl_ambil_seragam?->format('Y-m-d') ?? '') }}">
-                @error('tgl_ambil_seragam')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Status</label>
-                <select name="status_lain" class="form-select">
-                    <option value="">-- Pilih Status --</option>
-                    <option value="Belum Terima" {{ old('status_lain', $profile->status_lain ?? '') == 'Belum Terima' ? 'selected' : '' }}>Belum Terima</option>
-                    <option value="Sudah Terima" {{ old('status_lain', $profile->status_lain ?? '') == 'Sudah Terima' ? 'selected' : '' }}>Sudah Terima</option>
-                </select>
-                @error('status_lain')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-            <div class="mb-3">
-                    <label class="form-label">Keterangan</label>
-                    <textarea name="keterangan" class="form-control" rows="3">{{ old('keterangan', $profile->keterangan ?? '') }}</textarea>
+            <div class="card border-info mt-4">
+                <div class="card-header bg-info text-white">
+                    <strong>Detail Pengambilan Seragam</strong>
                 </div>
-            
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tanggal Ambil Seragam</label>
+                            <input type="date" name="tgl_ambil_seragam" class="form-control"
+                                value="{{ old('tgl_ambil_seragam', $profile->tgl_ambil_seragam?->format('Y-m-d') ?? '') }}">
+                            @error('tgl_ambil_seragam')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
 
-        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select name="status_lain" class="form-select">
+                                <option value="">-- Pilih Status --</option>
+                                <option value="Belum Terima" {{ old('status_lain', $profile->status_lain ?? '') == 'Belum Terima' ? 'selected' : '' }}>Belum Terima</option>
+                                <option value="Sudah Terima" {{ old('status_lain', $profile->status_lain ?? '') == 'Sudah Terima' ? 'selected' : '' }}>Sudah Terima</option>
+                            </select>
+                            @error('status_lain')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                                <label class="form-label">Keterangan</label>
+                                <textarea name="keterangan" class="form-control" rows="3">{{ old('keterangan', $profile->keterangan ?? '') }}</textarea>
+                            </div>
+                        
 
-        <!-- Ukuran detail seragam (sudah pakai select supaya aman dari error "selected is invalid") -->
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Kaos Kuning-Hitam</label>
-                <select name="kaos_kuning_hitam" class="form-select">
-                    <option value="">-</option>
-                    @foreach(['S','M','L','XL','XXL'] as $size)
-                        <option value="{{ $size }}" {{ old('kaos_kuning_hitam', $profile->kaos_kuning_hitam ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
+                    </div>
+
+                    <!-- Ukuran detail seragam (sudah pakai select supaya aman dari error "selected is invalid") -->
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Kaos Kuning-Hitam</label>
+                            <select name="kaos_kuning_hitam" class="form-select">
+                                <option value="">-</option>
+                                @foreach(['S','M','L','XL','XXL'] as $size)
+                                    <option value="{{ $size }}" {{ old('kaos_kuning_hitam', $profile->kaos_kuning_hitam ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Kaos Merah-Kuning-Biru</label>
+                            <select name="kaos_merah_kuning_biru" class="form-select">
+                                <option value="">-</option>
+                                @foreach(['S','M','L','XL','XXL'] as $size)
+                                    <option value="{{ $size }}" {{ old('kaos_merah_kuning_biru', $profile->kaos_merah_kuning_biru ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Kemeja Kuning-Hitam</label>
+                            <select name="kemeja_kuning_hitam" class="form-select">
+                                <option value="">-</option>
+                                @foreach(['S','M','L','XL','XXL'] as $size)
+                                    <option value="{{ $size }}" {{ old('kemeja_kuning_hitam', $profile->kemeja_kuning_hitam ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Blazer Merah</label>
+                            <select name="blazer_merah" class="form-select">
+                                <option value="">-</option>
+                                @foreach(['S','M','L','XL','XXL'] as $size)
+                                    <option value="{{ $size }}" {{ old('blazer_merah', $profile->blazer_merah ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mt-3">
+                            <label class="form-label">Blazer Biru</label>
+                            <select name="blazer_biru" class="form-select">
+                                <option value="">-</option>
+                                @foreach(['S','M','L','XL','XXL'] as $size)
+                                    <option value="{{ $size }}" {{ old('blazer_biru', $profile->blazer_biru ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <small class="form-text text-muted mt-3">
+                        Isi ukuran yang diberikan atau biarkan "-" jika belum diterima.
+                    </small>
+                </div>
             </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Kaos Merah-Kuning-Biru</label>
-                <select name="kaos_merah_kuning_biru" class="form-select">
-                    <option value="">-</option>
-                    @foreach(['S','M','L','XL','XXL'] as $size)
-                        <option value="{{ $size }}" {{ old('kaos_merah_kuning_biru', $profile->kaos_merah_kuning_biru ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Kemeja Kuning-Hitam</label>
-                <select name="kemeja_kuning_hitam" class="form-select">
-                    <option value="">-</option>
-                    @foreach(['S','M','L','XL','XXL'] as $size)
-                        <option value="{{ $size }}" {{ old('kemeja_kuning_hitam', $profile->kemeja_kuning_hitam ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Blazer Merah</label>
-                <select name="blazer_merah" class="form-select">
-                    <option value="">-</option>
-                    @foreach(['S','M','L','XL','XXL'] as $size)
-                        <option value="{{ $size }}" {{ old('blazer_merah', $profile->blazer_merah ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-3 mt-3">
-                <label class="form-label">Blazer Biru</label>
-                <select name="blazer_biru" class="form-select">
-                    <option value="">-</option>
-                    @foreach(['S','M','L','XL','XXL'] as $size)
-                        <option value="{{ $size }}" {{ old('blazer_biru', $profile->blazer_biru ?? '') == $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <small class="form-text text-muted mt-3">
-            Isi ukuran yang diberikan atau biarkan "-" jika belum diterima.
-        </small>
-    </div>
-</div>
 
                <!-- MUTASI & DATA LAIN -->
-<h5 class="mt-4 mb-3 text-primary">Mutasi & Data Lainnya</h5>
+            <h5 class="mt-4 mb-3 text-primary">Mutasi & Data Lainnya</h5>
 
-<div class="row g-3">
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Jenis Mutasi</label>
-        <select name="jenis_mutasi" class="form-select">
-            <option value="">-- Pilih Jenis Mutasi / Jabatan --</option>
-            @foreach ($jabatanOptions as $value => $label)
-                <option value="{{ $value }}"
-                    {{ old('jenis_mutasi', $profile->jenis_mutasi ?? '') == $value ? 'selected' : '' }}>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
-        @error('jenis_mutasi')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
+            <div class="row g-3">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Jenis Mutasi</label>
+                    <select name="jenis_mutasi" class="form-select">
+                        <option value="">-- Pilih Jenis Mutasi / Jabatan --</option>
+                        @foreach ($jabatanOptions as $value => $label)
+                            <option value="{{ $value }}"
+                                {{ old('jenis_mutasi', $profile->jenis_mutasi ?? '') == $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('jenis_mutasi')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
 
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Tgl Mutasi Jabatan</label>
-        <input type="date" name="tgl_mutasi_jabatan" id="tgl_mutasi_jabatan" class="form-control"
-               value="{{ old('tgl_mutasi_jabatan', $profile->tgl_mutasi_jabatan?->format('Y-m-d') ?? '') }}">
-        @error('tgl_mutasi_jabatan')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tgl Mutasi Jabatan</label>
+                    <input type="date" name="tgl_mutasi_jabatan" id="tgl_mutasi_jabatan" class="form-control"
+                        value="{{ old('tgl_mutasi_jabatan', $profile->tgl_mutasi_jabatan?->format('Y-m-d') ?? '') }}">
+                    @error('tgl_mutasi_jabatan')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
 
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Masa Kerja Jabatan (bulan)</label>
-        <input type="number" id="masa_kerja_jabatan_preview" class="form-control bg-light" 
-               value="{{ old('masa_kerja_jabatan', $profile->masa_kerja_jabatan ?? 0) }}"
-               readonly disabled>
-        <input type="hidden" name="masa_kerja_jabatan" id="masa_kerja_jabatan_hidden"
-               value="{{ old('masa_kerja_jabatan', $profile->masa_kerja_jabatan ?? 0) }}">
-        <small class="form-text text-muted">
-            Dihitung otomatis dari Tanggal Mutasi Jabatan (live preview)
-        </small>
-        @error('masa_kerja_jabatan')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-</div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Masa Kerja Jabatan (bulan)</label>
+                    <input type="number" id="masa_kerja_jabatan_preview" class="form-control bg-light" 
+                        value="{{ old('masa_kerja_jabatan', $profile->masa_kerja_jabatan ?? 0) }}"
+                        readonly disabled>
+                    <input type="hidden" name="masa_kerja_jabatan" id="masa_kerja_jabatan_hidden"
+                        value="{{ old('masa_kerja_jabatan', $profile->masa_kerja_jabatan ?? 0) }}">
+                    <small class="form-text text-muted">
+                        Dihitung otomatis dari Tanggal Mutasi Jabatan (live preview)
+                    </small>
+                    @error('masa_kerja_jabatan')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
 
                 
             </div>
@@ -410,10 +430,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const rbSelect          = document.getElementById('rb');
     const ktrSelect         = document.getElementById('ktr');
     const rpInput           = document.getElementById('rp');
-    const unitSelect        = document.getElementById('biMBA_unit'); // note: id di HTML adalah 'biMBA_unit'
+    const unitSelect        = document.getElementById('biMBA_unit');
     const noCabangInput     = document.getElementById('no_cabang');
+    
     const tglMasuk          = document.getElementById('tgl_masuk');
+    const tglSelesaiMagang  = document.getElementById('tgl_selesai_magang');   // ← Harus ada id ini
     const tglLahir          = document.getElementById('tgl_lahir');
+    
     const masaKerjaDisplay  = document.getElementById('masa_kerja_display');
     const masaKerjaHidden   = document.getElementById('masa_kerja');
     const usiaDisplay       = document.getElementById('usia_display');
@@ -422,18 +445,50 @@ document.addEventListener('DOMContentLoaded', function () {
     const previewMasaJab    = document.getElementById('masa_kerja_jabatan_preview');
     const hiddenMasaJab     = document.getElementById('masa_kerja_jabatan_hidden');
 
-    // 1. Update RB/KTR/RP berdasarkan Jabatan
+    // ==================== FUNGSI MASA KERJA (DIPERBAIKI) ====================
+    function hitungMasaKerja() {
+        let startDate = null;
+
+        // Prioritas 1: Tanggal Selesai Magang (jika diisi)
+        if (tglSelesaiMagang && tglSelesaiMagang.value) {
+            startDate = new Date(tglSelesaiMagang.value);
+        } 
+        // Prioritas 2: Tanggal Masuk
+        else if (tglMasuk && tglMasuk.value) {
+            startDate = new Date(tglMasuk.value);
+        }
+
+        if (!startDate || isNaN(startDate.getTime())) {
+            if (masaKerjaDisplay) masaKerjaDisplay.value = '-';
+            if (masaKerjaHidden) masaKerjaHidden.value = '';
+            return;
+        }
+
+        const sekarang = new Date();
+        let bulan = (sekarang.getFullYear() - startDate.getFullYear()) * 12 + 
+                    (sekarang.getMonth() - startDate.getMonth());
+
+        if (sekarang.getDate() < startDate.getDate()) bulan--;
+        if (bulan < 0) bulan = 0;
+
+        const tahun = Math.floor(bulan / 12);
+        const sisa  = bulan % 12;
+
+        const text = tahun > 0 
+            ? `${tahun} tahun ${sisa} bulan` 
+            : `${sisa} bulan`;
+
+        if (masaKerjaDisplay) masaKerjaDisplay.value = text;
+        if (masaKerjaHidden) masaKerjaHidden.value = bulan;
+    }
+
+    // Fungsi lain (tetap sama)
     function updateRbKtrRp() {
         const jabatan = (jabatanSelect.value || '').trim();
-
         if (jabatan === 'Guru') {
-            rbSelect.value = 'RB30';
-            ktrSelect.value = 'KTR 1A';
-            rpInput.value = '900000';
+            rbSelect.value = 'RB30'; ktrSelect.value = 'KTR 1A'; rpInput.value = '900000';
         } else if (jabatan === 'Kepala Unit') {
-            rbSelect.value = 'RB40';
-            ktrSelect.value = 'KTR 1B';
-            rpInput.value = '1350000';
+            rbSelect.value = 'RB40'; ktrSelect.value = 'KTR 1B'; rpInput.value = '1350000';
         } else {
             rbSelect.selectedIndex = 0;
             ktrSelect.selectedIndex = 0;
@@ -441,35 +496,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // 2. Auto fill No Cabang
     function updateNoCabang() {
         noCabangInput.value = unitNoCabang[unitSelect.value] || '';
     }
 
-    // 3. Hitung Masa Kerja (dari tgl masuk)
-    function hitungMasaKerja() {
-        if (!tglMasuk.value) {
-            masaKerjaDisplay.value = '';
-            masaKerjaHidden.value = '';
-            return;
-        }
-        const masuk = new Date(tglMasuk.value);
-        const sekarang = new Date();
-        let bulan = (sekarang.getFullYear() - masuk.getFullYear()) * 12 + (sekarang.getMonth() - masuk.getMonth());
-        if (sekarang.getDate() < masuk.getDate()) bulan--;
-        if (bulan < 0) bulan = 0;
-
-        const tahun = Math.floor(bulan / 12);
-        const sisa  = bulan % 12;
-        masaKerjaDisplay.value = tahun > 0 ? `${tahun} tahun ${sisa} bulan` : `${sisa} bulan`;
-        masaKerjaHidden.value = bulan;
-    }
-
-    // 4. Hitung Usia
     function hitungUsia() {
         if (!tglLahir.value) {
-            usiaDisplay.value = '';
-            return;
+            usiaDisplay.value = ''; return;
         }
         const lahir = new Date(tglLahir.value);
         const sekarang = new Date();
@@ -479,56 +512,40 @@ document.addEventListener('DOMContentLoaded', function () {
         usiaDisplay.value = umur + ' tahun';
     }
 
-    // 5. Hitung Masa Kerja Jabatan (real-time + preview)
     function hitungMasaKerjaJabatan() {
         if (!tglMutasiJabatan.value) {
-            previewMasaJab.value = '0';
-            hiddenMasaJab.value = '0';
-            return;
+            previewMasaJab.value = '0'; hiddenMasaJab.value = '0'; return;
         }
-
+        // ... (kode lama kamu untuk masa jabatan tetap sama)
         const start = new Date(tglMutasiJabatan.value);
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        today.setHours(0,0,0,0);
         if (start > today) {
-            previewMasaJab.value = '0';
-            hiddenMasaJab.value = '0';
-            return;
+            previewMasaJab.value = '0'; hiddenMasaJab.value = '0'; return;
         }
-
         let months = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
-        if (today.getDate() < start.getDate()) {
-            months--;
-        }
-
-        // Pembulatan sisa hari (opsional, sesuai backend)
-        const projected = new Date(start);
-        projected.setMonth(projected.getMonth() + months);
-        const remainingDays = Math.floor((today - projected) / (1000 * 60 * 60 * 24));
-
-        if (remainingDays >= 15) {
-            months++;
-        }
-
+        if (today.getDate() < start.getDate()) months--;
+        const projected = new Date(start); projected.setMonth(projected.getMonth() + months);
+        if (Math.floor((today - projected) / (86400000)) >= 15) months++;
         const final = Math.max(0, months);
         previewMasaJab.value = final;
         hiddenMasaJab.value = final;
     }
 
-    // Event listeners
-    jabatanSelect.addEventListener('change', updateRbKtrRp);
-    unitSelect.addEventListener('change', updateNoCabang);
-    tglMasuk.addEventListener('change', hitungMasaKerja);
-    tglLahir.addEventListener('change', hitungUsia);
-    tglMutasiJabatan.addEventListener('change', hitungMasaKerjaJabatan);
+    // Event Listeners
+    if (jabatanSelect) jabatanSelect.addEventListener('change', updateRbKtrRp);
+    if (unitSelect) unitSelect.addEventListener('change', updateNoCabang);
+    if (tglMasuk) tglMasuk.addEventListener('change', hitungMasaKerja);
+    if (tglSelesaiMagang) tglSelesaiMagang.addEventListener('change', hitungMasaKerja);
+    if (tglLahir) tglLahir.addEventListener('change', hitungUsia);
+    if (tglMutasiJabatan) tglMutasiJabatan.addEventListener('change', hitungMasaKerjaJabatan);
 
-    // Init semua saat load
+    // Jalankan saat halaman dimuat
     updateRbKtrRp();
     updateNoCabang();
-    hitungMasaKerja();
+    hitungMasaKerja();   // ← Ini yang penting
     hitungUsia();
-    hitungMasaKerjaJabatan();   // ← ini penting agar edit langsung tampil benar
+    hitungMasaKerjaJabatan();
 });
 </script>
 @endsection

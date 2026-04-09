@@ -29,55 +29,50 @@ class KomisiController extends Controller
 }
     public function index(Request $request)
 {
-    $tahunAwal  = $request->input('tahun_awal', date('Y'));
-    $bulanAwal  = $request->input('bulan_awal');
-    $tahunAkhir = $request->input('tahun_akhir', date('Y'));
-    $bulanAkhir = $request->input('bulan_akhir');
-    $unitId     = $request->input('unit_id');           // ← tambah ini
+    // === DEFAULT = BULAN LALU (karena komisi dibayar bulan ini untuk bulan lalu) ===
+    $defaultBulan = now()->subMonth()->month;
+    $defaultTahun = now()->subMonth()->year;
+
+    $tahunAwal  = $request->input('tahun_awal', $defaultTahun);
+    $bulanAwal  = $request->input('bulan_awal', $defaultBulan);
+    $tahunAkhir = $request->input('tahun_akhir', $defaultTahun);
+    $bulanAkhir = $request->input('bulan_akhir', $defaultBulan);
+    $unitId     = $request->input('unit_id');
 
     $query = Komisi::query();
 
-    // Filter periode (tahun & bulan) - tetap sama
-    if ($tahunAwal && $bulanAwal) {
-        $query->where(function ($q) use ($tahunAwal, $bulanAwal) {
-            $q->where('tahun', '>', $tahunAwal)
-              ->orWhere(function ($qq) use ($tahunAwal, $bulanAwal) {
-                  $qq->where('tahun', $tahunAwal)->where('bulan', '>=', $bulanAwal);
-              });
+    // Filter Periode (perbaikan logika filter)
+    $query->where(function ($q) use ($tahunAwal, $bulanAwal, $tahunAkhir, $bulanAkhir) {
+        $q->where('tahun', '>=', $tahunAwal)
+          ->where('tahun', '<=', $tahunAkhir);
+    });
+
+    // Filter bulan lebih tepat
+    if ($tahunAwal == $tahunAkhir) {
+        $query->whereBetween('bulan', [$bulanAwal, $bulanAkhir]);
+    } else {
+        // Jika lintas tahun (jarang)
+        $query->where(function ($q) use ($tahunAwal, $bulanAwal, $tahunAkhir, $bulanAkhir) {
+            $q->where('tahun', $tahunAwal)->where('bulan', '>=', $bulanAwal)
+              ->orWhere('tahun', $tahunAkhir)->where('bulan', '<=', $bulanAkhir);
         });
     }
 
-    if ($tahunAkhir && $bulanAkhir) {
-        $query->where(function ($q) use ($tahunAkhir, $bulanAkhir) {
-            $q->where('tahun', '<', $tahunAkhir)
-              ->orWhere(function ($qq) use ($tahunAkhir, $bulanAkhir) {
-                  $qq->where('tahun', $tahunAkhir)->where('bulan', '<=', $bulanAkhir);
-              });
-        });
-    }
-
-    // Tambah filter unit (asumsi relasi profile punya kolom unit_id)
-    $unitId = $request->input('unit_id');
-
+    // Filter Unit
     if ($unitId) {
-        // Cari dulu nama unit berdasarkan ID yang dipilih
         $unit = \App\Models\Unit::find($unitId);
-        
         if ($unit) {
-            $namaUnit = $unit->biMBA_unit;  // atau trim(strtolower($unit->biMBA_unit)) jika perlu
-
-            $query->where('bimba_unit', $namaUnit);
-            // Alternatif case-insensitive:
-            // $query->whereRaw('LOWER(TRIM(bimba_unit)) = ?', [strtolower(trim($namaUnit))]);
+            $query->where('bimba_unit', $unit->biMBA_unit);
         }
     }
 
-    $data_komisi = $query->with('profile:id,nama,nik,unit_id')   // tambah unit_id di with
+    $data_komisi = $query->with('profile:id,nama,nik,unit_id')
                          ->orderBy('tahun')
                          ->orderBy('bulan')
                          ->orderBy('nomor_urut')
                          ->get();
 
+    // Periode Text
     $namaBulan = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',
                   7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
 
@@ -85,15 +80,10 @@ class KomisiController extends Controller
     if ($bulanAwal && $tahunAwal && $bulanAkhir && $tahunAkhir) {
         $awal  = $namaBulan[(int)$bulanAwal] . ' ' . $tahunAwal;
         $akhir = $namaBulan[(int)$bulanAkhir] . ' ' . $tahunAkhir;
-        $periodeText = "$awal → $akhir";
-    } elseif ($bulanAwal && $tahunAwal) {
-        $periodeText = $namaBulan[(int)$bulanAwal] . ' ' . $tahunAwal . ' ke atas';
-    } elseif ($bulanAkhir && $tahunAkhir) {
-        $periodeText = 'Sampai ' . $namaBulan[(int)$bulanAkhir] . ' ' . $tahunAkhir;
+        $periodeText = $awal === $akhir ? $awal : "$awal → $akhir";
     }
 
-    // Kirim data unit ke view (harus disiapkan di controller atau view composer)
-    $unitOptions = $this->getUnitOptions();   // ← sesuaikan dengan cara kamu ambil list unit
+    $unitOptions = $this->getUnitOptions();
 
     return view('komisi.index', compact(
         'data_komisi', 

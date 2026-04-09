@@ -38,68 +38,34 @@ class PenerimaanController extends Controller
 
     public function index(Request $request)
 {
-    /* ===============================
-       PARAMETER FILTER
-    =============================== */
-    $perPage = (int) $request->input('per_page', 10);
-    $search  = trim($request->input('search', ''));
-    $bulan   = $request->input('bulan');
-    $tahun   = $request->input('tahun');
-    $bimbaUnit = $request->input('bimba_unit'); // ← Nama parameter sesuai kolom di penerimaan
+    $perPage   = (int) $request->input('per_page', 10);
+    $search    = trim($request->input('search', ''));
+    $bulan     = $request->input('bulan');
+    $tahun     = $request->input('tahun');
+    $bimbaUnit = $request->input('bimba_unit');
 
-    /* ===============================
-       QUERY UTAMA
-    =============================== */
     $query = Penerimaan::query();
 
-    /* ===============================
-       FILTER NIM | NAMA MURID
-    =============================== */
+    // Filter pencarian Nama Murid / NIM
     if (!empty($search)) {
-        if (str_contains($search, '|')) {
-            [$nim, $nama] = array_map('trim', explode('|', $search));
-            $query->where('nim', $nim);
-        } else {
-            $query->where(function ($q) use ($search) {
-                $q->where('nim', 'like', "%{$search}%")
-                  ->orWhere('nama_murid', 'like', "%{$search}%");
-            });
-        }
+        $query->where(function ($q) use ($search) {
+            $q->where('nim', 'like', "%{$search}%")
+              ->orWhere('nama_murid', 'like', "%{$search}%");
+        });
     }
 
-    /* ===============================
-       FILTER BULAN & TAHUN
-    =============================== */
-    if ($bulan) {
-        $query->where('bulan', $bulan);
-    }
+    if ($bulan) $query->where('bulan', $bulan);
+    if ($tahun) $query->where('tahun', $tahun);
+    if ($bimbaUnit) $query->where('bimba_unit', $bimbaUnit);
 
-    if ($tahun) {
-        $query->where('tahun', $tahun);
-    }
-
-    /* ===============================
-       FILTER BIMBA UNIT (dari kolom bimba_unit)
-    =============================== */
-    if (!empty($bimbaUnit)) {
-        $query->where('bimba_unit', $bimbaUnit);
-    }
-
-    /* ===============================
-       CLONE UNTUK TOTAL
-    =============================== */
     $queryForSum = clone $query;
 
-    /* ===============================
-       PAGINATION
-    =============================== */
     $penerimaan = $query->orderBy('tanggal', 'desc')
-        ->paginate($perPage)
-        ->withQueryString();
+                        ->orderBy('created_at', 'desc')
+                        ->paginate($perPage)
+                        ->withQueryString();
 
-    /* ===============================
-       TOTAL PER KOMPONEN
-    =============================== */
+    // Total Ringkasan
     $totalVoucher     = $queryForSum->sum('voucher');
     $totalSpp         = $queryForSum->sum('spp');
     $totalKaosPendek  = $queryForSum->sum('kaos');
@@ -114,75 +80,17 @@ class PenerimaanController extends Controller
     $totalEvent       = $queryForSum->sum('event');
     $totalLainLain    = $queryForSum->sum('lain_lain');
 
-    /* ===============================
-   RINGKASAN SPP
-=============================== */
-$bulanFilter = $bulan
-    ? strtolower($bulan)
-    : strtolower(now()->locale('id')->translatedFormat('F'));
-
-$tahunFilter = $tahun ?? now()->year;
-
-// Hitung akhir periode filter
-$endOfPeriod = null;
-
-if (!$bulan) {
-    // Jika bulan kosong (semua bulan) → akhir tahun
-    $endOfPeriod = \Carbon\Carbon::create($tahunFilter, 12, 31)->toDateString();
-} else {
-    // Ambil index bulan dari nama Indonesia
-    $bulanMap = [
-        'januari' => 1, 'februari' => 2, 'maret' => 3, 'april' => 4,
-        'mei' => 5, 'juni' => 6, 'juli' => 7, 'agustus' => 8,
-        'september' => 9, 'oktober' => 10, 'november' => 11, 'desember' => 12
-    ];
-    $monthNum = $bulanMap[strtolower($bulanFilter)] ?? 12;
-    $endOfPeriod = \Carbon\Carbon::create($tahunFilter, $monthNum, 1)
-                                 ->endOfMonth()
-                                 ->toDateString();
-}
-
-// Ambil murid aktif/baru yang sudah bergabung sebelum/selama periode
-$muridAktif = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru'])
-    ->where(function ($q) use ($endOfPeriod) {
-        $q->whereNull('tgl_masuk')                    // kalau null, tetap hitung
-          ->orWhere('tgl_masuk', '<=', $endOfPeriod); // join sebelum atau pada akhir periode
-    })
-    ->pluck('nim');
-
-// Sudah bayar SPP di periode tersebut
-$sudahBayar = Penerimaan::whereIn('nim', $muridAktif)
-    ->whereRaw('LOWER(bulan) = ?', [$bulanFilter])
-    ->where('tahun', $tahunFilter)
-    ->where('spp', '>', 0)
-    ->select('nim', 'spp')
-    ->get();
-
-// Belum bayar: murid aktif yang tidak ada di sudahBayar
-$belumBayar = BukuInduk::whereIn('nim', $muridAktif)
-    ->whereNotIn('nim', $sudahBayar->pluck('nim'))
-    ->select('nim', 'nama as nama_murid')
-    ->orderBy('nama_murid')
-    ->get();
-
-    /* ===============================
-       DATA DROPDOWN
-    =============================== */
-    // Daftar murid aktif untuk dropdown filter nama
+    // Data untuk Autocomplete Nama Murid
     $muridList = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru'])
-        ->orderBy('nama')
         ->select('nim', 'nama as nama_murid')
+        ->orderBy('nama_murid')
         ->get();
 
-    // DROPDOWN BIMBA UNIT DARI TABEL MASTER UNITS
+    // Unit List untuk Admin
     $unitList = Unit::orderBy('biMBA_unit')
-        ->get()
-        ->pluck('label', 'biMBA_unit') // key = biMBA_unit (untuk filter), value = label cantik
+        ->pluck('biMBA_unit', 'biMBA_unit')
         ->toArray();
 
-    /* ===============================
-       RETURN VIEW
-    =============================== */
     return view('penerimaan.index', compact(
         'penerimaan',
         'totalVoucher',
@@ -198,15 +106,13 @@ $belumBayar = BukuInduk::whereIn('nim', $muridAktif)
         'totalStpb',
         'totalEvent',
         'totalLainLain',
-        'sudahBayar',
-        'belumBayar',
-        'muridList',
-        'unitList',           // List unit dengan label cantik
+        'muridList',     // ← Nama variabel ini harus sama dengan Blade
+        'unitList',
         'perPage',
         'search',
         'bulan',
         'tahun',
-        'bimbaUnit'           // Untuk retain selected di dropdown
+        'bimbaUnit'
     ));
 }
 
