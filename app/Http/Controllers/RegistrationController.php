@@ -163,9 +163,9 @@ class RegistrationController extends Controller
                 ?? '';
 
             $prefilledTmptLahir =
-    $selectedStudent->tempat_lahir
-    ?? $trial?->tempat_lahir
-    ?? '';
+                $selectedStudent->tempat_lahir
+                ?? $trial?->tempat_lahir
+                ?? '';
 
             $prefilledOrangtua =
                 $selectedStudent->orangtua
@@ -387,18 +387,17 @@ class RegistrationController extends Controller
         $reg = Registration::create($finalData);
 
         if($reg->status === 'accepted'){
+    $bi['penerimaan'] = $pay;
 
-            $bi['penerimaan'] = $pay;
-
-            $this->commitBukuIndukWithPayload(
-                $student,
-                $reg->status,
-                $bi,
-                $bimbaUnit,
-                $noCabang
-            );
-
-        }
+    $this->commitBukuIndukWithPayload(
+        $student,
+        $reg->status,
+        $bi,
+        $bimbaUnit,
+        $noCabang,
+        $reg->tanggal_daftar ?? $data['tanggal_daftar'] ?? now()->format('Y-m-d')  // kirim tanggal_daftar
+    );
+}
 
     });
 
@@ -641,13 +640,18 @@ class RegistrationController extends Controller
         }
 
         // PERUBAHAN PALING PENTING: Hanya commit saat status BERUBAH menjadi accepted
-        if ($oldStatus !== 'accepted' && $registration->status === 'accepted') {
-            Log::info("[CREATE] Registrasi langsung ACCEPTED → Commit Buku Induk | NIM: " . optional($student)->nim . " | Nama: " . optional($student)->nama);
-            $bi['penerimaan'] = $pay;
-            $this->commitBukuIndukWithPayload($student, $registration->status, $bi, $bimbaUnit, $noCabang);
-        } else {
-            Log::info("[UPDATE] Status tetap {$registration->status} (sebelum: {$oldStatus}) → Tidak ada commit Buku Induk | Nama: {$student->nama}");
-        }
+if ($oldStatus !== 'accepted' && $registration->status === 'accepted') {
+    Log::info("[UPDATE] Registrasi diubah menjadi ACCEPTED → Commit Buku Induk | NIM: " . optional($student)->nim . " | Nama: " . optional($student)->nama);
+    $bi['penerimaan'] = $pay;
+    $this->commitBukuIndukWithPayload(
+        $student,
+        $registration->status,
+        $bi,
+        $bimbaUnit,
+        $noCabang,
+        $registration->tanggal_daftar   // kirim tanggal_daftar dari registration
+    );
+}
 
         return redirect()->route('registrations.index')->with('success', 'Registrasi berhasil diperbarui!');
     }
@@ -661,258 +665,204 @@ class RegistrationController extends Controller
         return redirect()->route('registrations.index')->with('success', 'Registrasi dihapus.');
     }
 
-    protected function commitBukuIndukWithPayload(
+protected function commitBukuIndukWithPayload(
     Student $student,
     string $regStatus,
     array $bi = [],
     ?string $bimbaUnit = null,
-    ?string $noCabang = null
+    ?string $noCabang = null,
+    ?string $tanggalDaftar = null
 ): void {
 
     if ($regStatus !== 'accepted') {
-        Log::info("Commit BukuInduk dibatalkan karena status bukan accepted: {$regStatus}");
+        Log::info("Commit BukuInduk dibatalkan: {$regStatus}");
         return;
     }
 
-    DB::transaction(function () use ($student, $bi, $bimbaUnit, $noCabang) {
+    DB::transaction(function () use ($student, $bi, $bimbaUnit, $noCabang, $tanggalDaftar) {
 
         /*
         |--------------------------------------------------------------------------
-        | Generate NIM jika belum ada
+        | 1. Update atau Create BukuInduk
         |--------------------------------------------------------------------------
-        */
+        /*
+                */
+    if (empty($student->nim)) {
+        // 1. Cari unit untuk dapatkan prefix (05141)
+        $unit = Unit::where('biMBA_unit', $bimbaUnit)
+                    ->where('no_cabang', $noCabang)
+                    ->first();
 
-        if (empty($student->nim)) {
-
-            $last = BukuInduk::whereRaw('nim REGEXP "^[0-9]+$"')
+        if (!$unit) {
+            Log::error("❌ Unit {$bimbaUnit}-{$noCabang} tidak ditemukan!");
+            $student->nim = '990000001'; // Fallback
+        } else {
+            // 2. Tentukan prefix 5 digit (contoh: 05141)
+            $prefix = str_pad($unit->no_cabang, 5, '0', STR_PAD_LEFT);
+            
+            // 3. Cari NIM terakhir dengan prefix ini
+            $lastNIM = BukuInduk::where('nim', 'LIKE', $prefix . '%')
+                ->where('bimba_unit', $bimbaUnit)
                 ->lockForUpdate()
-                ->orderByRaw('CAST(nim AS UNSIGNED) DESC')
+                ->orderByRaw('CAST(SUBSTRING(nim, 6) AS UNSIGNED) DESC')
                 ->value('nim');
 
-            $next = $last ? (int)$last + 1 : 10450001;
-
-            $student->nim = str_pad((string)$next, 9, '0', STR_PAD_LEFT);
-            $student->save();
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Ambil data penerimaan
-        |--------------------------------------------------------------------------
-        */
-
-        $pay = $bi['penerimaan'] ?? [];
-
-        $tanggalPenerimaan = $pay['tanggal_penerimaan']
-            ?? $pay['tanggal']
-            ?? null;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Tentukan tanggal masuk
-        |--------------------------------------------------------------------------
-        */
-
-        $tanggalMasuk =
-            $bi['tanggal_masuk']
-            ?? $tanggalPenerimaan
-            ?? $student->tanggal_masuk
-            ?? now()->toDateString();
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Normalisasi BI agar tidak null
-        |--------------------------------------------------------------------------
-        */
-
-        $bi['nama']        = $bi['nama']        ?? $student->nama;
-        $bi['kelas']       = $bi['kelas']       ?? 'biMBA AIUEO';
-        $bi['gol']         = $bi['gol']         ?? '-';
-        $bi['kd']          = $bi['kd']          ?? '-';
-        $bi['guru']        = $bi['guru']        ?? '-';
-        $bi['tahap']       = $bi['tahap']       ?? null;
-        $bi['spp']         = $bi['spp']         ?? null;
-        $bi['kode_jadwal'] = $bi['kode_jadwal'] ?? null;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Tentukan status Buku Induk
-        |--------------------------------------------------------------------------
-        */
-
-        $statusBI = 'Baru';
-
-        $sumberForm = strtolower($student->sumber_pendaftaran ?? '');
-        $infoBimba  = strtolower($student->informasi_bimba ?? '');
-
-        if (
-            str_contains($sumberForm, 'mutasi') ||
-            str_contains($sumberForm, 'pindah') ||
-            str_contains($infoBimba, 'mutasi') ||
-            str_contains($infoBimba, 'pindah') ||
-            ($student->status_trial ?? '') === 'mutasi'
-        ) {
-            $statusBI = 'Mutasi Baru';
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Simpan Buku Induk
-        |--------------------------------------------------------------------------
-        */
-
-        $trial = $student->muridTrial;
-
-BukuInduk::updateOrCreate(
-
-    ['nim' => $student->nim],
-
-    [
-        'nama'        => $bi['nama'],
-        'bimba_unit'  => $bimbaUnit,
-        'no_cabang'   => $noCabang,
-        'status'      => $statusBI,
-
-        'tahap'       => $bi['tahap'],
-        'kelas'       => $bi['kelas'] ?? $student->kelas ?? null,
-        'gol'         => $bi['gol'],
-        'kd'          => $bi['kd'],
-        'spp'         => $bi['spp'],
-        'guru'        => $bi['guru'],
-        'kode_jadwal' => $bi['kode_jadwal'],
-
-        'orangtua' => $student->orangtua
-            ?? $trial?->orangtua
-            ?? null,
-
-'tmpt_lahir' =>
-    $bi['tmpt_lahir']
-    ?? $student->tempat_lahir
-    ?? $trial?->tempat_lahir
-    ?? null,
-    
-        'info' => $student->informasi_bimba
-            ?? $trial?->info
-            ?? null,
-
-        'tgl_lahir' =>
-            $bi['tanggal_lahir']
-            ?? $student->tgl_lahir
-            ?? $trial?->tgl_lahir
-            ?? null,
-
-        'tgl_masuk' => $tanggalMasuk,
-
-        'status_pindah' =>
-            $statusBI === 'Mutasi Baru'
-                ? 'Pindah Masuk'
-                : null,
-
-        'tanggal_pindah' =>
-            $statusBI === 'Mutasi Baru'
-                ? $tanggalMasuk
-                : null,
-    ]
-);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Simpan Data Penerimaan
-        |--------------------------------------------------------------------------
-        */
-
-        if (!empty($pay)) {
-
-            $dt = Carbon::parse($tanggalPenerimaan ?? now());
-
-            $bulan = $pay['bulan'] ?? $dt->translatedFormat('F');
-            $tahun = $pay['tahun'] ?? (int)$dt->format('Y');
-
-            $sppRp = (int)($pay['spp_rp'] ?? 0);
-
-
-            $penerimaanPayload = [
-
-                'via'        => $pay['via'] ?? 'Tunai',
-                'bulan'      => $bulan,
-                'tahun'      => $tahun,
-                'tanggal'    => $dt->toDateString(),
-
-                'nim'        => $student->nim,
-                'nama_murid' => $student->nama,
-                'bimba_unit' => $bimbaUnit,
-                'no_cabang'  => $noCabang,
-
-                'kelas'  => $bi['kelas'],
-                'gol'    => $bi['gol'],
-                'kd'     => $bi['kd'],
-                'status' => $statusBI,
-                'guru'   => $bi['guru'],
-
-                'daftar'     => (int)($pay['daftar'] ?? 0),
-                'voucher'    => (int)($pay['voucher'] ?? 0),
-                'spp'        => $sppRp,
-                'nilai_spp'  => $sppRp,
-                'kaos'       => (int)($pay['kaos'] ?? 0),
-                'kpk'        => (int)($pay['kpk'] ?? 0),
-                'sertifikat' => (int)($pay['sertifikat'] ?? 0),
-                'stpb'       => (int)($pay['stpb'] ?? 0),
-                'tas'        => (int)($pay['tas'] ?? 0),
-                'event'      => (int)($pay['event'] ?? 0),
-                'lain_lain'  => (int)($pay['lain_lain'] ?? 0),
-            ];
-
-
-            $penerimaanPayload['total'] = array_sum([
-                $penerimaanPayload['daftar'],
-                $penerimaanPayload['voucher'],
-                $penerimaanPayload['spp'],
-                $penerimaanPayload['kaos'],
-                $penerimaanPayload['kpk'],
-                $penerimaanPayload['sertifikat'],
-                $penerimaanPayload['stpb'],
-                $penerimaanPayload['tas'],
-                $penerimaanPayload['event'],
-                $penerimaanPayload['lain_lain'],
-            ]);
-
-
-            $kwitansi = $pay['kwitansi']
-                ?? ('REG-' . $student->nim . '-' . time());
-
-
-            $existing = Penerimaan::where('nim', $student->nim)
-                ->whereRaw('LOWER(TRIM(bulan)) = ?', [strtolower(trim($bulan))])
-                ->where('tahun', $tahun)
-                ->first();
-
-
-            if ($existing) {
-
-                $existing->update($penerimaanPayload);
-
+            // 4. Generate next number (4 digit akhir)
+            if ($lastNIM) {
+                $lastNumber = (int)substr($lastNIM, 5); // Ambil 4 digit terakhir
+                $nextNumber = $lastNumber + 1;
             } else {
-
-                $penerimaanPayload['kwitansi'] = $kwitansi;
-
-                Penerimaan::create($penerimaanPayload);
+                $nextNumber = 1; // Mulai dari 0001
             }
+
+            // 5. Format NIM: PREFIX(5) + NUMBER(4) = 9 digit
+            $student->nim = $prefix . str_pad((string)$nextNumber, 4, '0', STR_PAD_LEFT);
         }
+        
+        $student->save();
+        Log::info("✅ NIM: {$student->nim} | Unit: {$bimbaUnit} | Prefix: {$prefix}");
+    }
 
+    /*
+    |--------------------------------------------------------------------------
+        */
+    $pay = $bi['penerimaan'] ?? [];
+    $tanggalPenerimaan = $pay['tanggal_penerimaan'] ?? $pay['tanggal'] ?? null;
 
-        Log::info(
-            "Commit BukuInduk & Penerimaan berhasil | NIM: {$student->nim} | Nama: {$student->nama}"
+    /*
+    |--------------------------------------------------------------------------
+        */
+    $tglDaftarFinal = $tanggalDaftar 
+        ?? $bi['tanggal_daftar'] 
+        ?? $tanggalPenerimaan 
+        ?? $student->tanggal_daftar 
+        ?? now()->format('Y-m-d');
+
+    $tglMasukFinal = $tanggalPenerimaan 
+        ?? $bi['tanggal_masuk'] 
+        ?? $tglDaftarFinal;
+
+    /*
+    |--------------------------------------------------------------------------
+        */
+    $biNorm = [
+        'nama' => $bi['nama'] ?? $student->nama,
+        'kelas' => $bi['kelas'] ?? 'biMBA AIUEO',
+        'gol' => $bi['gol'] ?? '-',
+        'kd' => $bi['kd'] ?? '-',
+        'guru' => $bi['guru'] ?? '-',
+        'tahap' => $bi['tahap'] ?? null,
+        'spp' => $bi['spp'] ?? null,
+        'kode_jadwal' => $bi['kode_jadwal'] ?? null,
+        'tmpt_lahir' => $bi['tmpt_lahir'] ?? $student->tempat_lahir ?? null,
+        'tanggal_lahir' => $bi['tanggal_lahir'] ?? $student->tgl_lahir ?? null,
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+        */
+    $statusBI = 'Baru';
+    $sumberForm = strtolower($student->sumber_pendaftaran ?? '');
+    $infoBimba = strtolower($student->informasi_bimba ?? '');
+
+    if (str_contains($sumberForm, 'mutasi') || str_contains($sumberForm, 'pindah') ||
+        str_contains($infoBimba, 'mutasi') || str_contains($infoBimba, 'pindah') ||
+        ($student->status_trial ?? '') === 'mutasi') {
+        $statusBI = 'Mutasi Baru';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+        */
+    $trial = $student->muridTrial;
+
+    BukuInduk::updateOrCreate(
+        ['nim' => $student->nim],
+        [
+            'nama' => $biNorm['nama'],
+            'bimba_unit' => $bimbaUnit,
+            'no_cabang' => $noCabang,
+            'status' => $statusBI,
+            
+            'tgl_daftar' => $tglDaftarFinal,
+            'tgl_masuk' => $tglMasukFinal,
+
+            'tahap' => $biNorm['tahap'],
+            'kelas' => $biNorm['kelas'],
+            'gol' => $biNorm['gol'],
+            'kd' => $biNorm['kd'],
+            'spp' => $biNorm['spp'],
+            'guru' => $biNorm['guru'],
+            'kode_jadwal' => $biNorm['kode_jadwal'],
+
+            'orangtua' => $student->orangtua ?? $trial?->orangtua ?? null,
+            'tmpt_lahir' => $biNorm['tmpt_lahir'],
+            'info' => $student->informasi_bimba ?? $trial?->info ?? null,
+            'tgl_lahir' => $biNorm['tanggal_lahir'],
+
+            'status_pindah' => $statusBI === 'Mutasi Baru' ? 'Pindah Masuk' : null,
+            'tanggal_pindah' => $statusBI === 'Mutasi Baru' ? $tglDaftarFinal : null,
+        ]
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+        */
+    if (!empty($pay)) {
+        $dt = Carbon::parse($tanggalPenerimaan ?? now());
+        
+        $penerimaanPayload = [
+            'via' => $pay['via'] ?? 'Tunai',
+            'bulan' => $pay['bulan'] ?? $dt->translatedFormat('F'),
+            'tahun' => $pay['tahun'] ?? (int)$dt->format('Y'),
+            'tanggal' => $dt->toDateString(),
+            'nim' => $student->nim,
+            'nama_murid' => $student->nama,
+            'bimba_unit' => $bimbaUnit,
+            'no_cabang' => $noCabang,
+            'status' => $statusBI,
+            'guru' => $biNorm['guru'],
+            'kelas' => $biNorm['kelas'],
+            'gol' => $biNorm['gol'],
+            'kd' => $biNorm['kd'],
+            
+            'daftar' => (int)($pay['daftar'] ?? 0),
+            'voucher' => (int)($pay['voucher'] ?? 0),
+            'spp' => (int)($pay['spp_rp'] ?? 0),
+            'nilai_spp' => (int)($pay['spp_rp'] ?? 0),
+            'kaos' => (int)($pay['kaos'] ?? 0),
+            'kpk' => (int)($pay['kpk'] ?? 0),
+            'sertifikat' => (int)($pay['sertifikat'] ?? 0),
+            'stpb' => (int)($pay['stpb'] ?? 0),
+            'tas' => (int)($pay['tas'] ?? 0),
+            'event' => (int)($pay['event'] ?? 0),
+            'lain_lain' => (int)($pay['lain_lain'] ?? 0),
+        ];
+
+        $penerimaanPayload['total'] = $penerimaanPayload['daftar'] +
+            $penerimaanPayload['voucher'] + $penerimaanPayload['spp'] +
+            $penerimaanPayload['kaos'] + $penerimaanPayload['kpk'] +
+            $penerimaanPayload['sertifikat'] + $penerimaanPayload['stpb'] +
+            $penerimaanPayload['tas'] + $penerimaanPayload['event'] +
+            $penerimaanPayload['lain_lain'];
+
+        $kwitansi = $pay['kwitansi'] ?? ('REG-' . $student->nim . '-' . time());
+
+        Penerimaan::updateOrCreate(
+            [
+                'nim' => $student->nim,
+                'bulan' => strtolower(trim($penerimaanPayload['bulan'])),
+                'tahun' => $penerimaanPayload['tahun'],
+            ],
+            array_merge($penerimaanPayload, ['kwitansi' => $kwitansi])
         );
+    }
 
-    });
+    Log::info("✅ SUKSES | NIM: {$student->nim} | {$student->nama} | Daftar: {$tglDaftarFinal} | Masuk: {$tglMasukFinal}");
+});
 }
 
+        
     // ===== Helper functions =====
     protected function enforceTrialStatus(Student $student, array &$data): void
     {

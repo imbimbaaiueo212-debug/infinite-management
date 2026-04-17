@@ -142,6 +142,7 @@
                                 <!-- INFO -->
                                 <td>
                                     Unit: {{ $item->bimba_unit }}<br>
+                                    Tgl Daftar: {{ $item->tgl_daftar?->format('d-m-Y') }}<br>
                                     Tahap: {{ $item->tahap ?? '-' }}<br>
                                     Gol: {{ $item->gol ?? '-' }} | KD: {{ $item->kd ?? '-' }}<br>
                                     SPP: Rp {{ number_format((int) str_replace('.', '', $item->spp ?? '0'), 0, ',', '.') }}<br>
@@ -210,52 +211,52 @@
 
                                 <!-- Aksi -->
                                 <td class="text-center" style="min-width: 140px;">
-    <div class="dropdown">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" type="button"
-            data-bs-toggle="dropdown">
-            Aksi
-        </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" type="button"
+                                        data-bs-toggle="dropdown">
+                                        Aksi
+                                    </button>
 
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-                <a class="dropdown-item" href="{{ route('buku_induk.edit', $item->id) }}">
-                    ✏️ Edit
-                </a>
-            </li>
-            <li>
-                <button class="dropdown-item" type="button" data-bs-toggle="modal"
-                    data-bs-target="#detailModal{{ $item->id }}">
-                    🔍 Detail
-                </button>
-            </li>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('buku_induk.edit', $item->id) }}">
+                                                ✏️ Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item" type="button" data-bs-toggle="modal"
+                                                data-bs-target="#detailModal{{ $item->id }}">
+                                                🔍 Detail
+                                            </button>
+                                        </li>
 
-            @if (auth()->user()?->role === 'admin')
-                <li>
-                    <a class="dropdown-item" href="{{ route('buku_induk.history', $item->id) }}">
-                        🕒 Riwayat
-                    </a>
-                </li>
-            @endif
+                                        @if (auth()->user()?->role === 'admin')
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('buku_induk.history', $item->id) }}">
+                                                    🕒 Riwayat
+                                                </a>
+                                            </li>
+                                        @endif
 
-            <li>
-                <hr class="dropdown-divider">
-            </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
 
-            @if (auth()->user()?->role === 'admin')
-                <li>
-                    <form action="{{ route('buku_induk.destroy', $item->id) }}" method="POST"
-                        onsubmit="return confirm('Yakin hapus data ini?')">
-                        @csrf
-                        @method('DELETE')
-                        <button class="dropdown-item text-danger">
-                            🗑️ Hapus
-                        </button>
-                    </form>
-                </li>
-            @endif
-        </ul>
-    </div>
-</td>
+                                        @if (auth()->user()?->role === 'admin')
+                                            <li>
+                                                <form action="{{ route('buku_induk.destroy', $item->id) }}" method="POST"
+                                                    onsubmit="return confirm('Yakin hapus data ini?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="dropdown-item text-danger">
+                                                        🗑️ Hapus
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            </td>
 
                             </tr>
                             {{-- MODAL DETAIL – FULL FIELD --}}
@@ -298,6 +299,8 @@
                                                 @endphp
 
                                                 <dd class="col-sm-8">: {{ $usiaText }}</dd>
+                                                <dt class="col-sm-4">Tanggal Daftar</dt>
+                                                <dd class="col-sm-8">: <strong>{{ $item->tgl_daftar?->format('d-m-Y') }}</strong></dd>
                                                 <dt class="col-sm-4">Tanggal Masuk</dt>
                                                 <dd class="col-sm-8">: {{ $item->tgl_masuk_formatted }}</dd>
                                                 <dt class="col-sm-4">Sisa Jadwal Bulan Aktif</dt>

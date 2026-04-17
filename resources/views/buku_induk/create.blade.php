@@ -100,6 +100,12 @@
                 <input type="date" name="tgl_lahir" id="tgl_lahir" class="form-control" value="{{ old('tgl_lahir') }}">
             </div>
 
+            <div class="col-md-6 mb-3">
+                <label for="tgl_daftar">Tanggal Daftar</label>
+                <input type="date" name="tgl_daftar" id="tgl_daftar" class="form-control" value="{{ old('tgl_daftar') }}">
+                <small class="text-muted">Jika kosong, akan otomatis diisi tanggal hari ini.</small>
+            </div>
+
             {{-- Tgl Masuk --}}
             <div class="col-md-6 mb-3">
                 <label for="tgl_masuk">Tanggal Masuk <span class="text-danger">*</span></label>

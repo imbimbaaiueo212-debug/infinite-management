@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\RekapAbsensi;
 use Carbon\Carbon;
 use App\Models\Unit;
+use Illuminate\Support\Facades\Auth;
 
 class BukuInduk extends Model
 {
@@ -23,7 +24,7 @@ class BukuInduk extends Model
         'note_garansi', 'periode', 'tgl_mulai', 'tgl_akhir', 'alert', 'tgl_bayar',
         'tgl_selesai', 'alert2', 'asal_modul', 'keterangan_optional', 'level',
         'jenis_kbm', 'kode_jadwal', 'hari_jam', 'alamat_murid', 'status_pindah',
-        'tanggal_pindah', 'ke_bimba_intervio', 'keterangan', 'bimba_unit', 'no_cabang', 'info',
+        'tanggal_pindah', 'ke_bimba_intervio', 'keterangan', 'bimba_unit', 'no_cabang', 'info', 'tgl_daftar',
     ];
 
     // =================================================================
@@ -40,6 +41,7 @@ class BukuInduk extends Model
         'tgl_bayar'        => 'date',
         'tgl_selesai'      => 'date',
         'tanggal_pindah'   => 'date',
+        'tgl_daftar'       => 'date',
     ];
 
     // =================================================================
@@ -112,7 +114,7 @@ class BukuInduk extends Model
             BukuIndukHistory::create([
                 'buku_induk_id' => $bukuInduk->id,
                 'action'        => 'delete',
-                'user'          => auth()->user()?->name ?? 'system',
+                'user'          => Auth::user()?->name ?? 'system',
                 'data'          => $bukuInduk->toArray(),
             ]);
 

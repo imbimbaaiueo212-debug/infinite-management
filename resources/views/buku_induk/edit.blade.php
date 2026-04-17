@@ -95,6 +95,13 @@
                             </div>
 
                             <div class="col-md-4">
+                                <label class="form-label">Tanggal Daftar</label>
+                                <input type="date" name="tgl_daftar" class="form-control"
+                                       value="{{ old('tgl_daftar', $bukuInduk->tgl_daftar?->format('Y-m-d')) }}">
+                                <small class="text-muted">Jika kosong, akan otomatis diisi tanggal hari ini.</small>
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label">Tanggal Masuk <span class="text-danger">*</span></label>
                                 <input type="date" name="tgl_masuk" class="form-control"
                                        value="{{ old('tgl_masuk', $bukuInduk->tgl_masuk?->format('Y-m-d')) }}" required>

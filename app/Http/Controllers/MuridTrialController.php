@@ -11,6 +11,7 @@ use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class MuridTrialController extends Controller
 {
@@ -106,8 +107,8 @@ if ($selectedUnitId) {
 }
 // Jika user login adalah kepala unit → paksa filter ke unitnya sendiri
 // (cek berdasarkan jabatan user login, karena tidak ada kolom role)
-elseif (auth()->check()) {
-    $userProfile = auth()->user()->profile; // asumsi relasi user -> profile ada
+elseif (Auth::check()) {
+    $userProfile = Auth::user()->profile; // asumsi relasi user -> profile ada
     $isKepalaUnit = $userProfile && str_contains(strtolower($userProfile->jabatan ?? ''), 'kepala unit');
 
     if ($isKepalaUnit) {
@@ -246,7 +247,7 @@ dd($data);
     $request->validate([
         'status_trial'       => 'required|in:daftar_baru,baru,aktif,batal,lanjut_daftar',
         'tanggal_aktif'      => 'nullable|date',
-        'tanggal_trial_baru' => 'nullable|date',   // ← wajib ditambahkan
+        'tanggal_trial_baru' => 'nullable|date',
     ]);
 
     $statusBaru = $request->status_trial;
@@ -255,51 +256,37 @@ dd($data);
         'status_trial' => $statusBaru,
     ];
 
-    // ----------------------------------------------------
-    // CASE KHUSUS: status 'aktif'
-    // ----------------------------------------------------
     if ($statusBaru === 'aktif') {
         if ($murid_trial->tanggal_aktif) {
-            return back()->with('warning', 'Tanggal aktif sudah diatur sebelumnya dan tidak dapat diubah lagi.');
+            return back()->with('warning', 'Tanggal aktif sudah diatur sebelumnya.');
         }
-
-        $updateData['tanggal_aktif'] = $request->filled('tanggal_aktif')
-            ? $request->tanggal_aktif
+        $updateData['tanggal_aktif'] = $request->filled('tanggal_aktif') 
+            ? $request->tanggal_aktif 
             : now()->format('Y-m-d');
-
-        // Optional: reset tanggal trial baru jika berubah ke aktif
         $updateData['tanggal_trial_baru'] = null;
-    }
 
-    // ----------------------------------------------------
-    // CASE KHUSUS: status 'baru'
-    // ----------------------------------------------------
-    elseif ($statusBaru === 'baru') {
+    } elseif ($statusBaru === 'baru') {
         if ($murid_trial->tanggal_trial_baru) {
-            return back()->with('warning', 'Tanggal trial baru sudah diatur sebelumnya dan tidak dapat diubah lagi.');
+            return back()->with('warning', 'Tanggal trial baru sudah diatur sebelumnya.');
         }
-
-        $updateData['tanggal_trial_baru'] = $request->filled('tanggal_trial_baru')
-            ? $request->tanggal_trial_baru
+        $updateData['tanggal_trial_baru'] = $request->filled('tanggal_trial_baru') 
+            ? $request->tanggal_trial_baru 
             : now()->format('Y-m-d');
-
-        // Optional: reset tanggal aktif jika berubah ke 'baru'
         $updateData['tanggal_aktif'] = null;
-    }
 
-    // ----------------------------------------------------
-    // Status lain (daftar_baru, lanjut_daftar, batal)
-    // ----------------------------------------------------
-    else {
-        // Reset kedua tanggal khusus
+    } else {
+        // Semua status lain (batal, lanjut_daftar, dll)
         $updateData['tanggal_aktif']      = null;
         $updateData['tanggal_trial_baru'] = null;
+
+        // 🔥 OTOMATIS KOSONGKAN NAMA GURU SAAT BATAL
+        if ($statusBaru === 'batal') {
+            $updateData['guru_trial'] = null;
+        }
     }
 
-    // Lakukan update sekali saja
     $murid_trial->update($updateData);
 
-    // Proses promotion / lanjut daftar jika diperlukan
     $result = $this->processStatusPromotion($murid_trial);
 
     if (($result['action'] ?? null) === 'registration_create') {
@@ -307,13 +294,12 @@ dd($data);
             ->with($result['type'], $result['message']);
     }
 
-    // Pesan sukses yang lebih deskriptif (opsional tapi membantu debugging)
     $message = match ($statusBaru) {
-        'aktif'         => 'Status diubah menjadi AKTIF dan tanggal aktif telah disimpan.',
-        'baru'          => 'Status diubah menjadi TRIAL BARU dan tanggal trial telah disimpan.',
+        'batal'         => 'Status diubah menjadi BATAL dan nama guru telah dikosongkan otomatis.',
+        'aktif'         => 'Status diubah menjadi AKTIF.',
+        'baru'          => 'Status diubah menjadi TRIAL BARU.',
         'lanjut_daftar' => 'Status diubah menjadi LANJUT DAFTAR.',
-        'batal'         => 'Status diubah menjadi BATAL.',
-        default         => 'Status berhasil diubah menjadi ' . ucfirst($statusBaru) . '.',
+        default         => 'Status berhasil diubah.',
     };
 
     return redirect()->route('murid_trials.index')
@@ -410,11 +396,13 @@ dd($data);
     }
 
     public function destroy(MuridTrial $murid_trial)
-    {
-        $murid_trial->delete();
-        return redirect()->route('murid_trials.index')
-            ->with('success', 'Data murid trial berhasil dihapus.');
-    }
+{
+    $murid_trial->update(['guru_trial' => null]); // aman
+    $murid_trial->delete();
+
+    return redirect()->route('murid_trials.index')
+        ->with('success', 'Data murid trial berhasil dihapus.');
+}
 
     public function updateGuru(Request $request, MuridTrial $muridTrial)
 {

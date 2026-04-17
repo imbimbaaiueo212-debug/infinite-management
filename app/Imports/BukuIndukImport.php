@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class BukuIndukImport implements ToCollection, WithHeadingRow
 {
@@ -43,16 +44,22 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             ]);
 
             /* =====================================================
-             * KONVERSI TANGGAL
+             * KONVERSI TANGGAL ← TAMBAH tgl_daftar
              * ===================================================== */
-            $tglLahir   = $this->convertExcelDate($row['tgl_lahir'] ?? null);
-            $tglMasuk   = $this->convertExcelDate($row['tgl_masuk'] ?? null);
-            $tglKeluar  = $this->convertExcelDate($row['tgl_keluar'] ?? null);
-            $tglMulai   = $this->convertExcelDate($row['tgl_mulai'] ?? null);
-            $tglAkhir   = $this->convertExcelDate($row['tgl_akhir'] ?? null);
-            $tglBayar   = $this->convertExcelDate($row['tgl_bayar'] ?? null);
-            $tglSelesai = $this->convertExcelDate($row['tgl_selesai'] ?? null);
-            $tglPindah  = $this->convertExcelDate($row['tanggal_pindah'] ?? null);
+            $tglLahir    = $this->convertExcelDate($row['tgl_lahir'] ?? null);
+            $tglDaftar   = $this->convertExcelDate($row['tgl_daftar'] ?? null);  // ← NEW
+            $tglMasuk    = $this->convertExcelDate($row['tgl_masuk'] ?? null);
+            $tglKeluar   = $this->convertExcelDate($row['tgl_keluar'] ?? null);
+            $tglMulai    = $this->convertExcelDate($row['tgl_mulai'] ?? null);
+            $tglAkhir    = $this->convertExcelDate($row['tgl_akhir'] ?? null);
+            $tglBayar    = $this->convertExcelDate($row['tgl_bayar'] ?? null);
+            $tglSelesai  = $this->convertExcelDate($row['tgl_selesai'] ?? null);
+            $tglPindah   = $this->convertExcelDate($row['tanggal_pindah'] ?? null);
+
+            // ← NEW: tgl_daftar default hari ini jika kosong
+            if (!$tglDaftar) {
+                $tglDaftar = Carbon::today();
+            }
 
             $usia = $tglLahir ? $tglLahir->age : null;
             $lama_bljr = $tglMasuk
@@ -60,13 +67,12 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 : null;
 
             /* =====================================================
-             * OTOMATISASI STATUS (INI BAGIAN BARU / DIPERBAIKI)
+             * OTOMATISASI STATUS
              * ===================================================== */
             $statusInput = trim((string) ($row['status'] ?? ''));
 
             $status = $statusInput;
 
-            // Hanya otomatisasi jika status di Excel kosong
             if (empty($statusInput)) {
                 $today = Carbon::today();
 
@@ -74,24 +80,17 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                     if ($tglKeluar->lessThanOrEqualTo($today)) {
                         $status = 'Keluar';
                     } else {
-                        // tgl_keluar di masa depan → masih aktif
                         $status = 'Aktif';
                     }
                 } elseif ($tglMasuk) {
                     if ($tglMasuk->lessThanOrEqualTo($today)) {
-                        // sudah masuk
                         $status = 'Aktif';
                     } else {
-                        // masuk di masa depan atau hari ini
                         $status = 'Baru';
                     }
                 } else {
-                    // tidak ada tgl_masuk & tgl_keluar → default aktif
                     $status = 'Aktif';
                 }
-
-                // Optional: bisa tambah log untuk debug
-                // Log::info("Status otomatis untuk NIM {$nim}: {$status} (masuk: {$tglMasuk?->toDateString()}, keluar: {$tglKeluar?->toDateString()})");
             }
 
             /* =====================================================
@@ -132,7 +131,7 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 $this->syncCabangUnitFromDB($row, $bimbaUnit, $nim);
 
             /* =====================================================
-             * DATA FINAL (FULL FIELD)
+             * DATA FINAL (FULL FIELD) ← TAMBAH tgl_daftar
              * ===================================================== */
             $data = [
                 // ===== IDENTITAS =====
@@ -143,16 +142,19 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 'kelas'      => $kelas,
                 'guru'       => $guru,
 
+                // ===== TANGGAL ← TAMBAH tgl_daftar
+                'tgl_daftar'     => $tglDaftar->format('Y-m-d'),  // ← NEW: POSISI SETELAH nim
+                'tgl_masuk'      => $tglMasuk?->format('Y-m-d'),
+                'tgl_keluar'     => $tglKeluar?->format('Y-m-d'),
+                'tanggal_pindah' => $tglPindah?->format('Y-m-d'),
+
                 // ===== AKADEMIK & KEUANGAN =====
                 'gol'        => strtoupper(trim($row['gol'] ?? '')),
                 'kd'         => strtoupper(trim($row['kd'] ?? '')),
                 'spp'        => $spp,
 
-                // ===== STATUS & TANGGAL =====
-                'tgl_masuk'      => $tglMasuk?->format('Y-m-d'),
-                'tgl_keluar'     => $tglKeluar?->format('Y-m-d'),
-                'tanggal_pindah' => $tglPindah?->format('Y-m-d'),
-                'status'         => $status,   // ← menggunakan status yang sudah diolah
+                // ===== STATUS =====
+                'status'         => $status,
 
                 // ===== BIODATA =====
                 'tmpt_lahir' => trim($row['tmpt_lahir'] ?? ''),
@@ -205,8 +207,8 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 BukuIndukHistory::create([
                     'buku_induk_id' => $bukuInduk->id,
                     'action' => 'update_import',
-                    'user'   => auth()->user()?->name ?? 'import_system',
-                    'note'   => "Updated via import | Status: {$status} | SPP: {$spp_source} | Jadwal: ".($row['kode_jadwal'] ?? '-'),
+                    'user'   => Auth::user()?->name ?? 'import_system',
+                    'note'   => "Updated via import | tgl_daftar: {$data['tgl_daftar']} | Status: {$status} | SPP: {$spp_source}",
                 ]);
             } else {
                 $bukuInduk = BukuInduk::create($data);
@@ -214,14 +216,15 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 BukuIndukHistory::create([
                     'buku_induk_id' => $bukuInduk->id,
                     'action' => 'import_create',
-                    'user'   => auth()->user()?->name ?? 'import_system',
-                    'note'   => "Created via import | Status: {$status} | SPP: {$spp_source} | Jadwal: ".($row['kode_jadwal'] ?? '-'),
+                    'user'   => Auth::user()?->name ?? 'import_system',
+                    'note'   => "Created via import | tgl_daftar: {$data['tgl_daftar']} | Status: {$status} | SPP: {$spp_source}",
                 ]);
             }
         }
     }
+
     /* =====================================================
-     * SINKRON UNIT ↔ CABANG
+     * SINKRON UNIT ↔ CABANG (TIDAK BERUBAH)
      * ===================================================== */
     private function syncCabangUnitFromDB(Collection $row, ?string $bimbaUnit, string $nim): array
     {
@@ -234,12 +237,12 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
         if ($noCabang && !$unit) {
             $found = Unit::withoutGlobalScopes()
                 ->where('no_cabang', $noCabang)->first();
-            if ($found) $unit = $found->biMBA_unit;
+            if ($found) $unit = $found->bimba_unit;
         }
 
         if ($unit && !$noCabang) {
             $found = Unit::withoutGlobalScopes()
-                ->whereRaw('UPPER(biMBA_unit) = ?', [strtoupper($unit)])
+                ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
                 ->first();
             if ($found) $noCabang = $found->no_cabang;
         }
@@ -247,7 +250,7 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
         if ($unit && $noCabang) {
             $valid = Unit::withoutGlobalScopes()
                 ->where('no_cabang', $noCabang)
-                ->whereRaw('UPPER(biMBA_unit) = ?', [strtoupper($unit)])
+                ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
                 ->exists();
 
             if (!$valid) {
@@ -259,7 +262,7 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
     }
 
     /* =====================================================
-     * HELPER
+     * HELPER (TIDAK BERUBAH)
      * ===================================================== */
     private function getHeaderValue(Collection $row, array $possibleKeys): ?string
     {

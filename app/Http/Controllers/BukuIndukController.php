@@ -25,11 +25,11 @@ class BukuIndukController extends Controller
         $currentMonth = $now->month;
 
         BukuInduk::where('status', 'baru')
-    ->whereNotNull('tgl_masuk')
-    ->whereDate('tgl_masuk', '<=', now()->subDays(30))
-    ->update([
-        'status' => 'aktif'
-    ]);
+        ->whereNotNull('tgl_masuk')
+        ->whereDate('tgl_masuk', '<=', now()->subDays(30))
+        ->update([
+            'status' => 'aktif'
+        ]);
 
         // ========================================================
         // PAGINATION & QUERY
@@ -323,6 +323,9 @@ if (!$isAdmin && $userUnit) {
             'no_cabang' => 'required|string|max:20',
         ]);
 
+        // ← TAMBAHKAN INI setelah $data = $request->validate([...])
+        $data['tgl_daftar'] = $request->filled('tgl_daftar') ? $request->tgl_daftar : now()->toDateString();
+
         // Verifikasi no_cabang sesuai bimba_unit
         $correctNoCabang = Unit::where('bimba_unit', $data['bimba_unit'])->value('no_cabang');
         if (!$correctNoCabang || $data['no_cabang'] !== $correctNoCabang) {
@@ -470,6 +473,7 @@ if (!$isAdmin && $userUnit) {
 
         'tmpt_lahir' => 'nullable|string|max:50',
         'tgl_lahir'  => 'nullable|date',
+        'tgl_daftar' => 'nullable|date',
         'tgl_masuk'  => 'required|date',
         'tgl_keluar' => 'nullable|date',
 
@@ -524,6 +528,11 @@ if (!$isAdmin && $userUnit) {
         'no_cabang'  => 'required|string',
         'info'       => 'required|string',
     ]);
+
+    // ← TAMBAHKAN INI
+    if (!$data['tgl_daftar']) {
+        $data['tgl_daftar'] = now()->toDateString();
+    }
 
     /* =====================================================
      * NORMALISASI TANGGAL KOSONG
