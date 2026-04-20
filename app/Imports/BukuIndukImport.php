@@ -56,10 +56,10 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             $tglSelesai  = $this->convertExcelDate($row['tgl_selesai'] ?? null);
             $tglPindah   = $this->convertExcelDate($row['tanggal_pindah'] ?? null);
 
-            // ← NEW: tgl_daftar default hari ini jika kosong
-            if (!$tglDaftar) {
-                $tglDaftar = Carbon::today();
-            }
+                // jangan di pake kocak
+                // if (!$tglDaftar) {
+                //     $tglDaftar = Carbon::today();
+                // }
 
             $usia = $tglLahir ? $tglLahir->age : null;
             $lama_bljr = $tglMasuk
@@ -143,7 +143,7 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
                 'guru'       => $guru,
 
                 // ===== TANGGAL ← TAMBAH tgl_daftar
-                'tgl_daftar'     => $tglDaftar->format('Y-m-d'),  // ← NEW: POSISI SETELAH nim
+                'tgl_daftar'     => $tglDaftar?->format('Y-m-d'),   // ← ini otomatis null jika $tglDaftar null
                 'tgl_masuk'      => $tglMasuk?->format('Y-m-d'),
                 'tgl_keluar'     => $tglKeluar?->format('Y-m-d'),
                 'tanggal_pindah' => $tglPindah?->format('Y-m-d'),
