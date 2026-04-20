@@ -5,6 +5,8 @@ use App\Models\BukuInduk;
 use Revolution\Google\Sheets\Facades\Sheets;
 use Google\Service\Sheets as GoogleSheets;
 use Google\Client as GoogleClient;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 use App\Models\MuridTrial;
 use Carbon\Carbon;
 use App\Http\Controllers\{
@@ -253,6 +255,10 @@ Route::get('/students/{student}/history/json', [\App\Http\Controllers\StudentCon
     ->name('students.history.json')->middleware('auth');
 Route::get('/wheel/humas', [StudentController::class, 'wheelForHumas'])
     ->name('wheel.humas');
+Route::post('/students/{student}/reactivate', [StudentController::class, 'reactivate'])
+     ->name('students.reactivate');
+Route::post('/students/{student}/reactivate', [StudentController::class, 'reactivate'])
+     ->name('students.reactivate');
 
 //Buku Induk Router
 Route::resource('buku_induk', BukuIndukController::class)->middleware('auth');
@@ -576,7 +582,7 @@ Route::get('/pemesanan-sertifikat/siswa-by-unit/{unitId}', function ($unitId) {
 
         return response()->json($siswas);
     } catch (\Exception $e) {
-        \Log::error('AJAX Siswa Error: ' . $e->getMessage());
+        Log::error('AJAX Siswa Error: ' . $e->getMessage());
         return response()->json(['error' => 'Gagal memuat siswa'], 500);
     }
 })->middleware('auth');

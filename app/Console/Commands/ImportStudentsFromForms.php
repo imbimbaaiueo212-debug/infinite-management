@@ -38,48 +38,128 @@ class ImportStudentsFromForms extends Command
         if ($this->option('dd') && $index > 0) break;
 
         try {
-            $payload = $this->mapRow($row);
+            $payload = $this->mapRow((array) $row);
 
             if (empty($payload['nama'])) {
                 $skipped++;
                 continue;
             }
 
-            // DETEKSI MUTASI (kata mutasi, pindah, transfer, dll)
-            $sourceFromForm = $payload['sumber_pendaftaran'] ?? '';
-            $isMutasi = preg_match('/\b(mutasi|pindah|pindahan|transfer|pindah cabang)\b/i', $sourceFromForm);
+            // ================== DETEKSI JENIS PENDAFTARAN ==================
+            $sumber = strtolower(trim($payload['sumber_pendaftaran'] ?? ''));
 
-            // Jika mutasi → source = direct + buat NIM
-            // Jika bukan → source = trial + NIM = null
-            $payload['source'] = $isMutasi ? 'direct' : 'trial';
-            $payload['nim']    = $isMutasi ? $this->nextNim($payload['bimba_unit'] ?? null, $payload['no_cabang'] ?? null) : null;
+            $isAktifKembali = preg_match('/\b(aktif kembali|aktif ulang|masuk kembali|reaktif|kembali masuk|daftar lagi|balik lagi|ikut lagi|aktif lagi|kembali daftar)\b/i', $sumber);
+            $isMutasi       = preg_match('/\b(mutasi|pindah|pindahan|transfer|pindah cabang)\b/i', $sumber);
+
+            if ($isAktifKembali) {
+                $payload['source'] = 'direct';
+                $payload['is_aktif_kembali'] = true;
+                $this->info("🔄 DETEKSI AKTIF KEMBALI → {$payload['nama']}");
+            } elseif ($isMutasi) {
+                $payload['source'] = 'direct';
+                $payload['is_aktif_kembali'] = false;
+            } else {
+                $payload['source'] = 'trial';
+                $payload['is_aktif_kembali'] = false;
+            }
 
             $key = $this->buildUpsertKey($payload);
 
             DB::transaction(function () use (
-                &$imported, &$updated, &$skipped, $payload, $key, $isMutasi
+                &$imported, &$updated, &$skipped, $payload, $key, $isMutasi, $isAktifKembali
             ) {
-                $student = Student::where($key)->lockForUpdate()->first();
+                $student = null;
+                $namaForm = trim($payload['nama'] ?? '');
+                $tglLahir = $payload['tgl_lahir'] ?? null;
+                $bimbaUnit = $payload['bimba_unit'] ?? null;
+
+                                // ====================== 1. KHUSUS AKTIF KEMBALI - PENCARIAN SUPER KUAT ======================
+                if ($isAktifKembali) {
+                    $this->info("🔍 Mencari NIM lama di Buku Induk untuk: {$namaForm} | Unit: {$bimbaUnit}");
+
+                    $bukuInduk = BukuInduk::whereNotNull('nim')
+                        ->where(function ($q) use ($namaForm) {
+                            $clean = trim(strtoupper($namaForm));
+                            $q->whereRaw('TRIM(UPPER(nama)) = ?', [$clean])
+                              ->orWhereRaw('UPPER(nama) LIKE ?', ['%' . $clean . '%'])
+                              ->orWhereRaw('REPLACE(UPPER(nama), " ", "") LIKE ?', ['%' . str_replace(' ', '', $clean) . '%'])
+                              ->orWhereRaw('SOUNDEX(nama) = SOUNDEX(?)', [$namaForm]);
+                        })
+                        ->when($tglLahir, fn($q) => $q->where('tgl_lahir', $tglLahir))
+                        ->when($bimbaUnit, fn($q) => $q->where('bimba_unit', $bimbaUnit))
+                        // Lebih longgar status
+                        ->whereIn('status', ['keluar', 'Keluar', 'KELUAR', 'aktif kembali', 'Aktif Kembali', 'Baru', 'Aktif'])
+                        ->orderByRaw("CASE 
+                            WHEN status IN ('keluar', 'Keluar', 'KELUAR') THEN 1 
+                            WHEN status IN ('aktif kembali', 'Aktif Kembali') THEN 2 
+                            ELSE 3 END")
+                        ->orderBy('tgl_keluar', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if ($bukuInduk && !empty($bukuInduk->nim)) {
+                        $this->info("✅ DITEMUKAN di Buku Induk → NIM: {$bukuInduk->nim} | Status: {$bukuInduk->status}");
+
+                        $student = Student::where('nim', $bukuInduk->nim)
+                                          ->lockForUpdate()
+                                          ->first();
+
+                        if ($student) {
+                            $this->info("✅ Record Student sudah ada, pakai NIM lama");
+                        } else {
+                            $this->info("✅ Record Student belum ada → akan dibuat dengan NIM lama");
+                            $payload['nim'] = $bukuInduk->nim;
+                        }
+                    } else {
+                        $this->warn("❌ TIDAK DITEMUKAN data lama di Buku Induk untuk: {$namaForm}");
+                        Log::warning('Aktif Kembali gagal menemukan', [
+                            'nama'       => $namaForm,
+                            'bimba_unit' => $bimbaUnit,
+                            'tgl_lahir'  => $tglLahir
+                        ]);
+                    }
+                }
+
+                // ====================== 2. Cari dengan key normal jika belum ketemu ======================
+                if (!$student) {
+                    $student = Student::where($key)->lockForUpdate()->first();
+                }
 
                 // Resolve no_cabang
                 if (!empty($payload['bimba_unit']) && empty($payload['no_cabang'])) {
                     $payload['no_cabang'] = $this->resolveNoCabangFromBimbaUnit($payload['bimba_unit']);
                 }
 
+                                // ====================== 3. CREATE / UPDATE ======================
                 if (!$student) {
+                    // Murid BENAR-BENAR baru atau Aktif Kembali yang belum ada di Student
+                    if (empty($payload['nim'])) {   // Hanya buat NIM baru kalau belum ada
+                        if ($isAktifKembali || $isMutasi) {
+                            $payload['nim'] = $this->nextNim($payload['bimba_unit'] ?? null, $payload['no_cabang'] ?? null);
+                            $this->warn("⚠️ Membuat NIM BARU untuk " . ($isAktifKembali ? 'Aktif Kembali' : 'Mutasi') . ": {$payload['nim']}");
+                        }
+                    } else {
+                        $this->info("✅ Menggunakan NIM lama dari Buku Induk: {$payload['nim']}");
+                    }
+
                     $student = Student::create($payload);
                     $imported++;
 
-                    if ($isMutasi) {
-                        $this->info("BARU (Mutasi → NIM dibuat: {$student->nim}): {$student->nama}");
-                        // TIDAK MASUK BUKU INDUK → tunggu registrasi di-approve
-                    } else {
-                        $this->info("BARU (Trial Baru): {$student->nama}");
-                    }
-                } else {
+                    $this->info($isAktifKembali 
+                        ? "✅ AKTIF KEMBALI (menggunakan NIM lama: {$student->nim}): {$student->nama}" 
+                        : "✅ BARU " . ($isMutasi ? "(Mutasi)" : "(Trial)"));
+                } 
+                else {
+                    // MURID SUDAH ADA
+                    $bukuInduk = BukuInduk::where('nim', $student->nim)->first();
+                    $wasKeluar = $bukuInduk && !empty($bukuInduk->tgl_keluar);
+
                     $student->fill($payload);
 
-                    if ($isMutasi) {
+                    if ($isAktifKembali) {
+                        $student->source = 'direct';
+                        $student->nim = $bukuInduk->nim ?? $student->nim;   // Pastikan NIM tidak berubah
+                    } elseif ($isMutasi) {
                         $student->source = 'direct';
                         if (empty($student->nim)) {
                             $student->nim = $this->nextNim($student->bimba_unit, $student->no_cabang);
@@ -87,27 +167,28 @@ class ImportStudentsFromForms extends Command
                     } else {
                         $student->source = 'trial';
                         $student->nim = null;
-                        $student->promoted_at = null;
                     }
 
                     if ($student->isDirty()) {
                         $student->save();
                         $updated++;
 
-                        if ($isMutasi) {
-                            $this->info("UPDATE → Mutasi (NIM: {$student->nim}): {$student->nama}");
-                            // TIDAK MASUK BUKU INDUK
+                        if ($isAktifKembali && $wasKeluar && $bukuInduk) {
+                            $this->reactivateExistingStudent($student, $payload, $bukuInduk);
+                            $this->info("✅ AKTIF KEMBALI BERHASIL (NIM lama: {$student->nim}): {$student->nama}");
+                        } elseif ($isMutasi) {
+                            $this->info("✅ UPDATE Mutasi (NIM: {$student->nim}): {$student->nama}");
                         } else {
-                            $this->info("UPDATE → Trial Baru: {$student->nama}");
+                            $this->info("✅ UPDATE Trial: {$student->nama}");
                         }
                     } else {
                         $skipped++;
+                        $this->info("⏭️ Tidak ada perubahan untuk: {$student->nama}");
                     }
                 }
 
-                // Hanya buat trial relation jika BUKAN mutasi
-                if (!$isMutasi) {
-                    $this->ensureTrialRelation($student); // status 'baru'
+                if (!$isMutasi && !$isAktifKembali) {
+                    $this->ensureTrialRelation($student, 'baru');
                 }
             });
 
@@ -201,6 +282,17 @@ class ImportStudentsFromForms extends Command
             'upload file kk' => 'foto_kk',
             'dokumen kk' => 'foto_kk',
             'link foto kk' => 'foto_kk',
+
+            // Foto Mutasi
+            'upload surat mutasi' => 'foto_mutasi',
+            'upload mutasi' => 'foto_mutasi',
+            'mutasi' => 'foto_mutasi',
+            'foto mutasi' => 'foto_mutasi',
+            'upload kartu mutasi' => 'foto_mutasi',
+            'kartu mutasi' => 'foto_mutasi',
+            'file mutasi' => 'foto_mutasi',
+            'upload file mutasi' => 'foto_mutasi',
+            'dokumen mutasi' => 'foto_mutasi',
 
             // mapping untuk biMBA unit
             'bimba unit' => 'bimba_unit',
@@ -833,5 +925,52 @@ class ImportStudentsFromForms extends Command
             'source' => $payload['source'] ?? ($student->source ?? null),
             'murid_trial_id' => $student->murid_trial_id ?? null,
         ];
+    }
+
+    /**
+     * Proses Aktif Kembali murid lama (pakai NIM yang sama)
+     */
+    protected function reactivateExistingStudent(Student $student, array $payload, BukuInduk $bukuInduk): void
+    {
+        $tanggalMasukBaru = $payload['tanggal_masuk'] ?? now()->format('Y-m-d');
+
+        // Clear status keluar & update tanggal masuk
+        $bukuInduk->update([
+            'tgl_keluar'       => null,
+            'kategori_keluar'  => null,
+            'alasan'           => null,
+            'tanggal_masuk'    => $tanggalMasukBaru,
+            'status'           => 'Aktif Kembali',
+            'keterangan'       => trim(($bukuInduk->keterangan ?? '') . "\n\n[OTOMATIS via Google Form] Aktif kembali pada " . now()->format('d/m/Y')),
+        ]);
+
+        // Update Student juga
+        $student->update([
+            'tanggal_masuk' => $tanggalMasukBaru,
+            'source'        => 'direct',
+        ]);
+
+        // Catat riwayat
+        if (class_exists(\App\Models\StudentHistory::class)) {
+            \App\Models\StudentHistory::create([
+                'student_id' => $student->id,
+                'user_id'    => null, // dari import
+                'diff'       => [
+                    'aktif_kembali' => [
+                        'via'                => 'google_form',
+                        'nim'                => $student->nim,
+                        'tanggal_masuk_baru' => $tanggalMasukBaru,
+                        'old_tgl_keluar'     => $bukuInduk->getOriginal('tgl_keluar'),
+                    ]
+                ],
+                'ip' => 'system-import',
+            ]);
+        }
+
+        Log::info('Murid aktif kembali via Google Form (NIM lama)', [
+            'nim'  => $student->nim,
+            'nama' => $student->nama,
+            'tanggal_masuk' => $tanggalMasukBaru,
+        ]);
     }
 }

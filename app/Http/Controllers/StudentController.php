@@ -60,17 +60,27 @@ class StudentController extends Controller
         'Jam' => 'jam',
 
         // === TAMBAHAN BARU: FOTO KK (semua kemungkinan header dari Google Form) ===
-    'Upload Foto KK'                  => 'foto_kk',
-    'Upload KK'                         => 'foto_kk',
-    'Kartu Keluarga'                  => 'foto_kk',
-    'Foto Kartu Keluarga'             => 'foto_kk',
-    'Upload Kartu Keluarga'           => 'foto_kk',
-    'KK'                              => 'foto_kk',
-    'File KK'                         => 'foto_kk',
-    'Upload File KK'                  => 'foto_kk',
-    'Dokumen KK'                      => 'foto_kk',
-    'Link Foto KK'                    => 'foto_kk',
-    'Link Kartu Keluarga'             => 'foto_kk',
+        'Upload Foto KK'                  => 'foto_kk',
+        'Upload KK'                         => 'foto_kk',
+        'Kartu Keluarga'                  => 'foto_kk',
+        'Foto Kartu Keluarga'             => 'foto_kk',
+        'Upload Kartu Keluarga'           => 'foto_kk',
+        'KK'                              => 'foto_kk',
+        'File KK'                         => 'foto_kk',
+        'Upload File KK'                  => 'foto_kk',
+        'Dokumen KK'                      => 'foto_kk',
+        'Link Foto KK'                    => 'foto_kk',
+        'Link Kartu Keluarga'             => 'foto_kk',
+
+        // === FOTO MUTASI ===
+        'Upload Foto Mutasi'        => 'foto_mutasi',
+        'Foto Mutasi'               => 'foto_mutasi',
+        'Upload Mutasi'             => 'foto_mutasi',
+        'File Mutasi'               => 'foto_mutasi',
+        'Dokumen Mutasi'            => 'foto_mutasi',
+        'Link Foto Mutasi'          => 'foto_mutasi',
+        'Link Surat Mutasi'         => 'foto_mutasi',
+        'Surat Mutasi'              => 'foto_mutasi',
 
         // TAMBAHAN UNTUK CABANG & UNIT
         'Cabang' => 'no_cabang',
@@ -118,12 +128,10 @@ class StudentController extends Controller
     if (str_contains($lower, 'sapta taruna iv')) {
     return '01045';
 }
-    if (str_contains($lower, 'pondok indah')) {
-        return '05141';
+    if (str_contains($lower, 'villa bekasi indah 2')) {
+        return '00340';
     }
-    if (str_contains($lower, 'kebayoran')) {
-        return '05142';
-    }
+    
     // tambah unit lain di sini kalau perlu...
 
     // === Coba ambil kode angka langsung dari teks (misal: "05141 Griya Pesona Madani") ===
@@ -613,11 +621,8 @@ protected function resolveKodeUnit(?string $bimbaUnit): string
     if (str_contains($lower, 'sapta taruna iv') || str_contains($lower, 'sapta taruna 4')) {
         return '01045';
     }
-    if (str_contains($lower, 'pondok indah')) {
-        return '05141';
-    }
-    if (str_contains($lower, 'kebayoran')) {
-        return '05142';
+    if (str_contains($lower, 'villa bekasi indah 2') || str_contains($lower, 'vbi 2')) {
+        return '00340';
     }
 
     // Ambil angka 5 digit langsung dari teks (misal: "05141 Griya Pesona Madani")
@@ -798,43 +803,11 @@ protected function resolveKodeUnit(?string $bimbaUnit): string
             ->with('success', "Data student {$student->nama} (NIM: {$student->nim}) telah dihapus.");
     }
 
-    // -------------------------------------------------------------------------
-    // importFromSheet: panggil command dan lalu buat registrasi otomatis
-    // serta pasca-import isi no_cabang secara deterministik
-    // -------------------------------------------------------------------------
-   public function importFromSheet(Request $request)
+    /**
+ * Perbaiki semua no_cabang yang kosong atau salah berdasarkan bimba_unit
+ */
+protected function fixAllNoCabang(): void
 {
-    $sheet = $request->input('sheet', 'Registrasi');
-
-    $exit   = Artisan::call('forms:import-students', ['sheet' => $sheet]);
-    $output = trim(Artisan::output());
-
-    // === 1. Buat Registration otomatis untuk student direct ===
-    $directStudents = \App\Models\Student::where('source', 'direct')
-        ->whereDoesntHave('registrations', function ($q) {
-            $q->whereIn('status', ['pending', 'verified', 'accepted']);
-        })
-        ->get();
-
-    foreach ($directStudents as $student) {
-        $payload = [
-            'student_id'     => $student->id,
-            'status'         => 'pending',
-            'tanggal_daftar' => now(),
-            'source'         => $student->source,
-            'created_by'     => Auth::id(),
-        ];
-
-        if (Schema::hasColumn('registrations', 'tahun_ajaran')) {
-            $payload['tahun_ajaran'] = method_exists(\App\Models\Registration::class, 'currentAcademicYear')
-                ? \App\Models\Registration::currentAcademicYear()
-                : null;
-        }
-
-        \App\Models\Registration::create(array_filter($payload, fn($v) => $v !== null));
-    }
-
-    // === 2. PERBAIKI SEMUA no_cabang – BAIK YANG KOSONG MAUPUN YANG SALAH! ===
     $studentsToFix = Student::whereNotNull('bimba_unit')
         ->where('bimba_unit', '!=', '')
         ->select('id', 'bimba_unit', 'no_cabang')
@@ -859,20 +832,106 @@ protected function resolveKodeUnit(?string $bimbaUnit): string
             }
 
             Log::info('no_cabang diperbaiki otomatis', [
-                'student_id' => $student->id,
-                'bimba_unit' => $student->bimba_unit,
-                'old_no_cabang' => $oldCode,
-                'new_no_cabang' => $correctCode,
+                'student_id'     => $student->id,
+                'bimba_unit'     => $student->bimba_unit,
+                'old_no_cabang'  => $oldCode,
+                'new_no_cabang'  => $correctCode,
             ]);
         }
     }
 
-    // === 3. Pesan sukses yang jelas ===
-    $message = "Import dari sheet '{$sheet}' selesai!"
-             . " Registrasi otomatis dibuat: {$directStudents->count()}."
-             . " no_cabang diisi baru: {$filled}, diperbaiki (salah → benar): {$updated}.";
+    Log::info("fixAllNoCabang selesai - Baru diisi: {$filled}, Diperbaiki: {$updated}");
+}
+
+    // -------------------------------------------------------------------------
+    // importFromSheet: panggil command dan lalu buat registrasi otomatis
+    // serta pasca-import isi no_cabang secara deterministik
+    // -------------------------------------------------------------------------
+   public function importFromSheet(Request $request)
+{
+    $sheet = $request->input('sheet', 'Registrasi');
+
+    Log::info("Mulai import sheet: {$sheet}");
+
+    $exit = Artisan::call('forms:import-students', ['sheet' => $sheet]);
+    $output = trim(Artisan::output());
+
+    // === 1. Cek duplikat berdasarkan Nama + Tanggal Lahir atau NIM ===
+    $this->preventDuplicateStudents();
+
+    // === 2. Buat Registration otomatis ===
+    $directStudents = Student::where('source', 'direct')
+        ->whereDoesntHave('registrations', function ($q) {
+            $q->whereIn('status', ['pending', 'verified', 'accepted']);
+        })
+        ->get();
+
+    foreach ($directStudents as $student) {
+        $hasActive = Registration::where('student_id', $student->id)
+            ->whereIn('status', ['pending', 'verified', 'accepted'])
+            ->exists();
+
+        if (!$hasActive) {
+            $payload = [
+                'student_id'     => $student->id,
+                'status'         => 'pending',
+                'tanggal_daftar' => now(),
+                'source'         => $student->source,
+                'created_by'     => Auth::id(),
+            ];
+
+            if (Schema::hasColumn('registrations', 'tahun_ajaran')) {
+                $payload['tahun_ajaran'] = Registration::currentAcademicYear() ?? null;
+            }
+
+            Registration::create(array_filter($payload));
+        }
+    }
+
+    // === 3. Perbaiki no_cabang ===
+    $this->fixAllNoCabang();
+
+    $message = "Import sheet '{$sheet}' selesai! "
+             . "Registrasi dibuat: {$directStudents->count()}. "
+             . "Duplikat dicek & dicegah.";
 
     return back()->with('success', $message);
+}
+protected function preventDuplicateStudents(): void
+{
+    // Ambil semua student yang baru diimport (misal: yang belum punya NIM atau timestamp import baru)
+    $newImports = Student::whereNull('nim')
+        ->orWhere('created_at', '>=', now()->subMinutes(10))
+        ->get();
+
+    foreach ($newImports as $student) {
+        // Cek duplikat berdasarkan Nama + Tgl Lahir
+        $duplicate = Student::where('id', '!=', $student->id)
+            ->where('nama', 'LIKE', "%{$student->nama}%")
+            ->where('tgl_lahir', $student->tgl_lahir)
+            ->first();
+
+        if ($duplicate) {
+            Log::warning("Duplikat ditemukan dan dihapus", [
+                'new_id' => $student->id,
+                'existing_id' => $duplicate->id,
+                'nama' => $student->nama
+            ]);
+
+            $student->delete(); // atau merge data-nya
+            continue;
+        }
+
+        // Kalau belum punya NIM, generate
+        if (empty($student->nim) && !empty($student->bimba_unit)) {
+            $nim = $this->generateNimFromBukuInduk($student->bimba_unit);
+            while (Student::where('nim', $nim)->exists()) {
+                $nim = $this->incrementNim($nim);
+            }
+            $student->nim = $nim;
+            $student->save();
+        }
+    }
 }
 
     public function historyJson(Student $student)
@@ -1099,7 +1158,7 @@ protected function resolveKodeUnit(?string $bimbaUnit): string
             // 4. Log history
             StudentHistory::create([
                 'student_id' => $student->id,
-                'user_id'    => auth()->id(),
+                'user_id'    => Auth::id(),
                 'diff'       => ['mutasi_masuk' => $data],
             ]);
 
@@ -1107,4 +1166,55 @@ protected function resolveKodeUnit(?string $bimbaUnit): string
                 ->with('success', "Mutasi masuk {$student->nama} berhasil! Data sudah masuk Buku Induk dengan lengkap.");
         });
     }
+
+    /**
+ * Aktifkan Kembali Murid yang Statusnya Keluar
+ */
+public function reactivate(Student $student)
+{
+    $bi = BukuInduk::where('nim', $student->nim)->first();
+
+    if (!$bi) {
+        return back()->with('error', 'Buku Induk tidak ditemukan.');
+    }
+
+    return DB::transaction(function () use ($student, $bi) {
+        
+        // Reset semua field keluar
+        $bi->update([
+            'status'          => 'Aktif',
+            'tgl_keluar'      => null,
+            'kategori_keluar' => null,
+            'alasan'          => null,
+            'tanggal_pindah'  => null,
+            'tanggal_masuk'   => $student->tanggal_masuk ?? now()->toDateString(),
+            'updated_at'      => now(),
+        ]);
+
+        // Update juga di tabel Student (opsional tapi direkomendasikan)
+        $student->update([
+            'tanggal_masuk' => $bi->tanggal_masuk ?? now()->toDateString(),
+        ]);
+
+        // Log history
+        StudentHistory::create([
+            'student_id' => $student->id,
+            'user_id'    => Auth::id(),
+            'diff'       => [
+                'status' => [
+                    'old' => 'Keluar',
+                    'new' => 'Aktif Kembali'
+                ],
+                'kategori_keluar' => ['old' => $bi->getOriginal('kategori_keluar'), 'new' => null],
+                'alasan'          => ['old' => $bi->getOriginal('alasan'), 'new' => null],
+            ],
+            'ip'         => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        return redirect()
+            ->route('students.edit', $student->id)
+            ->with('success', "Murid {$student->nama} ({$student->nim}) berhasil diaktifkan kembali.");
+    });
+}
 }

@@ -153,6 +153,7 @@
                         <th>Tgl. Input</th>
                         <!-- TAMBAHAN BARU: FOTO KK -->
                         <th class="text-center">Foto KK</th>
+                        <th class="text-center">Foto Mutasi</th>
                         <th width="280" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -189,10 +190,10 @@
                             <td>{{ $student->nim ?? '—' }}</td>
                             <td>{{ $student->nama }}</td>
                             <td>
-    {{ $student->tgl_lahir 
-        ? \Carbon\Carbon::parse($student->tgl_lahir)->format('d/m/Y') 
-        : '-' }}
-</td>
+                                {{ $student->tgl_lahir 
+                                    ? \Carbon\Carbon::parse($student->tgl_lahir)->format('d/m/Y') 
+                                    : '-' }}
+                            </td>
 
                             {{-- BARU: Cabang --}}
                             <td><span class="badge bg-primary">{{ $student->no_cabang ?? '—' }}</span></td>
@@ -339,26 +340,40 @@
                                 @endif
                             </td>
 
+                            <!-- TAMBAHAN BARU: KOLOM FOTO MUTASI -->
                             <td class="text-center">
-    <button type="button" class="btn btn-sm btn-info text-white me-1 btn-show-history"
-        data-bs-toggle="modal" data-bs-target="#historyModal" 
-        data-student-id="{{ $student->id }}"
-        data-student-name="{{ $student->nama }}"
-        data-history-url="{{ route('students.history.json', $student) }}">
-        Histori
-    </button>
+                                @if($student->foto_mutasi)
+                                    <a href="{{ $student->foto_mutasi }}" target="_blank" rel="noopener noreferrer"
+                                        class="btn btn-sm btn-success" title="Lihat Foto Mutasi">
+                                        <i class="bi bi-file-image"></i> Ada
+                                    </a>
+                                @else
+                                    <span class="text-danger small" title="Belum ada foto Mutasi">
+                                        <i class="bi bi-x-circle"></i> Belum
+                                    </span>
+                                @endif
+                            </td>
 
-    <a href="{{ route('students.edit', $student) }}" class="btn btn-sm btn-warning">Edit</a>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-info text-white me-1 btn-show-history"
+                                    data-bs-toggle="modal" data-bs-target="#historyModal" 
+                                    data-student-id="{{ $student->id }}"
+                                    data-student-name="{{ $student->nama }}"
+                                    data-history-url="{{ route('students.history.json', $student) }}">
+                                    Histori
+                                </button>
 
-    @if(auth()->check() && auth()->user()->is_admin)   <!-- ← sesuaikan dengan field admin kamu -->
-        <form action="{{ route('students.destroy', $student) }}" method="POST" class="d-inline"
-            onsubmit="return confirm('Apakah Anda yakin ingin menghapus murid {{ $student->nama }}?');">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-        </form>
-    @endif
-</td>
+                                <a href="{{ route('students.edit', $student) }}" class="btn btn-sm btn-warning">Edit</a>
+
+                                @if(auth()->check() && auth()->user()->is_admin)   <!-- ← sesuaikan dengan field admin kamu -->
+                                    <form action="{{ route('students.destroy', $student) }}" method="POST" class="d-inline"
+                                        onsubmit="return confirm('Apakah Anda yakin ingin menghapus murid {{ $student->nama }}?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                    </form>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
