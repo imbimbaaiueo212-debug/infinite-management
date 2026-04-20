@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProfileExport;
@@ -836,7 +837,7 @@ if (array_search($ktrOtomatis, $ktrList) < array_search('KTR 2A', $ktrList)) {
         $range = $masaKerjaBulan >= 24 ? '>= 24 Bulan' : '< 24 Bulan';
 
         // Query skim utama (pakai status asli, termasuk Magang)
-        $skim = \DB::table('skim')
+        $skim = DB::table('skim')
             ->where('jabatan', $jabatan)
             ->where('masa_kerja', $range)
             ->where('status', $status)
@@ -844,7 +845,7 @@ if (array_search($ktrOtomatis, $ktrList) < array_search('KTR 2A', $ktrList)) {
 
         // Jika tidak ditemukan skim khusus untuk status ini, fallback ke status 'Aktif'
         if (!$skim) {
-            $skim = \DB::table('skim')
+            $skim = DB::table('skim')
                 ->where('jabatan', $jabatan)
                 ->where('masa_kerja', $range)
                 ->where('status', 'Aktif')

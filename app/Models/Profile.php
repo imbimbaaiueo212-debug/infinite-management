@@ -343,4 +343,38 @@ public function getMasaKerjaJabatanBulanAttribute()
             $this->saveQuietly(); // tanpa event/fillable issue
         }
     }
+
+        /**
+     * Simpan snapshot history untuk periode tertentu
+     */
+    public function saveHistory(string $periode): void
+    {
+        // Cek apakah sudah ada history untuk periode ini
+        if (ProfileHistory::where('profile_id', $this->id)
+                          ->where('periode', $periode)
+                          ->exists()) {
+            return;
+        }
+
+        ProfileHistory::create([
+            'profile_id'          => $this->id,
+            'periode'             => $periode,
+            'status_karyawan'     => $this->status_karyawan,
+            'tgl_magang'          => $this->tgl_magang,
+            'tgl_non_aktif'       => $this->tgl_non_aktif,
+            'tgl_resign'          => $this->tgl_resign,
+            'tgl_selesai_magang'  => $this->tgl_selesai_magang,
+            'tgl_masuk'           => $this->tgl_masuk,
+            'jumlah_murid_mba'    => $this->jumlah_murid_mba,
+            'jumlah_murid_jadwal' => $this->jumlah_murid_jadwal,
+            'jumlah_rombim'       => $this->jumlah_rombim,
+            'rb'                  => $this->rb,
+            'ktr'                 => $this->ktr,
+            'ktr_tambahan'        => $this->ktr_tambahan,
+            'rp'                  => $this->rp,
+            'masa_kerja'          => $this->masa_kerja,
+            'masa_kerja_jabatan'  => $this->masa_kerja_jabatan,
+            'data_lengkap'        => $this->toArray(),
+        ]);
+    }
 }
