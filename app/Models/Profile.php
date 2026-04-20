@@ -57,55 +57,7 @@ class Profile extends Model
         'updated' => ProfileUpdated::class,
     ];
 
-    protected static function booted()
-{
-    static::addGlobalScope('unit', function (Builder $builder) {
-        if (Auth::check()) {
-            $user = Auth::user();
-
-            if ($user->is_admin ?? false) {
-                return;
-            }
-
-            if ($user->bimba_unit) {
-                // ← FIX UTAMA: gunakan qualifyColumn agar selalu punya prefix 'profiles.'
-                $builder->where($builder->getModel()->qualifyColumn('bimba_unit'), $user->bimba_unit);
-            } else {
-                $builder->whereRaw('1 = 0');
-            }
-        }
-    });
-        // Otomatis buat PendapatanTunjangan saat profile dibuat
-        static::created(function ($profile) {
-            $skim = Skim::where('jabatan', $profile->jabatan)
-                ->where('status', $profile->status_karyawan)
-                ->where(function ($q) use ($profile) {
-                    $profile->masa_kerja >= 24
-                        ? $q->where('masa_kerja', '>= 24 Bulan')
-                        : $q->where('masa_kerja', '< 24 Bulan');
-                })
-                ->first();
-
-            $thp = $skim ? (
-                (float) $skim->tunj_pokok +
-                (float) $skim->harian +
-                (float) $skim->fungsional +
-                (float) $skim->kesehatan
-            ) : 0;
-
-            PendapatanTunjangan::create([
-                'profile_id' => $profile->id,
-                'tanggal' => now()->toDateString(),
-                'nama' => $profile->nama,
-                'jabatan' => $profile->jabatan,
-                'status' => $profile->status_karyawan,
-                'departemen' => $profile->departemen,
-                'masa_kerja' => $profile->masa_kerja,
-                'thp' => $thp,
-                'total' => $thp,
-            ]);
-        });
-    }
+    
 
     // ===================================================================
     // ACCESSORS
@@ -344,37 +296,10 @@ public function getMasaKerjaJabatanBulanAttribute()
         }
     }
 
-        /**
-     * Simpan snapshot history untuk periode tertentu
-     */
-    public function saveHistory(string $periode): void
+   
+public function histories()
     {
-        // Cek apakah sudah ada history untuk periode ini
-        if (ProfileHistory::where('profile_id', $this->id)
-                          ->where('periode', $periode)
-                          ->exists()) {
-            return;
-        }
-
-        ProfileHistory::create([
-            'profile_id'          => $this->id,
-            'periode'             => $periode,
-            'status_karyawan'     => $this->status_karyawan,
-            'tgl_magang'          => $this->tgl_magang,
-            'tgl_non_aktif'       => $this->tgl_non_aktif,
-            'tgl_resign'          => $this->tgl_resign,
-            'tgl_selesai_magang'  => $this->tgl_selesai_magang,
-            'tgl_masuk'           => $this->tgl_masuk,
-            'jumlah_murid_mba'    => $this->jumlah_murid_mba,
-            'jumlah_murid_jadwal' => $this->jumlah_murid_jadwal,
-            'jumlah_rombim'       => $this->jumlah_rombim,
-            'rb'                  => $this->rb,
-            'ktr'                 => $this->ktr,
-            'ktr_tambahan'        => $this->ktr_tambahan,
-            'rp'                  => $this->rp,
-            'masa_kerja'          => $this->masa_kerja,
-            'masa_kerja_jabatan'  => $this->masa_kerja_jabatan,
-            'data_lengkap'        => $this->toArray(),
-        ]);
+        return $this->hasMany(ProfileHistory::class)
+                    ->orderBy('periode', 'desc');
     }
 }

@@ -3,11 +3,13 @@
 namespace App\Events;
 
 use App\Models\Profile;
-use App\Models\ProfileHistory;   // ← Tambahkan ini
+use App\Models\ProfileHistory;
 use Carbon\Carbon;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ProfileUpdated
 {
@@ -18,30 +20,20 @@ class ProfileUpdated
     public function __construct(Profile $profile)
     {
         $this->profile = $profile;
-
-        // 🔥 Simpan history otomatis setiap kali event dipanggil
         $this->saveHistory();
     }
 
-    /**
-     * Simpan snapshot history untuk bulan saat ini
-     */
-    protected function saveHistory(): void
-    {
-        $periode = Carbon::now()->format('Y-m');   // contoh: 2026-04
+   protected function saveHistory(): void
+{
+    $periode = Carbon::now()->format('Y-m');
 
-        // Cek apakah sudah ada history untuk periode ini
-        $exists = ProfileHistory::where('profile_id', $this->profile->id)
-                    ->where('periode', $periode)
-                    ->exists();
+    $changedBy = $this->getChangedBy();
 
-        if ($exists) {
-            return; // sudah ada, tidak perlu simpan lagi
-        }
-
+    try {
         ProfileHistory::create([
             'profile_id'          => $this->profile->id,
             'periode'             => $periode,
+            'changed_at'          => Carbon::now(),
             'status_karyawan'     => $this->profile->status_karyawan,
             'tgl_magang'          => $this->profile->tgl_magang,
             'tgl_non_aktif'       => $this->profile->tgl_non_aktif,
@@ -57,7 +49,36 @@ class ProfileUpdated
             'rp'                  => $this->profile->rp,
             'masa_kerja'          => $this->profile->masa_kerja,
             'masa_kerja_jabatan'  => $this->profile->masa_kerja_jabatan,
-            'data_lengkap'        => $this->profile->toArray(),   // backup semua data
+            'data_lengkap'        => $this->profile->toArray(),
+            'changed_by'          => $changedBy,
         ]);
+
+        Log::info("✅ ProfileHistory berhasil disimpan", [
+            'profile_id' => $this->profile->id,
+            'nama'       => $this->profile->nama,
+            'periode'    => $periode,
+            'changed_by' => $changedBy,
+            'changed_at' => Carbon::now()->toDateTimeString()
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('❌ Gagal menyimpan ProfileHistory: ' . $e->getMessage(), [
+            'profile_id' => $this->profile->id,
+            'error'      => $e->getTraceAsString()
+        ]);
+    }
+}
+
+    /**
+     * Ambil nama user yang melakukan perubahan
+     */
+    protected function getChangedBy(): string
+    {
+        if (Auth::check()) {
+            $user = Auth::user();
+            return $user->name ?? $user->email ?? $user->username ?? 'Admin';
+        }
+
+        return 'Sistem';
     }
 }

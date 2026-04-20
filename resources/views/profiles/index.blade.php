@@ -310,6 +310,14 @@
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                                             </form>
+                                            <!-- Tombol Histori -->
+                                            <button class="btn btn-info btn-sm text-white histori-btn ms-1"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#historiModal"
+                                                    data-id="{{ $profile->id }}"
+                                                    data-nama="{{ addslashes($profile->nama) }}">
+                                                <i class="fas fa-history"></i>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -560,6 +568,13 @@
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">Hapus</button>
                                 </form>
+                                <button class="btn btn-info btn-sm text-white histori-btn flex-fill"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#historiModal"
+                                        data-id="{{ $profile->id }}"
+                                        data-nama="{{ addslashes($profile->nama) }}">
+                                    <i class="fas fa-history"></i> Histori
+                                </button>
                             @endif
                         </div>
                     </div>
@@ -735,6 +750,43 @@
         </div>
     </div>
 </div>
+
+    <!-- ==================== MODAL HISTORI ==================== -->
+    <div class="modal fade" id="historiModal" tabindex="-1" aria-labelledby="historiModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="historiModalLabel">
+                        <i class="fas fa-history me-2"></i> Riwayat Perubahan - 
+                        <span id="histori-nama"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0" id="historiTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center">Periode</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Jml Murid</th>
+                                    <th>RB</th>
+                                    <th>KTR</th>
+                                    <th class="text-end">RP</th>
+                                    <th class="text-center">Diubah Oleh</th>
+                                    <th class="text-center">Tanggal Ubah</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historiBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
@@ -1015,6 +1067,43 @@ $(document).on('click', '.card-header', function() {
     $('.detail-content').not(`#detail-${id}`).slideUp(200);
     $('.detail-toggle').not(`[data-id="${id}"]`).removeClass('fa-chevron-up').addClass('fa-chevron-down');
 });
+    // ==================== SCRIPT HISTORI ====================
+    $(document).on('click', '.histori-btn', function () {
+        const id = $(this).data('id');
+        const nama = $(this).data('nama');
+
+        $('#histori-nama').text(nama);
+        $('#historiBody').html('<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Memuat histori...</td></tr>');
+
+        fetch(`/profiles/${id}/histori`)
+            .then(response => response.json())
+            .then(data => {
+                let html = '';
+                if (data.length === 0) {
+                    html = `<tr><td colspan="8" class="text-center py-4 text-muted">Belum ada riwayat perubahan.</td></tr>`;
+                } else {
+                    data.forEach(item => {
+                        html += `
+                            <tr>
+                                <td class="text-center fw-bold">${item.periode}</td>
+                                <td><span class="badge ${item.status_karyawan === 'Aktif' ? 'bg-success' : 'bg-warning text-dark'}">${item.status_karyawan ?? '-'}</span></td>
+                                <td class="text-center">${item.jumlah_murid_jadwal ?? 0}</td>
+                                <td class="text-center">${item.rb ?? '-'}</td>
+                                <td class="text-center">${item.ktr ?? item.ktr_tambahan ?? '-'}</td>
+                                <td class="text-end fw-bold text-success">
+                                    ${item.rp ? 'Rp ' + new Intl.NumberFormat('id-ID').format(item.rp) : '-'}
+                                </td>
+                                <td class="text-center">${item.changed_by ?? 'Sistem'}</td>
+                                <td class="text-center small">${item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}</td>
+                            </tr>`;
+                    });
+                }
+                $('#historiBody').html(html);
+            })
+            .catch(() => {
+                $('#historiBody').html('<tr><td colspan="8" class="text-center text-danger py-4">Gagal memuat histori. Silakan coba lagi.</td></tr>');
+            });
+    });
 </script>
 @endpush
 @endsection

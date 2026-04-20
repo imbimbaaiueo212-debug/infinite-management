@@ -1382,4 +1382,27 @@ public function getNextNikNoUrut(Request $request)
         'no_cabang' => $noCabang
     ]);
 }
+public function showHistori(Profile $profile)
+{
+    // Hanya admin yang boleh melihat histori
+    if (!Auth::user()->is_admin) {
+        abort(403);
+    }
+
+    $histori = $profile->histories()
+        ->orderBy('periode', 'desc')
+        ->get([
+            'periode',
+            'status_karyawan',
+            'jumlah_murid_jadwal',
+            'rb',
+            'ktr',
+            'ktr_tambahan',
+            'rp',
+            'changed_by',
+            'created_at'
+        ]);
+
+    return response()->json($histori);
+}
 }

@@ -129,7 +129,7 @@ Route::prefix('units')->group(function () {
 
 Route::prefix('profiles')->name('profiles.')->middleware('auth')->group(function () {
 
-    // ✅ TARUH INI PALING ATAS
+    // ✅ Route yang sudah ada
     Route::get('/next-nik-nourut', [ProfileController::class, 'getNextNikNoUrut'])
         ->name('next-nik-nourut');
 
@@ -149,6 +149,11 @@ Route::prefix('profiles')->name('profiles.')->middleware('auth')->group(function
     Route::post('/{profile}/inline-update-ktr', [ProfileController::class, 'inlineUpdateKtr'])->name('inline-update-ktr');
     Route::post('/{profile}/inline-update-field', [ProfileController::class, 'inlineUpdateField'])->name('inline-update-field');
     Route::post('/{profile}/seragam-kolom', [ProfileController::class, 'updateSeragamKolom'])->name('seragam-kolom');
+
+    // ✅ ROUTE HISTORI - INI YANG BENAR
+    Route::get('{profile}/histori', [ProfileController::class, 'showHistori'])
+         ->name('histori');
+
 });
 
 // =========================================
