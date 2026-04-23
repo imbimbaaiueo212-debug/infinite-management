@@ -202,7 +202,7 @@
 @endsection
 
 @push('scripts')
-   
+    
     <script>
         $(function () {
             const $input = $('#searchInput');

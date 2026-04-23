@@ -39,9 +39,16 @@
                             </div>
                         @endif
 
-                        <div class="col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '5' : '8' }}">
-                            <label class="form-label fw-bold small">Cari Nama / NIK</label>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Ketik nama atau NIK...">
+                       <div class="col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '5' : '8' }}">
+                            <label class="form-label fw-bold small">Pilih Relawan</label>
+                            <select id="searchSelect" class="form-select">
+                                <option value="">— Semua Relawan —</option>
+                                @foreach($rekap->unique('nama_relawan')->sortBy('nama_relawan') as $row)
+                                    <option value="{{ strtolower($row->nama_relawan) }}">
+                                        {{ $row->nama_relawan }} ({{ $row->nik ?? '-' }})
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         <div class="col-md-auto">
@@ -216,46 +223,34 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Filter script (ringkas)
-    const searchInput = document.getElementById('searchInput');
+
+    const searchSelect = document.getElementById('searchSelect');
     const filterUnitCabang = document.getElementById('filterUnitCabang');
     const rows = document.querySelectorAll('#rekapTable tbody tr');
 
     function filterTable() {
-        const search = (searchInput.value || '').toLowerCase().trim();
+        const selected = (searchSelect?.value || '').toLowerCase();
         const unitFilter = filterUnitCabang ? filterUnitCabang.value : '';
 
         rows.forEach(row => {
             const nama = (row.dataset.nama || '').toLowerCase();
             const unitCabang = `${row.dataset.unit || ''}|${row.dataset.cabang || ''}`;
 
-            const matchSearch = !search || nama.includes(search);
+            const matchSearch = !selected || nama === selected;
             const matchUnit = !unitFilter || unitCabang === unitFilter;
 
             row.style.display = (matchSearch && matchUnit) ? '' : 'none';
         });
     }
 
-    if (searchInput) searchInput.addEventListener('input', filterTable);
-    if (filterUnitCabang) filterUnitCabang.addEventListener('change', filterTable);
+    if (searchSelect) {
+        searchSelect.addEventListener('change', filterTable);
+    }
 
-    // Modal Info
-    const infoModal = document.getElementById('infoModal');
-    infoModal.addEventListener('show.bs.modal', function (e) {
-        const button = e.relatedTarget;
+    if (filterUnitCabang) {
+        filterUnitCabang.addEventListener('change', filterTable);
+    }
 
-        document.getElementById('infoModalLabel').textContent = 'Detail Relawan';
-        document.getElementById('modal-nama-header').textContent = button.dataset.nama;
-        document.getElementById('modal-nama').textContent = button.dataset.nama;
-        document.getElementById('modal-nik').textContent = button.dataset.nik;
-        document.getElementById('modal-jabatan').textContent = button.dataset.jabatan;
-        document.getElementById('modal-status').textContent = button.dataset.status;
-        document.getElementById('modal-departemen').textContent = button.dataset.departemen;
-        document.getElementById('modal-unit').textContent = button.dataset.unit;
-        document.getElementById('modal-cabang').textContent = button.dataset.cabang;
-        document.getElementById('modal-murid').textContent = button.dataset.murid;
-        document.getElementById('modal-rombim').textContent = button.dataset.rombim;
-    });
 });
 </script>
 @endpush
