@@ -206,7 +206,7 @@
             <table>
                 <tr><td>Waktu /Minggu</td><td class="text-end">{{ $rekap->waktu_mgg ?? '-' }}</td></tr>
                 <tr><td>Waktu /Bulan</td><td class="text-end">{{ $rekap->waktu_bln ?? '-' }}</td></tr>
-                <tr><td>Kategori</td><td class="text-end">{{ $rekap->ktr ?? $rekap->status ?? '-' }}</td></tr>
+                <tr><td>Kategori</td><td class="text-end">{{ strtoupper($rekap->kategori ?? $rekap->status_karyawan ?? '-') }}</td></tr>
                 <tr><td>Durasi Kerja</td><td class="text-end">{{ $rekap->durasi_kerja ?? $masaKerja ?? '-' }}</td></tr>
                 <tr><td>Persentase</td><td class="text-end">{{ $rekap->persen ?? '-' }} %</td></tr>
                 <tr><td>Imbalan Pokok</td><td class="text-end">Rp {{ $rupiah($pokok) }}</td></tr>

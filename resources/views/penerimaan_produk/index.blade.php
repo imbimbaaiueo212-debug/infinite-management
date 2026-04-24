@@ -82,7 +82,7 @@
                     <th>MINGGU</th>
                     <th>LABEL</th>
                     <th>JUMLAH PENERIMAAN</th>
-                    <th>JUMLAH ORDERAN</th> <!-- KOLOM BARU YANG DIMINTA -->
+                    <th>JUMLAH SELURUH ORDERAN</th> <!-- KOLOM BARU YANG DIMINTA -->
                     <th>KATEGORI</th>
                     <th>JENIS</th>
                     <th>NAMA PRODUK</th>

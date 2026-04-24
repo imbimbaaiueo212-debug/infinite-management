@@ -43,9 +43,9 @@
                             <label class="form-label fw-bold small">Pilih Relawan</label>
                             <select id="searchSelect" class="form-select">
                                 <option value="">— Semua Relawan —</option>
-                                @foreach($rekap->unique('nama_relawan')->sortBy('nama_relawan') as $row)
+                                @foreach($rekap->unique('nama_relawan')->sortBy('nik') as $row)
                                     <option value="{{ strtolower($row->nama_relawan) }}">
-                                        {{ $row->nama_relawan }} ({{ $row->nik ?? '-' }})
+                                         {{ $row->nik ?? '-' }} | {{ $row->nama_relawan }}
                                     </option>
                                 @endforeach
                             </select>
@@ -250,6 +250,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterUnitCabang) {
         filterUnitCabang.addEventListener('change', filterTable);
     }
+
+});
+document.addEventListener('DOMContentLoaded', function () {
+
+    const infoButtons = document.querySelectorAll('.info-relawan-btn');
+
+    infoButtons.forEach(btn => {
+        btn.addEventListener('click', function () {
+
+            // Ambil data dari tombol
+            const nama = this.dataset.nama || '-';
+            const nik = this.dataset.nik || '-';
+            const jabatan = this.dataset.jabatan || '-';
+            const status = this.dataset.status || '-';
+            const departemen = this.dataset.departemen || '-';
+            const unit = this.dataset.unit || '-';
+            const cabang = this.dataset.cabang || '-';
+            const masaKerja = this.dataset.masaKerja || '-';
+            const murid = this.dataset.murid || '0';
+            const rombim = this.dataset.rombim || '0';
+
+            // Inject ke modal
+            document.getElementById('modal-nama').textContent = nama;
+            document.getElementById('modal-nama-header').textContent = nama;
+            document.getElementById('modal-nik').textContent = nik;
+            document.getElementById('modal-jabatan').textContent = jabatan;
+            document.getElementById('modal-status').textContent = status;
+            document.getElementById('modal-departemen').textContent = departemen;
+            document.getElementById('modal-unit').textContent = unit;
+            document.getElementById('modal-cabang').textContent = cabang;
+            document.getElementById('modal-murid').textContent = murid;
+            document.getElementById('modal-rombim').textContent = rombim;
+
+        });
+    });
 
 });
 </script>

@@ -20,6 +20,7 @@ class OrderModul extends Model
         'kode3', 'jml3', 'hrg3', 'sts3',
         'kode4', 'jml4', 'hrg4', 'sts4',
         'kode5', 'jml5', 'hrg5', 'sts5',
+        'harga_satuan',
     ];
 
     protected $casts = [

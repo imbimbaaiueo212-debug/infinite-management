@@ -135,13 +135,13 @@
         </div>
 
         <!-- Tombol Sinkronisasi: paling kanan (order-md-3) -->
-        <div class="col-12 col-md-3 col-lg-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} col-xl-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} order-md-3 d-flex align-items-end">
+        <!-- <div class="col-12 col-md-3 col-lg-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} col-xl-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} order-md-3 d-flex align-items-end">
             <a href="{{ route('jadwal.generate') }}" 
                class="btn btn-warning btn-lg w-100 shadow"
                onclick="return confirm('Yakin sinkronisasi jadwal sekarang? Data akan di-update.')">
                 <i class="bi bi-arrow-repeat me-2"></i> Sinkronisasi
             </a>
-        </div>
+        </div>-->
 
     </div>
 </form>
@@ -152,13 +152,13 @@
                     Tidak ada data jadwal.<br>
                     <small class="text-muted">Pilih guru atau lakukan sinkronisasi terlebih dahulu.</small>
                 </div>
-            @else
-                @php 
-    $startJamKe = 1;      // mulai dari jam_ke 1 di database
-    $endJamKe   = 9;      // sesuaikan max jam_ke yang ada (misal sampai 116 → jam_ke 9)
-    $jamMulai   = 8;      // jam pertama = 08:00
-    $rowCounter = 1; 
-@endphp
+                            @else
+                                @php 
+                    $startJamKe = 1;      // mulai dari jam_ke 1 di database
+                    $endJamKe   = 9;      // sesuaikan max jam_ke yang ada (misal sampai 116 → jam_ke 9)
+                    $jamMulai   = 8;      // jam pertama = 08:00
+                    $rowCounter = 1; 
+                @endphp
 
                 <div class="table-container">
                     <table class="table table-bordered table-hover m-0 text-center" style="min-width: 2800px;">
@@ -190,8 +190,8 @@
                                 <tr>
                                     <td class="fw-bold">{{ $rowCounter++ }}</td>
                                     <td class="fw-bold text-primary">
-    {{ str_pad($jamMulai + ($jam - 1), 2, '0', STR_PAD_LEFT) }}:00
-</td>
+                                        {{ str_pad($jamMulai + ($jam - 1), 2, '0', STR_PAD_LEFT) }}:00
+                                    </td>
 
                                     @foreach([
                                         ['hari'=>'Senin', 'shift'=>'srj'],

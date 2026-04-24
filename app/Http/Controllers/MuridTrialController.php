@@ -22,6 +22,20 @@ class MuridTrialController extends Controller
     $rawQ         = $request->get('q');
     $plainSearch  = trim((string) $request->get('search', ''));
     $selectedUnitId = $request->get('unit_id'); // ⬅️ GANTI INI
+    $user = Auth::user();
+
+    // default
+    $selectedUnitId = $request->get('unit_id');
+
+    // kalau bukan admin → paksa unit dari user
+    if ($user && !in_array($user->role ?? '', ['admin','superadmin'])) {
+
+        $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
+
+        if ($unit) {
+            $selectedUnitId = $unit->id;
+        }
+    }
 
     $searchTerm = null;
     if (!empty($rawQ)) {

@@ -7,8 +7,8 @@
     <div class="row justify-content-center">
         <div class="col-12 col-xl-11">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Edit Murid: {{ $bukuInduk->nama }} (NIM: {{ $bukuInduk->nim }})</h3>
+                <div class="card-header bg-primary text-primary fw-bold d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Edit Murid: {{ $bukuInduk->nim }} | {{ $bukuInduk->nama }}</h3>
                     <a href="{{ route('buku_induk.index') }}" class="btn btn-light btn-sm">Kembali ke Daftar</a>
                 </div>
 
@@ -32,111 +32,133 @@
 
                             <!-- 1. IDENTITAS UTAMA -->
                             <div class="col-12">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Identitas Murid</h5>
+                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">DETAIL MURID</h5>
                             </div>
 
-                            <div class="col-lg-6">
-                                <label class="form-label fw-bold">NIM <span class="text-danger"> *</span></label>
+                            @php
+                                    $user = auth()->user();
+                                @endphp
+
+                                @if($user && empty($user->bimba_unit))
+                                    {{-- ADMIN / belum punya unit → tampilkan select --}}
+                                    <div class="col-lg-3">
+                                        <label class="form-label fw-bold text-primary">
+                                            Unit biMBA <span class="text-danger">*</span>
+                                        </label>
+
+                                        <select name="bimba_unit" id="bimba_unit_select"
+                                            class="form-select @error('bimba_unit') is-invalid @enderror" required>
+
+                                            <option value="">-- Pilih Unit biMBA --</option>
+
+                                            @foreach($units as $namaUnit => $noCabang)
+                                                <option value="{{ $namaUnit }}"
+                                                    data-no-cabang="{{ $noCabang }}"
+                                                    {{ old('bimba_unit', $bukuInduk->bimba_unit) === $namaUnit ? 'selected' : '' }}>
+                                                    {{ $namaUnit }} ({{ $noCabang }})
+                                                </option>
+                                            @endforeach
+
+                                        </select>
+
+                                        @error('bimba_unit')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                @else
+                                    {{-- USER → hidden (pakai unit dari login) --}}
+                                    <input type="hidden" name="bimba_unit" value="{{ $user->bimba_unit }}">
+                                @endif
+
+                            <div class="col-lg-3">
+                                <label class="form-label">NIM <span class="text-danger"> *</span></label>
                                 <input type="text" name="nim" class="form-control @error('nim') is-invalid @enderror"
                                        value="{{ old('nim', $bukuInduk->nim) }}" required>
                                 @error('nim') <div class="text-danger small">{{ $message }}</div> @enderror
                             </div>
 
-                            <div class="col-lg-6">
-                                <label class="form-label fw-bold">Nama Lengkap <span class="text-danger">*</span></label>
+                            <div class="col-lg-3">
+                                <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                                 <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror"
                                        value="{{ old('nama', $bukuInduk->nama) }}" required>
                                 @error('nama') <div class="text-danger small">{{ $message }}</div> @enderror
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">Tempat Lahir</label>
                                 <input type="text" name="tmpt_lahir" class="form-control"
                                        value="{{ old('tmpt_lahir', $bukuInduk->tmpt_lahir) }}">
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">Tanggal Lahir</label>
                                 <input type="date" name="tgl_lahir" class="form-control"
                                        value="{{ old('tgl_lahir', $bukuInduk->tgl_lahir?->format('Y-m-d')) }}">
                             </div>
 
-                            <!-- 2. UNIT & CABANG -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Unit & Cabang</h5>
-                            </div>
+                            @php
+                                    $user = auth()->user();
+                                @endphp
 
-                            <div class="col-lg-8">
-                                <label class="form-label fw-bold text-primary">Unit biMBA <span class="text-danger">*</span></label>
-                                <select name="bimba_unit" id="bimba_unit_select" class="form-select @error('bimba_unit') is-invalid @enderror" required>
-                                    <option value="">-- Pilih Unit biMBA --</option>
-                                    @foreach($units as $namaUnit => $noCabang)
-                                        <option value="{{ $namaUnit }}"
-                                            data-no-cabang="{{ $noCabang }}"
-                                            {{ old('bimba_unit', $bukuInduk->bimba_unit) === $namaUnit ? 'selected' : '' }}>
-                                            {{ $namaUnit }} ({{ $noCabang }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('bimba_unit') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                            </div>
+                                @if($user && empty($user->no_cabang))
+                                    {{-- ADMIN / belum punya no cabang → tampilkan --}}
+                                    <div class="col-lg-3">
+                                        <label class="form-label fw-bold">No Cabang</label>
 
-                            <div class="col-lg-4">
-                                <label class="form-label fw-bold">No Cabang</label>
-                                <input type="text" id="no_cabang_display" class="form-control bg-light text-center fw-bold fs-5 text-primary" readonly
-                                       value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '-') }}">
-                                <input type="hidden" name="no_cabang" id="no_cabang_hidden"
-                                       value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '') }}">
-                            </div>
+                                        <input type="text"
+                                            id="no_cabang_display"
+                                            class="form-control bg-light text-center fw-bold fs-5 text-primary"
+                                            readonly
+                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '-') }}">
 
-                            <!-- 3. TANGGAL & STATUS -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Tanggal & Status</h5>
-                            </div>
+                                        <input type="hidden"
+                                            name="no_cabang"
+                                            id="no_cabang_hidden"
+                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '') }}">
+                                    </div>
+                                @else
+                                    {{-- USER → tidak tampil, pakai dari login --}}
+                                    <input type="hidden" name="no_cabang" value="{{ $user->no_cabang }}">
+                                @endif
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Tanggal Daftar</label>
                                 <input type="date" name="tgl_daftar" class="form-control"
                                        value="{{ old('tgl_daftar', $bukuInduk->tgl_daftar?->format('Y-m-d')) }}">
                                 <small class="text-muted">Jika kosong, akan otomatis diisi tanggal hari ini.</small>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Tanggal Masuk <span class="text-danger">*</span></label>
                                 <input type="date" name="tgl_masuk" class="form-control"
                                        value="{{ old('tgl_masuk', $bukuInduk->tgl_masuk?->format('Y-m-d')) }}" required>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Usia</label>
                                 <input type="text" class="form-control bg-light text-center" readonly
                                        value="{{ $bukuInduk->usia ?? '-' }} tahun">
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Lama Belajar</label>
                                 <input type="text" class="form-control bg-light text-center" readonly
                                        value="{{ $bukuInduk->lama_bljr ?? '-' }}">
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label fw-bold">Status Saat Ini</label>
-                                <div class="form-control text-center fs-4 fw-bold
+                                <div class="form-control text-center fs-5 fw-bold
                                     {{ $bukuInduk->status == 'Aktif' ? 'bg-success text-white' :
                                        ($bukuInduk->status == 'Keluar' ? 'bg-danger text-white' : 'bg-warning text-dark') }}">
                                     {{ $bukuInduk->status ?? 'Baru' }}
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">Tanggal Keluar</label>
                                 <input type="date" name="tgl_keluar" class="form-control"
                                        value="{{ old('tgl_keluar', $bukuInduk->tgl_keluar?->format('Y-m-d')) }}">
-                            </div>
-
-                            <!-- 4. AKADEMIK & SPP -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Akademik & SPP</h5>
                             </div>
 
                             <div class="col-md-3">
@@ -216,52 +238,7 @@
                                 </select>
                             </div>
 
-                            <!-- 5. KBM & JADWAL -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Jadwal & KBM</h5>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-info">Kode Jadwal <span class="text-danger">*</span></label>
-                                <select name="kode_jadwal" class="form-select" required>
-                                    <option value="">-- Pilih Kode Jadwal --</option>
-                                    @foreach($kodeJadwalOptions as $kode)
-                                        <option value="{{ $kode }}"
-                                            {{ old('kode_jadwal', $bukuInduk->kode_jadwal) == $kode ? 'selected' : '' }}>
-                                            {{ $kode }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-    <label class="form-label fw-bold text-info">Hari & Jam</label>
-    <div class="form-control-plaintext border p-2 bg-light">
-        @php
-            $details = $bukuInduk->jadwal()
-                ->select('hari', 'jam_ke', 'shift')
-                ->distinct()
-                ->orderByRaw("FIELD(hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu')")
-                ->get();
-        @endphp
-
-        @if($details->isNotEmpty())
-            @foreach($details->groupBy('hari') as $hari => $group)
-                <div>
-                    <strong>{{ $hari }}</strong>                
-                </div>
-            @endforeach
-        @else
-            <span class="text-muted">Belum ada jadwal</span>
-        @endif
-    </div>
-    <!-- Opsional: tambah info kecil -->
-    <small class="form-text text-muted">
-        Jadwal diambil dari sinkronisasi. Edit melalui tombol "Generate Jadwal" jika perlu perubahan.
-    </small>
-</div>
-
-                            <div class="col-md-4">
+                             <div class="col-md-4">
                                 <label class="form-label">Level</label>
                                 <select name="level" class="form-select">
                                     <option value="">-- Pilih Level --</option>
@@ -281,9 +258,15 @@
                                 </select>
                             </div>
 
-                            <!-- 6. KONTAK & ORANG TUA -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Kontak & Orang Tua</h5>
+                            <div class="col-md-4">
+                                <label class="form-label">Tanggal Kenaikan Level</label>
+                                <input type="date" name="tgl_level" class="form-control"
+                                       value="{{ old('tgl_level', $bukuInduk->tgl_level?->format('Y-m-d')) }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Keterangan Level</label>
+                                <textarea name="keterangan_level" class="form-control">{{ old('keterangan_level', $bukuInduk->keterangan_level) }}</textarea>
                             </div>
 
                             <div class="col-md-6">
@@ -303,15 +286,119 @@
                                 <textarea name="alamat_murid" class="form-control" rows="2">{{ old('alamat_murid', $bukuInduk->alamat_murid) }}</textarea>
                             </div>
 
-                            {{-- ================= BEASISWA ================= --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Note</label>
+                                <select name="note" class="form-select">
+                                    <option value="">-- Tidak Ada --</option>
+                                    @foreach($noteOptions as $n)
+                                        <option value="{{ $n }}" {{ old('note', $bukuInduk->note) == $n ? 'selected' : '' }}>{{ $n }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                             <div class="col-md-6">
+                                <label class="form-label">Kategori Keluar</label>
+                                <select name="kategori_keluar" class="form-select">
+                                    <option value="">-- Pilih Kategori --</option>
+                                    @foreach($kategoriKeluarOptions as $kk)
+                                        <option value="{{ $kk }}" {{ old('kategori_keluar', $bukuInduk->kategori_keluar) == $kk ? 'selected' : '' }}>{{ $kk }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Alasan Keluar</label>
+                                <input type="text" name="alasan" class="form-control"
+                                       value="{{ old('alasan', $bukuInduk->alasan) }}">
+                            </div>
+
+                            
+
+                            <div class="col-md-6">
+                                <label class="form-label">Info <span class="text-danger">*</span></label>
+                                <select name="info" class="form-select" required>
+                                    <option value="">-- Pilih Info --</option>
+                                    @foreach($infoOptions as $i)
+                                        <option value="{{ $i }}" {{ old('info', $bukuInduk->info) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- 5. KBM & JADWAL -->
                             <div class="col-12 mt-4">
-                                <h5 class="text-danger border-bottom pb-2 mb-3">
-                                    Beasiswa
-                                </h5>
+                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">JADWAL biMBA</h5>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold text-info">Kode Jadwal <span class="text-danger">*</span></label>
+                                <select name="kode_jadwal" class="form-select" required>
+                                    <option value="">-- Pilih Kode Jadwal --</option>
+                                    @foreach($kodeJadwalOptions as $kode)
+                                        <option value="{{ $kode }}"
+                                            {{ old('kode_jadwal', $bukuInduk->kode_jadwal) == $kode ? 'selected' : '' }}>
+                                            {{ $kode }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Periode Beasiswa</label>
+                                    <label class="form-label fw-bold text-info">Hari & Jam</label>
+                                    <div class="form-control-plaintext border p-2 bg-light">
+                                        @php
+                                            $details = $bukuInduk->jadwal()
+                                                ->select('hari', 'jam_ke', 'shift')
+                                                ->distinct()
+                                                ->orderByRaw("FIELD(hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu')")
+                                                ->orderBy('jam_ke')
+                                                ->get();
+                                        @endphp
+
+                                        @if($details->isNotEmpty())
+                                            @php
+                                                // Ambil shift
+                                                $shift = $details->first()->shift;
+
+                                                // Ambil hari unik
+                                                $hariList = $details->pluck('hari')->unique()->values()->toArray();
+
+                                                // 🔥 Mapping jam_ke → jam asli
+                                                $jamMap = [
+                                                    1 => '08:00',
+                                                    2 => '09:00',
+                                                    3 => '10:00',
+                                                    4 => '11:00',
+                                                    5 => '12:00',
+                                                    6 => '13:00',
+                                                    7 => '14:00',
+                                                    8 => '15:00',
+                                                    9 => '16:00',
+                                                ];
+
+                                                // Ambil jam terkecil (biar konsisten)
+                                                $jamKe = $details->min('jam_ke');
+
+                                                $jam = $jamMap[$jamKe] ?? '-';
+                                            @endphp
+
+                                            <strong>{{ $shift }}</strong>
+                                            <span class="text-muted">({{ implode(' | ', $hariList) }})</span>
+                                            -
+                                            <span class="fw-bold text-primary">{{ $jam }}</span>
+
+                                        @else
+                                            <span class="text-muted">Belum ada jadwal</span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                            {{-- ================= BEASISWA ================= --}}
+                             <div class="col-12 mt-4">
+                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">MASA AKTIF (DHUAFA & BNF)</h5>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Periode</label>
 
                                 {{-- TAMPILAN SAJA --}}
                                 <input type="text"
@@ -328,7 +415,7 @@
 
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">
-                                    Tanggal Mulai Beasiswa
+                                    Tanggal Mulai
                                 </label>
                                 <input type="date"
                                     name="tgl_mulai"
@@ -338,27 +425,13 @@
 
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">
-                                    Tanggal Akhir Beasiswa
+                                    Tanggal Akhir
                                 </label>
                                 <input type="date"
                                     name="tgl_akhir"
                                     class="form-control"
                                     value="{{ old('tgl_akhir', $bukuInduk->tgl_akhir?->format('Y-m-d')) }}">
                             </div>
-
-                            <div class="col-md-4">
-    <label class="form-label fw-bold">Note Garansi</label>
-    <select name="note_garansi" class="form-select">
-        <option value="">-- Tidak Ada --</option>
-        @foreach($noteGaransiOptions as $opt)
-            <option value="{{ $opt }}"
-                {{ old('note_garansi', $bukuInduk->note_garansi) === $opt ? 'selected' : '' }}>
-                {{ $opt }}
-            </option>
-        @endforeach
-    </select>
-</div>
-
 
                             <div class="col-md-6 mt-3">
                                 <div class="form-check">
@@ -370,50 +443,16 @@
                                         value="aktif"
                                         {{ old('alert', $bukuInduk->alert) === 'aktif' ? 'checked' : '' }}
                                     >
-                                    <label class="form-check-label fw-bold text-danger" for="alert">
+                                    <label class="form-check-label fw-bold text-info" for="alert">
                                         Beasiswa Aktif
                                     </label>
                                 </div>
-                                <small class="text-muted">
-                                    Akan otomatis aktif jika tanggal masih berlaku
-                                </small>
                             </div>
 
 
                             <!-- 7. NOTE & LAIN-LAIN -->
                             <div class="col-12 mt-4">
-                                <h5 class="text-primary border-bottom pb-2 mb-3">Note & Keterangan Lain</h5>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Note</label>
-                                <select name="note" class="form-select">
-                                    <option value="">-- Tidak Ada --</option>
-                                    @foreach($noteOptions as $n)
-                                        <option value="{{ $n }}" {{ old('note', $bukuInduk->note) == $n ? 'selected' : '' }}>{{ $n }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Kategori Keluar</label>
-                                <select name="kategori_keluar" class="form-select">
-                                    <option value="">-- Pilih Kategori --</option>
-                                    @foreach($kategoriKeluarOptions as $kk)
-                                        <option value="{{ $kk }}" {{ old('kategori_keluar', $bukuInduk->kategori_keluar) == $kk ? 'selected' : '' }}>{{ $kk }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Alasan Keluar</label>
-                                <input type="text" name="alasan" class="form-control"
-                                       value="{{ old('alasan', $bukuInduk->alasan) }}">
-                            </div>
-
-                            <div class="col-md-12">
-                                <label class="form-label">Keterangan Optional</label>
-                                <textarea name="keterangan_optional" class="form-control" rows="2">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
+                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">SUPPLY MODUL</h5>
                             </div>
 
                             <div class="col-md-6">
@@ -422,14 +461,9 @@
                                        value="{{ old('asal_modul', $bukuInduk->asal_modul) }}">
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label">Info <span class="text-danger">*</span></label>
-                                <select name="info" class="form-select" required>
-                                    <option value="">-- Pilih Info --</option>
-                                    @foreach($infoOptions as $i)
-                                        <option value="{{ $i }}" {{ old('info', $bukuInduk->info) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="col-md-12">
+                                <label class="form-label text-primary fw-bold">KETERANGAN OPTIONAL</label>
+                                <textarea name="keterangan_optional" class="form-control" rows="2">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
                             </div>
 
                         </div>

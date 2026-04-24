@@ -26,6 +26,18 @@ class RegistrationController extends Controller
     $q        = trim((string) $request->get('q', ''));
     $status   = trim((string) $request->get('status', ''));
     $unitId   = $request->get('unit_id'); // ⬅️ dari dropdown
+    $user = Auth::user();
+        $unitId = $request->get('unit_id');
+
+        // 🔒 paksa unit untuk non-admin
+        if ($user && !in_array($user->role ?? '', ['admin','superadmin'])) {
+
+            $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
+
+            if ($unit) {
+                $unitId = $unit->id;
+            }
+        }
 
     $query = Registration::query()
         ->with(['student.bukuInduk'])
@@ -87,7 +99,9 @@ class RegistrationController extends Controller
     return view('registrations.index', compact(
         'regs',
         'studentOptions',
-        'unitOptions'
+        'unitOptions',
+        'unitId'
+
     ));
 }
 

@@ -103,122 +103,120 @@
                         <i class="fas fa-plus me-2"></i> Tambah Baris
                     </button>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0" id="tabel-produk">
-                            <thead class="table-dark">
-                                <tr class="text-center">
-                                    <th width="18%">Produk (Pilih Nama Lengkap)</th>
-                                    <th width="10%">Jenis</th>
-                                    <th width="10%">Kategori</th>
-                                    <th width="18%">Label</th>
-                                    <th width="7%">Order</th>
-                                    <th width="8%">Diterima</th>
-                                    <th width="8%">Satuan</th>
-                                    <th width="11%">Harga Satuan</th>
-                                    <th width="11%">Total (Rp)</th>
-                                    <th width="12%">Status</th>
-                                    <th width="15%">Isi</th>
-                                    <th width="5%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="baris-produk align-middle">
-                                    <td>
-                                        <select name="items[0][label]" class="form-select label-select rounded-3 shadow-sm"
-                                            required>
-                                            @if($produks->isEmpty())
-                                                <option value="">-- Semua produk sudah diterima atau tidak ada order --</option>
-                                            @else
-                                                <option value="">-- Pilih Produk yang Belum Diterima --</option>
-                                                @foreach($produks as $produk)
-                                                @php
-                                                    $displayText = $produk['nama_produk'] ?? ($produk['label'].' - '.$produk['kode']);
-                                                    $displayText = trim($displayText);
+                <div class="card-body p-2">
+    <div class="table-responsive" style="overflow-x:auto;">
+        <table class="table table-bordered table-hover align-middle mb-0" id="tabel-produk" style="min-width:1400px;">
+            
+            <thead class="table-dark text-center">
+                <tr>
+                    <th style="min-width:220px">Produk</th>
+                    <th style="min-width:120px">Jenis</th>
+                    <th style="min-width:120px">Kategori</th>
+                    <th style="min-width:120px">Label</th>
+                    <th style="min-width:80px">Order</th>
+                    <th style="width:100px">Diterima</th>
+                    <th style="width:100px">Satuan</th>
+                    <th style="min-width:130px">Harga</th>
+                    <th style="min-width:140px">Total</th>
+                    <th style="min-width:120px">Status</th>
+                    <th style="min-width:50px">Isi</th>
+                    <th style="width:60px">Aksi</th>
+                </tr>
+            </thead>
 
-                                                    $cleanIsi = $produk['isi'] ? preg_replace("/\r\n|\r|\n/", " ", $produk['isi']) : '';
-                                                    $cleanIsi = trim(preg_replace('/\s+/', ' ', $cleanIsi));
-                                                    $cleanIsi = htmlspecialchars($cleanIsi, ENT_QUOTES, 'UTF-8');
-                                                @endphp
+            <tbody>
+                <tr class="baris-produk align-middle">
 
-                                                <option value="{{ $produk['kode'] }}"
-                                                    data-order="{{ $produk['order_qty'] ?? 0 }}"
-                                                    data-jenis="{{ $produk['jenis'] }}"
-                                                    data-kategori="{{ $produk['kategori'] ?? '' }}"
-                                                    data-nama="{{ $produk['nama_produk'] ?? $produk['label'] ?? $produk['kode'] }}"
-                                                    data-satuan="{{ $produk['satuan'] ?? 'Set' }}"
-                                                    data-harga="{{ $produk['harga'] ?? 0 }}"
-                                                    data-status="{{ $produk['status'] ?? '' }}"
-                                                    data-isi="{{ $cleanIsi }}">
-                                                    {{ $displayText }}
-                                                </option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </td>
-                                    <td><input type="text" name="items[0][jenis]"
-                                            class="form-control jenis-field bg-light rounded-3" readonly></td>
-                                    <td><input type="text" name="items[0][kategori]"
-                                            class="form-control kategori-field bg-light rounded-3" readonly></td>
-                                    <td><input type="text" name="items[0][nama_produk]"
-                                            class="form-control nama-field bg-light rounded-3" readonly></td>
-                                    <td>
-                                        <input type="number"
-                                            class="form-control text-center bg-light fw-bold rounded-3 order-field"
-                                            value="0"
-                                            readonly>
-                                    </td>
-                                    <td>
-                                        <input type="number"
-                                            name="items[0][jumlah]"
-                                            class="form-control jumlah-field text-end fw-bold rounded-3"
-                                            value="0"
-                                            min="0" required>
-                                    </td>
+                    <td>
+                        <select name="items[0][label]" 
+                            class="form-select form-select-sm label-select" required>
+                            @if($produks->isEmpty())
+                                <option value="">-- Tidak ada produk --</option>
+                            @else
+                                <option value="">-- Pilih Produk --</option>
+                                @foreach($produks as $produk)
+                                <option value="{{ $produk['kode'] }}"
+                                    data-order="{{ $produk['order_qty'] ?? 0 }}"
+                                    data-jenis="{{ $produk['jenis'] }}"
+                                    data-kategori="{{ $produk['kategori'] ?? '' }}"
+                                    data-nama="{{ $produk['nama_produk'] ?? '' }}"
+                                    data-satuan="{{ $produk['satuan'] ?? 'Set' }}"
+                                    data-harga="{{ $produk['harga'] ?? 0 }}"
+                                    data-status="{{ $produk['status'] ?? '' }}"
+                                    data-isi="{{ $produk['isi'] ?? '' }}">
+                                    {{ $produk['nama_produk'] ?? $produk['label'] }}
+                                </option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </td>
 
-                                    <td><input type="text" name="items[0][satuan]"
-                                            class="form-control satuan-field bg-light rounded-3" readonly></td>
-                                    <td>
-                                        <input type="text" name="items[0][harga]"
-                                            class="form-control harga-field text-end fw-bold bg-light rounded-3" readonly>
-                                        <small class="text-muted text-end d-block harga-satuan-display fst-italic mt-1"></small>
-                                    </td>
-                                    <td class="bg-success-subtle text-end fw-bold fs-5 total-row-display rounded-3">Rp 0
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-secondary status-badge fs-6 px-3 py-2">-</span>
-                                        <input type="hidden" name="items[0][status]" class="status-field">
-                                    </td>
+                    <td><input type="text" name="items[0][jenis]" class="form-control form-control-sm bg-light jenis-field" readonly></td>
 
-                                    <td>
-                                        <textarea name="items[0][isi]"
-                                            class="form-control isi-field bg-light rounded-3 fs-6 py-2"
-                                            rows="4" readonly style="resize:none;"></textarea>
-                                    </td>
+                    <td><input type="text" name="items[0][kategori]" class="form-control form-control-sm bg-light kategori-field" readonly></td>
 
-                                    <td class="text-center">
-                                        <button type="button"
-                                            class="btn btn-danger btn-sm rounded-circle hapus-baris shadow-sm"
-                                            title="Hapus baris">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="table-primary">
-                                <tr>
-                                    <td colspan="7" class="text-end fw-bold fs-4">GRAND TOTAL</td>
-                                    <td class="text-end fw-bold fs-4 text-dark" id="grand-total">Rp 0</td>
-                                    <td colspan="4"></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="10" class="text-end fw-bold">Jumlah Baris</td>
-                                    <td class="text-center fw-bold fs-5" id="total-item">1</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+                    <td><input type="text" name="items[0][nama_produk]" class="form-control form-control-sm bg-light nama-field" readonly></td>
+
+                    <td>
+                        <input type="number" class="form-control form-control-sm text-center bg-light order-field" value="0" readonly>
+                    </td>
+
+                    <td>
+                        <input type="number" name="items[0][jumlah]" 
+                            class="form-control form-control-sm text-end jumlah-field" 
+                            value="0" min="0">
+                    </td>
+
+                    <td>
+                        <input type="text" name="items[0][satuan]" 
+                            class="form-control form-control-sm bg-light satuan-field" readonly>
+                    </td>
+
+                    <td>
+                        <input type="text" name="items[0][harga]" 
+                            class="form-control form-control-sm text-end bg-light harga-field" readonly>
+                        <small class="text-muted d-block text-end harga-satuan-display"></small>
+                    </td>
+
+                    <td class="text-end fw-bold text-success total-row-display">
+                        Rp 0
+                    </td>
+
+                    <td class="text-center">
+                        <span class="badge bg-secondary status-badge">-</span>
+                        <input type="hidden" name="items[0][status]" class="status-field">
+                    </td>
+
+                    <td>
+                        <input name="items[0][isi]" 
+                            class="form-control form-control-sm bg-light isi-field" 
+                            rows="2" readonly>
+                    </td>
+
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm hapus-baris">
+                            ✕
+                        </button>
+                    </td>
+
+                </tr>
+            </tbody>
+
+            <tfoot class="bg-light">
+                <tr>
+                    <td colspan="8" class="text-end fw-bold">GRAND TOTAL</td>
+                    <td class="text-end fw-bold text-primary" id="grand-total">Rp 0</td>
+                    <td colspan="3"></td>
+                </tr>
+                <tr>
+                    <td colspan="10" class="text-end">Jumlah Baris</td>
+                    <td class="text-center fw-bold" id="total-item">1</td>
+                </tr>
+            </tfoot>
+
+        </table>
+    </div>
+</div>
             </div>
 
             <!-- Section Sertifikat Murid -->

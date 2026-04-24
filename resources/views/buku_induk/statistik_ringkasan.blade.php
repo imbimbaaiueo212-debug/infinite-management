@@ -82,55 +82,58 @@
 
 <div class="container-fluid py-4">
     <div class="filter-section shadow-sm">
-    <form method="GET" action="" class="row g-3 align-items-end">
-        @if($isAdmin)
-            <!-- HANYA ADMIN YANG LIHAT DROPDOWN UNIT -->
-            <div class="col-12 col-md-4">
-                <label class="form-label small fw-bold">Pilih Unit</label>
-                <select name="unit_id" class="form-select form-select-sm">
-                    @foreach($unitOptions as $value => $nama)
-                        <option value="{{ $value }}" {{ $selectedUnit == $value ? 'selected' : '' }}>
-                            {{ $nama }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        @else
-            <!-- USER BIASA: HILANGKAN DROPDOWN, PAKSA UNIT SENDIRI -->
-            <input type="hidden" name="unit_id" value="{{ $userUnit }}">
+    <form method="GET" class="row g-3 mb-4">
 
-            <div class="col-12">
-                <div class="alert alert-info small py-2 mb-0 rounded">
-                    <i class="fas fa-building me-2"></i>
-                    Statistik untuk Unit: <strong>{{ $userUnit ?? 'Tidak Terdefinisi' }}</strong>
-                </div>
-            </div>
-        @endif
+    @php
+        // Helper untuk generate opsi bulan-tahun
+        $periodeOptions = [];
+        foreach ($tahunOptions as $tahun) {
+            foreach ($bulanOptions as $bulanKey => $bulanNama) {
+                $value = $bulanKey . '-' . $tahun;
+                $label = $bulanNama . ' ' . $tahun;
+                $periodeOptions[$value] = $label;
+            }
+        }
+    @endphp
 
-        <!-- Bulan & Tahun tetap muncul untuk semua user -->
-        <div class="col-6 col-md-{{ $isAdmin ? '3' : '4' }}">
-            <label class="form-label small fw-bold">Bulan</label>
-            <select name="bulan" class="form-select form-select-sm">
-                @foreach($bulanOptions as $key => $nama)
-                    <option value="{{ $key }}" {{ $bulan == $key ? 'selected' : '' }}>{{ $nama }}</option>
-                @endforeach
-            </select>
-        </div>
+    <!-- Periode Awal -->
+    <div class="col-md-5">
+        <label class="fw-bold">Periode Awal</label>
+        <select id="periode_awal" class="form-control">
+            @foreach($periodeOptions as $val => $label)
+                <option value="{{ $val }}"
+                    {{ ($bulanAwal.'-'.$tahunAwal) == $val ? 'selected' : '' }}>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+    </div>
 
-        <div class="col-6 col-md-{{ $isAdmin ? '3' : '4' }}">
-            <label class="form-label small fw-bold">Tahun</label>
-            <select name="tahun" class="form-select form-select-sm">
-                @foreach($tahunOptions as $thn)
-                    <option value="{{ $thn }}" {{ $tahun == $thn ? 'selected' : '' }}>{{ $thn }}</option>
-                @endforeach
-            </select>
-        </div>
+    <!-- Periode Akhir -->
+    <div class="col-md-5">
+        <label class="fw-bold">Periode Akhir</label>
+        <select id="periode_akhir" class="form-control">
+            @foreach($periodeOptions as $val => $label)
+                <option value="{{ $val }}"
+                    {{ ($bulanAkhir.'-'.$tahunAkhir) == $val ? 'selected' : '' }}>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+    </div>
 
-        <!-- Info Auto Update -->
-        <div class="col-12 col-md-{{ $isAdmin ? '2' : '4' }} d-flex align-items-end justify-content-end">
-            <small class="text-muted fst-italic">Auto update</small>
-        </div>
-    </form>
+    <!-- Hidden input (yang dikirim ke controller) -->
+    <input type="hidden" name="bulan_awal" id="bulan_awal">
+    <input type="hidden" name="tahun_awal" id="tahun_awal">
+    <input type="hidden" name="bulan_akhir" id="bulan_akhir">
+    <input type="hidden" name="tahun_akhir" id="tahun_akhir">
+
+    <!-- Button -->
+    <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary w-100">Filter</button>
+    </div>
+
+</form>
 </div>
 
     <div class="stat-container shadow-sm">
@@ -204,15 +207,35 @@
     </div>
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.querySelector('.filter-section form');
-        const selects = form.querySelectorAll('select');
+document.addEventListener('DOMContentLoaded', function () {
 
-        selects.forEach(select => {
-            select.addEventListener('change', function () {
-                form.submit(); // Otomatis submit form saat ada perubahan
-            });
-        });
+    function setHiddenValue(selectId, bulanId, tahunId) {
+        const val = document.getElementById(selectId).value;
+        if (!val) return;
+
+        const [bulan, tahun] = val.split('-');
+
+        document.getElementById(bulanId).value = bulan;
+        document.getElementById(tahunId).value = tahun;
+    }
+
+    function updateAll() {
+        setHiddenValue('periode_awal', 'bulan_awal', 'tahun_awal');
+        setHiddenValue('periode_akhir', 'bulan_akhir', 'tahun_akhir');
+    }
+
+    // Saat pertama load
+    updateAll();
+
+    // Saat user pilih
+    document.getElementById('periode_awal').addEventListener('change', updateAll);
+    document.getElementById('periode_akhir').addEventListener('change', updateAll);
+
+    // Submit form (PASTI sudah terisi)
+    document.querySelector('form').addEventListener('submit', function () {
+        updateAll();
     });
+
+});
 </script>
 @endsection

@@ -38,34 +38,29 @@ class AbsensiRelawan extends Model
     // ===================================================================
     // GLOBAL SCOPE: FILTER OTOMATIS BERDASARKAN UNIT USER YANG LOGIN
     // ===================================================================
-    protected static function booted()
-    {
-        static::addGlobalScope('unit', function (Builder $builder) {
-            // Cek apakah user sudah login (hindari error di seeder/migration/console)
-            if (Auth::check()) {
-                $user = Auth::user();
+   protected static function booted()
+{
+    static::addGlobalScope('unit', function (Builder $builder) {
+        if (Auth::check()) {
+            $user = Auth::user();
 
-                // Admin / Pusat / Developer → lihat SEMUA data
-                if ($user->is_admin) {
-                    return;
-                }
-
-                // User biasa → hanya lihat data unitnya sendiri
-                if ($user->bimba_unit) {
-                    $builder->where('bimba_unit', $user->bimba_unit);
-                } else {
-                    // Tidak punya unit → blokir total (keamanan)
-                    $builder->whereRaw('1 = 0');
-                }
+            if ($user->is_admin) {
+                return;
             }
-            // Jika belum login (misal di artisan tinker), tidak filter
-        });
 
-        // Event otomatis hitung potongan tunjangan
-        static::created(fn($absensi) => $absensi->hitungPotonganTunjangan());
-        static::updated(fn($absensi) => $absensi->hitungPotonganTunjangan());
-        static::deleted(fn($absensi) => $absensi->tanggal ? $absensi->hitungPotonganTunjangan() : null);
-    }
+            if ($user->bimba_unit) {
+                // ✅ FIX: kasih prefix tabel
+                $builder->where('absensi_relawan.bimba_unit', $user->bimba_unit);
+            } else {
+                $builder->whereRaw('1 = 0');
+            }
+        }
+    });
+
+    static::created(fn($absensi) => $absensi->hitungPotonganTunjangan());
+    static::updated(fn($absensi) => $absensi->hitungPotonganTunjangan());
+    static::deleted(fn($absensi) => $absensi->tanggal ? $absensi->hitungPotonganTunjangan() : null);
+}
 
     // ===================================================================
     // HITUNG ULANG POTONGAN TUNJANGAN (diperbaiki & lebih aman)
@@ -249,7 +244,12 @@ class AbsensiRelawan extends Model
         };
     }
     public function profile()
-{
-    return $this->belongsTo(Profile::class, 'nik', 'nik');
-}
+    {
+        return $this->belongsTo(Profile::class, 'nik', 'nik');
+    }
+    public function volunteer()
+    {
+        return $this->hasOne(AbsensiVolunteer::class, 'nik', 'nik')
+            ->whereColumn('absensi_volunteer.tanggal', 'absensi_relawan.tanggal');
+    }
 }

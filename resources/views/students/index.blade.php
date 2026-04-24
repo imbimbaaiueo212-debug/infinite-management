@@ -23,7 +23,7 @@
 
         {{-- Filter & Search --}}
 <form id="filterStudents" 
-      class="card card-body mb-4 table-responsive" 
+      class="card card-body mb-4" 
       method="GET" 
       action="{{ route('students.index') }}">
 
@@ -32,13 +32,14 @@
         <!-- Unit biMBA: paling kiri di md+ -->
         <div class="col-12 col-md-5 col-lg-3 order-md-1">
             <label for="unit_id" class="form-label">Unit biMBA</label>
-            <select name="unit_id" id="unit_id"
-                    class="form-select select2-unit"
-                    data-placeholder="Pilih Cabang - Unit biMBA">
-                <option value=""></option>
+            <select name="unit_id" id="unit_id" class="form-select"
+                {{ !in_array(auth()->user()->role ?? '', ['admin','superadmin']) ? 'disabled' : '' }}>
+                
+                <option value="">Semua Unit</option>
+
                 @foreach($unitOptions as $opt)
                     <option value="{{ $opt['value'] }}"
-                        @selected($unitId == $opt['value'])>
+                        {{ $unitId == $opt['value'] ? 'selected' : '' }}>
                         {{ $opt['label'] }}
                     </option>
                 @endforeach
@@ -46,7 +47,7 @@
         </div>
 
         <!-- Cari (Nama / NIM): kedua -->
-        <div class="col-12 col-md-6 col-lg-4 order-md-2" style="min-width:260px">
+        <div class="col-12 col-md-6 col-lg-3 order-md-2">
             <label for="q" class="form-label">Cari (Nama / NIM)</label>
             <select name="q" id="q" class="form-select select2-students"
                 data-placeholder="Ketik untuk mencari Nama/NIM">
@@ -773,5 +774,17 @@
             el.textContent = original;
         }, 2000);
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+    const unitSelect = document.getElementById('unit_id');
+
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function () {
+            this.form.submit();
+        });
+    }
+
+});
     </script>
 @endpush

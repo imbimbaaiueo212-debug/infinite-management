@@ -23,19 +23,28 @@
 
     <!-- Unit biMBA: paling kiri di md+ -->
     <div class="col-lg-3 col-md-4 order-md-1">
-        <label for="unit_id" class="form-label fw-medium">Unit biMBA</label>
-        <select name="unit_id" id="unit_id"
-                class="form-select select2-unit"
-                data-placeholder="Pilih Cabang - Unit">
-            <option value=""></option>
-            @foreach($unitOptions as $opt)
-                <option value="{{ $opt['value'] }}"
-                    @selected(request('unit_id') == $opt['value'])>
-                    {{ $opt['label'] }}
-                </option>
-            @endforeach
-        </select>
-    </div>
+    <label for="unit_id" class="form-label fw-medium">Unit biMBA</label>
+
+    <select name="unit_id" id="unit_id"
+        class="form-select select2-unit"
+        data-placeholder="Pilih Cabang - Unit"
+        {{ !in_array(auth()->user()->role ?? '', ['admin','superadmin']) ? 'disabled' : '' }}>
+
+        <option value=""></option>
+
+        @foreach($unitOptions as $opt)
+            <option value="{{ $opt['value'] }}"
+                @selected(($unitId ?? request('unit_id')) == $opt['value'])>
+                {{ $opt['label'] }}
+            </option>
+        @endforeach
+    </select>
+
+    {{-- ⛔ penting: kirim value saat disabled --}}
+    @if(!in_array(auth()->user()->role ?? '', ['admin','superadmin']))
+        <input type="hidden" name="unit_id" value="{{ $unitId }}">
+    @endif
+</div>
 
     <!-- Cari NIM / Nama: kedua (lebar agak lebih besar) -->
     <div class="col-lg-4 col-md-5 order-md-2">
@@ -261,6 +270,23 @@ $(document).ready(function() {
     $('#q').on('select2:select', function () {
         $(this).closest('form').submit();
     });
+});
+document.addEventListener('DOMContentLoaded', function () {
+
+    const unitSelect = document.getElementById('unit_id');
+
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function () {
+
+            // hanya admin yang auto submit
+            const isAdmin = @json(in_array(auth()->user()->role ?? '', ['admin','superadmin']));
+
+            if (isAdmin) {
+                this.form.submit();
+            }
+        });
+    }
+
 });
 </script>
 @endpush

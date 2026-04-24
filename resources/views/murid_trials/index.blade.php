@@ -29,15 +29,26 @@
     <!-- Unit biMBA: paling kiri di md+ -->
     <div class="col-md-3 order-md-1">
         <label class="form-label">Unit biMBA</label>
-        <select name="unit_id" id="unitSelect" class="form-select select2-unit"
-                data-placeholder="Pilih Cabang - Unit">
+
+        <select name="unit_id" id="unitSelect"
+            class="form-select select2-unit"
+            data-placeholder="Pilih Cabang - Unit"
+            {{ (!auth()->user()->isAdmin ?? true) ? 'disabled' : '' }}>
+
             <option value=""></option>
+
             @foreach(($unitOptions ?? []) as $opt)
-                <option value="{{ $opt['value'] }}" @selected(request('unit_id') == $opt['value'])>
+                <option value="{{ $opt['value'] }}"
+                    @selected(($selectedUnitId ?? request('unit_id')) == $opt['value'])>
                     {{ $opt['label'] }}
                 </option>
             @endforeach
         </select>
+
+        {{-- ⛔ penting: kirim value saat disabled --}}
+        @if(!auth()->user()->isAdmin ?? true)
+            <input type="hidden" name="unit_id" value="{{ $selectedUnitId }}">
+        @endif
     </div>
 
     <!-- Cari Nama / No HP / Unit: tengah (lebar lebih besar) -->
@@ -159,25 +170,25 @@
 
                                     {{-- AKSI --}}
                                     <td class="text-center">
-    @if($murid->status_trial === 'lanjut_daftar')
-        @if($murid->student)
-            <a href="{{ route('registrations.create', ['student_id' => $murid->student->id, 'from_trial' => true]) }}"
-               class="btn btn-success btn-sm">Pendaftaran</a>
-        @endif
-    @else
-        <span class="text-muted small">Menunggu status</span>
-    @endif
+                                        @if($murid->status_trial === 'lanjut_daftar')
+                                            @if($murid->student)
+                                                <a href="{{ route('registrations.create', ['student_id' => $murid->student->id, 'from_trial' => true]) }}"
+                                                class="btn btn-success btn-sm">Pendaftaran</a>
+                                            @endif
+                                        @else
+                                            <span class="text-muted small">Menunggu status</span>
+                                        @endif
 
-    @if(auth()->check() && auth()->user()->is_admin)   <!-- ← ganti sesuai field admin di model User kamu -->
-        <form action="{{ route('murid_trials.destroy', $murid->id) }}" method="POST"
-              class="d-inline ms-1">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn-danger btn-sm"
-                    onclick="return confirm('Yakin hapus data ini?')">Hapus</button>
-        </form>
-    @endif
-</td>
+                                        @if(auth()->check() && auth()->user()->is_admin)   <!-- ← ganti sesuai field admin di model User kamu -->
+                                            <form action="{{ route('murid_trials.destroy', $murid->id) }}" method="POST"
+                                                class="d-inline ms-1">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger btn-sm"
+                                                        onclick="return confirm('Yakin hapus data ini?')">Hapus</button>
+                                            </form>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>

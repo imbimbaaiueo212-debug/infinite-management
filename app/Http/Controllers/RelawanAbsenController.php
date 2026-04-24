@@ -58,7 +58,7 @@ class RelawanAbsenController extends Controller
             'profiles.bimba_unit',
             'profiles.no_cabang'
         )
-        ->orderBy('profiles.nama');
+        ->orderBy('profiles.nik');
 
     if (!$user->is_admin && $user->bimba_unit) {
         $relawanQuery->where('profiles.bimba_unit', $user->bimba_unit);
@@ -344,7 +344,7 @@ class RelawanAbsenController extends Controller
     $absen = AbsensiVolunteer::findOrFail($id);
 
     // Cek hak akses
-    if (!auth()->user()->is_admin && $absen->bimba_unit !== auth()->user()->bimba_unit) {
+    if (!Auth::user()->is_admin && $absen->bimba_unit !== Auth::user()->bimba_unit) {
         abort(403, 'Anda tidak berhak mengedit absensi unit lain.');
     }
 
@@ -454,7 +454,7 @@ class RelawanAbsenController extends Controller
     {
         $absen = AbsensiVolunteer::findOrFail($id);
 
-        if (!auth()->user()->is_admin && $absen->bimba_unit !== auth()->user()->bimba_unit) {
+        if (!Auth::user()->is_admin && $absen->bimba_unit !== Auth::user()->bimba_unit) {
             abort(403);
         }
 

@@ -25,6 +25,7 @@ class BukuInduk extends Model
         'tgl_selesai', 'alert2', 'asal_modul', 'keterangan_optional', 'level',
         'jenis_kbm', 'kode_jadwal', 'hari_jam', 'alamat_murid', 'status_pindah',
         'tanggal_pindah', 'ke_bimba_intervio', 'keterangan', 'bimba_unit', 'no_cabang', 'info', 'tgl_daftar',
+        'tgl_surat_garansi', 'keterangan_level', 'tgl_level',
     ];
 
     // =================================================================
@@ -210,5 +211,19 @@ public function getHariJamExportAttribute()
 
     // Gabungkan dengan koma dan spasi
     return implode(', ', $hariList);
+}
+
+public function getTglSuratGaransiFormattedAttribute()
+{
+    return $this->tgl_surat_garansi
+        ? $this->tgl_surat_garansi->translatedFormat('d F Y')
+        : '-';
+}
+
+public function getTglLevelFormattedAttribute()
+{
+    return $this->tgl_level
+        ? $this->tgl_level->translatedFormat('d F Y')
+        : '-';
 }
 }

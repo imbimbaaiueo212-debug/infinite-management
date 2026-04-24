@@ -43,7 +43,7 @@ class JadwalDetailController extends Controller
             }
         })
         ->select('nama', 'nik', 'bimba_unit', 'no_cabang', 'jabatan')
-        ->orderBy('nama');
+        ->orderBy('nik');
 
     $isAdmin = Auth::check() && Auth::user()->is_admin;
 

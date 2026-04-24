@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Models\OrderModul;
 use App\Models\DataProduk;
 use App\Models\Produk;
@@ -84,7 +86,7 @@ class OrderModulController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error getStatusStok: ' . $e->getMessage());
+            Log::error('Error getStatusStok: ' . $e->getMessage());
             return response()->json(['error' => 'Terjadi kesalahan server'], 500);
         }
     }
@@ -97,108 +99,21 @@ class OrderModulController extends Controller
     }
 
     public function index(Request $request)
-    {
-        $kode         = $request->input('kode');
-        $minggu       = $request->input('minggu');
-        $tahun        = $request->input('tahun', date('Y'));
-        $periodeRekap = $request->input('periode_rekap', now()->format('Y-m'));
-        $unitId       = $request->input('unit_id');
+{
+    $query = OrderModul::with('unit');
 
-        $user = auth()->user();
-
-        $query = OrderModul::with('unit')
-                           ->whereYear('tanggal_order', $tahun)
-                           ->whereNotNull('unit_id');  // ← KRITIS: hilangkan order tanpa unit
-
-        // Non-admin: paksa pakai unit login sendiri
-        if (!$user->is_admin) {
-            $userUnit = $user->bimba_unit;
-            if ($userUnit) {
-                $unit = Unit::where('biMBA_unit', $userUnit)->first();
-                if ($unit) {
-                    $query->where('unit_id', $unit->id);
-                } else {
-                    // Jika unit login tidak ditemukan → kosongkan hasil
-                    $query->where('unit_id', 0); // trik agar tidak ada data
-                }
-            }
-        } 
-        // Admin: pakai filter request jika ada
-        else {
-            if ($request->filled('unit_id') && is_numeric($unitId)) {
-                $query->where('unit_id', $unitId);
-            }
-            // Jika admin pilih "Semua Unit" (kosong) → semua unit OK (tapi null sudah di-exclude)
-        }
-
-        // Filter kode
-        if ($kode) {
-            $query->where(function ($q) use ($kode) {
-                for ($i = 1; $i <= 5; $i++) {
-                    $q->orWhere('kode' . $i, 'like', '%' . $kode . '%');
-                }
-            });
-        }
-
-        // Filter minggu
-        if ($minggu) {
-            $query->whereNotNull('kode' . $minggu);
-        }
-
-        $orders = $query->orderByDesc('tanggal_order')->get();
-
-        $units = Unit::orderBy('no_cabang')->get();
-
-        $produks = Produk::whereIn('jenis', $this->allowedJenis)
-                         ->orderBy('kode')
-                         ->get(['kode', 'label', 'jenis', 'harga']);
-
-        // Hitung total
-        $totalHrgPerMinggu = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $sumQuery = OrderModul::whereYear('tanggal_order', $tahun)
-                                  ->whereNotNull('unit_id');
-            if (!$user->is_admin) {
-                $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
-                if ($unit) $sumQuery->where('unit_id', $unit->id);
-            } elseif ($request->filled('unit_id')) {
-                $sumQuery->where('unit_id', $unitId);
-            }
-            $totalHrgPerMinggu['hrg' . $i] = $sumQuery->sum('hrg' . $i);
-        }
-        $grandTotalTahun = array_sum($totalHrgPerMinggu);
-
-        $totalOrderPerMinggu = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $countQuery = OrderModul::whereYear('tanggal_order', $tahun)
-                                    ->whereNotNull('unit_id')
-                                    ->whereNotNull('kode' . $i)
-                                    ->where('jml' . $i, '>', 0);
-            if (!$user->is_admin) {
-                $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
-                if ($unit) $countQuery->where('unit_id', $unit->id);
-            } elseif ($request->filled('unit_id')) {
-                $countQuery->where('unit_id', $unitId);
-            }
-            $totalOrderPerMinggu['minggu' . $i] = $countQuery->count();
-        }
-
-        $totalOrderTahunQuery = OrderModul::whereYear('tanggal_order', $tahun)
-                                          ->whereNotNull('unit_id');
-        if (!$user->is_admin) {
-            $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
-            if ($unit) $totalOrderTahunQuery->where('unit_id', $unit->id);
-        } elseif ($request->filled('unit_id')) {
-            $totalOrderTahunQuery->where('unit_id', $unitId);
-        }
-        $totalOrderTahun = $totalOrderTahunQuery->count();
-
-        return view('order_modul.index', compact(
-            'orders', 'units', 'totalHrgPerMinggu', 'totalOrderPerMinggu',
-            'grandTotalTahun', 'totalOrderTahun', 'kode', 'minggu', 'tahun',
-            'periodeRekap', 'produks'
-        ));
+    // ✅ FILTER RANGE TANGGAL (AMAN & FLEXIBLE)
+    if ($request->start_date && $request->end_date) {
+        $query->whereBetween('tanggal_order', [
+            $request->start_date,
+            $request->end_date
+        ]);
     }
+
+    $orders = $query->orderByDesc('tanggal_order')->get();
+
+    return view('order_modul.index', compact('orders'));
+}
 
     public function create()
 {
@@ -224,91 +139,116 @@ class OrderModulController extends Controller
     ));
 }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'tanggal_order' => 'required|date',
-            'unit_id'       => 'required|exists:units,id', // Wajib pilih unit
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
+        'tanggal_order' => 'required|date',
+        'unit_id'       => 'required|exists:units,id',
+    ]);
 
-        $data = $request->all();
-        $periodeRekap = Carbon::parse($data['tanggal_order'])->format('Y-m');
+    $produks  = $request->input('produk', []);
+    $jumlahs  = $request->input('jumlah', []);
+    $statuses = $request->input('status', []);
 
-        $statusStokMap = $this->getStatusStokMap($periodeRekap);
-        $hargaMap = $this->getHargaMap();
-
-        // Hitung total harga dan status stok untuk setiap slot (1-5)
-        for ($i = 1; $i <= 5; $i++) {
-            $kode = $data['kode' . $i] ?? null;
-            $jml  = (int) ($data['jml' . $i] ?? 0);
-
-            $hargaSatuan = $hargaMap[$kode] ?? 0;
-            $data['hrg' . $i] = $jml * $hargaSatuan;
-
-            $data['sts' . $i] = ($kode && isset($statusStokMap[$kode]))
-                ? $statusStokMap[$kode]
-                : null;
-        }
-
-        OrderModul::create($data);
-
-        return redirect()->route('order_modul.index')
-                         ->with('success', 'Order modul berhasil disimpan!');
+    if (empty($produks)) {
+        return back()->with('error', 'Produk belum dipilih!');
     }
+
+    // 🔒 USER TIDAK BOLEH SET STATUS
+    if (!Auth::user()->is_admin) {
+        $statuses = array_fill(0, count($produks), 'pending');
+    }
+
+    foreach ($produks as $i => $produk) {
+
+        if (!$produk) continue;
+
+        $jumlah = (int) ($jumlahs[$i] ?? 0);
+        $status = $statuses[$i] ?? 'pending';
+
+        // ambil harga dari DB
+        $dataProduk = Produk::where('label', $produk)->first();
+        $hargaSatuan = $dataProduk->harga ?? 0;
+        $total = $jumlah * $hargaSatuan;
+
+        // ✅ SIMPAN ORDER
+        $order = OrderModul::create([
+            'tanggal_order' => $request->tanggal_order,
+            'unit_id'       => $request->unit_id,
+
+            'kode1' => $produk,
+            'jml1'  => $jumlah,
+            'hrg1'  => $total,
+            'status'=> $status,
+            'approval' => 'pending',
+        ]);
+    }
+
+    return redirect()->route('order_modul.index')
+                     ->with('success', 'Order berhasil disimpan');
+}
 
     public function edit($id)
 {
     $order = OrderModul::with('unit')->findOrFail($id);
     $units = Unit::orderBy('no_cabang')->get();
 
-    $statusStokMap = [];
-    $periodeRekap = Carbon::parse($order->tanggal_order)->format('Y-m');
-    $hargaMap = $this->getHargaMap();
-
-    $produks = collect();  // kosong dulu, load via AJAX
+    // ambil produk (master)
+    $produks = \App\Models\Produk::orderBy('label')->get();
 
     return view('order_modul.edit', compact(
         'order',
-        'produks',
         'units',
-        'statusStokMap',
-        'periodeRekap',
-        'hargaMap'
+        'produks'
     ));
 }
 
     public function update(Request $request, $id)
-    {
-        $order = OrderModul::findOrFail($id);
+{
+    $order = OrderModul::findOrFail($id);
 
-        $request->validate([
-            'tanggal_order' => 'required|date',
-            'unit_id'       => 'required|exists:units,id',
-        ]);
+    $request->validate([
+        'tanggal_order' => 'required|date',
+        'unit_id'       => 'required|exists:units,id',
+    ]);
 
-        $data = $request->all();
-        $periodeRekap = Carbon::parse($data['tanggal_order'])->format('Y-m');
+    $hargaMap = \App\Models\Produk::pluck('harga', 'label')->toArray();
 
-        $statusStokMap = $this->getStatusStokMap($periodeRekap);
-        $hargaMap = $this->getHargaMap();
+    $data = [
+        'tanggal_order' => $request->tanggal_order,
+        'unit_id'       => $request->unit_id,
+    ];
 
-        for ($i = 1; $i <= 5; $i++) {
-            $kode = $data['kode' . $i] ?? null;
-            $jml  = (int) ($data['jml' . $i] ?? 0);
-
-            $hargaSatuan = $hargaMap[$kode] ?? 0;
-            $data['hrg' . $i] = $jml * $hargaSatuan;
-
-            $data['sts' . $i] = ($kode && isset($statusStokMap[$kode]))
-                ? $statusStokMap[$kode]
-                : null;
-        }
-
-        $order->update($data);
-
-        return redirect()->route('order_modul.index')
-                         ->with('success', 'Order modul berhasil diperbarui!');
+    // reset semua slot
+    for ($i = 1; $i <= 5; $i++) {
+        $data['kode'.$i] = null;
+        $data['jml'.$i]  = 0;
+        $data['hrg'.$i]  = 0;
     }
+
+    // mapping dari input ke slot
+    $produk = $request->produk ?? [];
+    $jumlah = $request->jumlah ?? [];
+
+    foreach ($produk as $i => $kode) {
+
+        if ($i >= 5) break;
+
+        $jml = (int) ($jumlah[$i] ?? 0);
+        $harga = $hargaMap[$kode] ?? 0;
+
+        $index = $i + 1;
+
+        $data['kode'.$index] = $kode;
+        $data['jml'.$index]  = $jml;
+        $data['hrg'.$index]  = $jml * $harga;
+    }
+
+    $order->update($data);
+
+    return redirect()->route('order_modul.index')
+        ->with('success', 'Order berhasil diupdate');
+}
 
     public function destroy($id)
     {
@@ -359,5 +299,39 @@ class OrderModulController extends Controller
             ];
         })
     ]);
+}
+public function updateStatus(Request $request, $id)
+{
+    if (!Auth::user()->is_admin) {
+        abort(403);
+    }
+
+    $order = OrderModul::findOrFail($id);
+
+    $request->validate([
+        'status' => 'required|in:pending,accept,reject'
+    ]);
+
+    $order->status = $request->status;
+    $order->save();
+
+    // ✅ CEK: jangan double kirim ke penerimaan
+    if ($request->status === 'accept') {
+
+        $already = \App\Models\PenerimaanProduk::where('keterangan', 'like', '%Order #'.$order->id.'%')->exists();
+
+        if (!$already) {
+            \App\Models\PenerimaanProduk::create([
+                'unit_id' => $order->unit_id,
+                'tanggal' => now(),
+                'kode_produk' => $order->kode1,
+                'jumlah' => $order->jml1,
+                'harga' => $order->hrg1,
+                'keterangan' => 'Approval Order #' . $order->id,
+            ]);
+        }
+    }
+
+    return back()->with('success', 'Status berhasil diupdate');
 }
 }

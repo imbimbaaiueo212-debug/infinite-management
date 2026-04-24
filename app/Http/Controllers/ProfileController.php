@@ -56,7 +56,7 @@ class ProfileController extends Controller
     // DROPDOWN NAMA/NIK: DINAMIS — IKUT FILTER UNIT
     $profileOptionsQuery = (clone $baseQuery)
         ->select('id', 'nik', 'nama', 'biMBA_unit')
-        ->orderBy('nama');
+        ->orderBy('nik', 'asc');
 
     if ($unitFilter) {
         $profileOptionsQuery->where('biMBA_unit', $unitFilter);
@@ -79,7 +79,7 @@ class ProfileController extends Controller
         $query->where('id', $search);
     }
 
-    $profiles = $query->orderBy('nama')->get();
+    $profiles = $query->orderBy('nik')->get();
 
     // === OPSI RB & KTR (ini ringan, biarkan tetap) ===
     $rbOptions = Ktr::where('waktu', 'like', 'RB%')
@@ -219,7 +219,7 @@ public function create()
     }
 
     // Di dalam method edit()
-public function edit(Profile $profile)
+    public function edit(Profile $profile)
 {
     // Hitung ulang semua data termasuk masa kerja dengan logic baru
     $this->recalculateProfileData($profile);
@@ -358,125 +358,74 @@ protected function calculateAndSaveMasaKerjaJabatan(Profile $profile)
     // AJAX: INLINE UPDATE RB
     // ===================================================================
     public function inlineUpdate(Request $request, Profile $profile)
-    {
-        if (!Auth::check()) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
-        }
-
-        $validator = Validator::make($request->only('rb'), ['rb' => 'nullable|string|max:10']);
-        if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
-        }
-
-        $raw = trim($request->rb ?? '');
-        $rbLabel = $raw === '' ? null : $this->normalizeRbLabel($raw);
-
-        // === CEK APAKAH RB ADA DI TABEL KTR ===
-        $isValidRb = $rbLabel ? Ktr::where('waktu', $rbLabel)->exists() : true;
-
-        if ($raw !== '' && !$isValidRb) {
-            // RB tidak valid → simpan, tapi RP jadi null
-            $profile->rb = $rbLabel;
-            $profile->rb_tambahan = $rbLabel;
-            $profile->ktr = null;
-            $profile->ktr_tambahan = null;
-            $profile->rp = null;
-            $profile->jumlah_rombim = null;
-            $profile->save();
-
-            return response()->json([
-                'status' => 'ok',
-                'profile' => [
-                    'id'             => $profile->id,
-                    'rb'             => $profile->rb,
-                    'rb_calc'        => $profile->rb_tambahan,
-                    'ktr'            => $profile->ktr,
-                    'ktr_tambahan'   => $profile->ktr_tambahan,
-                    'jumlah_rombim'  => $profile->jumlah_rombim,
-                    'rp'             => null,
-                ]
-            ]);
-        }
-
-        // === RB VALID → HITUNG SEMUA ===
-        $jumlahMurid = $this->getJumlahMuridForProfile($profile);
-
-        $profile->rb = $rbLabel;
-        $profile->rb_tambahan = $rbLabel;
-
-        $ktrFromRb = $rbLabel ? $this->resolveKtrFromRb($rbLabel) : null;
-
-        if ($profile->jabatan === 'Guru') {
-            $profile->ktr = $ktrFromRb ?? $this->formatKtrFromCountForGuru($jumlahMurid);
-            $profile->ktr_tambahan = $profile->ktr;
-            $profile->jumlah_rombim = $this->resolveSlotRombimFromCount($jumlahMurid);
-        } elseif ($profile->jabatan === 'Kepala Unit') {
-            $profile->ktr_tambahan = $ktrFromRb ?? $this->formatKtrFromCountForKepala($jumlahMurid);
-            $profile->ktr = null;
-        }
-
-        $priorityKtr = $profile->jabatan === 'Guru' ? $profile->ktr : $profile->ktr_tambahan;
-        $profile->rp = $this->resolveRpFromJumlahMuridWithKtr($jumlahMurid, $priorityKtr, $rbLabel);
-
-        $profile->save();
-        $labelBulan = Carbon::now()->locale('id')->translatedFormat('F Y');
-    app(ImbalanRekapController::class)->createRekapsForPeriode($labelBulan);
-
-        return response()->json([
-    'status' => 'ok',
-    'profile' => [
-        'rb'               => $profile->rb,
-        'rb_tambahan'      => $profile->rb_tambahan,
-        'ktr'              => $profile->ktr,
-        'ktr_tambahan'     => $profile->ktr_tambahan,
-        'rp'               => $profile->rp,
-        'jumlah_rombim'    => $profile->jumlah_rombim,
-        'jumlah_murid_jadwal' => $profile->jumlah_murid_jadwal, // jika perlu
-    ]
-]);
+{
+    if (!Auth::check()) {
+        return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
 
-    // ===================================================================
-    // AJAX: INLINE UPDATE KTR
-    // ===================================================================
-   public function inlineUpdateKtr(Request $request, Profile $profile)
-{
-    $request->validate(['ktr' => 'nullable|string|max:10']);
+    $validator = Validator::make($request->only('rb'), [
+        'rb' => 'nullable|string|max:10'
+    ]);
 
-    $inputKtr = $request->filled('ktr') ? trim($request->ktr) : null;
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'errors' => $validator->errors()
+        ], 422);
+    }
 
-    // Jika user pilih "Otomatis" atau kosong → reset ke nilai otomatis
-    if ($inputKtr === '' || $inputKtr === 'Otomatis' || $inputKtr === null) {
-        // Reset manual
-        $profile->ktr_tambahan = null;
+    $raw = trim($request->rb ?? '');
+    $rbLabel = $raw === '' ? null : $this->normalizeRbLabel($raw);
 
-        // Hitung ulang otomatis (panggil fungsi calculate biar konsisten)
+    // ===============================
+    // CEK VALID RB
+    // ===============================
+    $isValidRb = $rbLabel ? Ktr::where('waktu', $rbLabel)->exists() : true;
+
+    // ===============================
+    // HITUNG UTAMA DULU (SOURCE OF TRUTH)
+    // ===============================
+    if ($profile->jabatan === 'Guru') {
+        $this->calculateGuruData($profile);
+    } elseif ($profile->jabatan === 'Kepala Unit') {
         $this->calculateKepalaUnitData($profile);
+    }
 
-        // KTR sekarang sudah otomatis di $profile->ktr
-        $ktrFinal = $profile->ktr;
-    } else {
-        // Input manual → simpan ke tambahan dan ktr
-        $isValidKtr = Ktr::where('kategori', $inputKtr)->exists();
+    // ===============================
+    // HANDLE RB INPUT
+    // ===============================
+    if ($raw !== '') {
 
-        if ($isValidKtr) {
-            $profile->ktr_tambahan = $inputKtr;
-            $profile->ktr = $inputKtr;
-
-            // Hitung RP berdasarkan manual
-            $jumlahMurid = $this->getJumlahMuridForProfile($profile);
-            $profile->rp = $this->resolveRpFromJumlahMuridWithKtr($jumlahMurid, $inputKtr, $profile->rb);
-        } else {
-            // Invalid → RP null
+        if (!$isValidRb) {
+            // RB tidak valid → tetap simpan tapi RP null
+            $profile->rb = $rbLabel;
+            $profile->rb_tambahan = $rbLabel;
             $profile->rp = null;
-        }
+        } else {
+            // RB valid → override RB saja (TIDAK sentuh KTR)
+            $profile->rb = $rbLabel;
+            $profile->rb_tambahan = $rbLabel;
 
-        $ktrFinal = $inputKtr;
+            // hitung ulang RP karena RB berubah
+            $jumlahMurid = $this->getJumlahMuridForProfile($profile);
+
+            $priorityKtr = $profile->jabatan === 'Guru'
+                ? $profile->ktr
+                : $profile->ktr_tambahan;
+
+            $profile->rp = $this->resolveRpFromJumlahMuridWithKtr(
+                $jumlahMurid,
+                $priorityKtr,
+                $rbLabel
+            );
+        }
     }
 
     $profile->save();
 
-    // Rekap imbalan
+    // ===============================
+    // REKAP
+    // ===============================
     $labelBulan = Carbon::now()->locale('id')->translatedFormat('F Y');
     app(ImbalanRekapController::class)->createRekapsForPeriode($labelBulan);
 
@@ -485,8 +434,67 @@ protected function calculateAndSaveMasaKerjaJabatan(Profile $profile)
         'profile' => [
             'rb'               => $profile->rb,
             'rb_tambahan'      => $profile->rb_tambahan,
-            'ktr'              => $profile->ktr,             // otomatis atau manual
-            'ktr_tambahan'     => $profile->ktr_tambahan,   // manual atau null
+            'ktr'              => $profile->ktr,
+            'ktr_tambahan'     => $profile->ktr_tambahan,
+            'rp'               => $profile->rp,
+            'jumlah_rombim'    => $profile->jumlah_rombim,
+            'jumlah_murid_jadwal' => $profile->jumlah_murid_jadwal,
+        ]
+    ]);
+}
+
+    // ===================================================================
+    // AJAX: INLINE UPDATE KTR
+    // ===================================================================
+  public function inlineUpdateKtr(Request $request, Profile $profile)
+{
+    $request->validate(['ktr' => 'nullable|string|max:10']);
+
+    $inputKtr = $request->filled('ktr') ? trim($request->ktr) : null;
+
+    if ($inputKtr === '' || $inputKtr === 'Otomatis' || $inputKtr === null) {
+
+        // reset manual
+        $profile->ktr_tambahan = null;
+
+        if ($profile->jabatan === 'Guru') {
+            $this->calculateGuruData($profile);
+        } else {
+            $this->calculateKepalaUnitData($profile);
+        }
+
+    } else {
+
+        $isValidKtr = Ktr::where('kategori', $inputKtr)->exists();
+
+        if ($isValidKtr) {
+            $profile->ktr = $inputKtr;
+            $profile->ktr_tambahan = $inputKtr;
+
+            $jumlahMurid = $this->getJumlahMuridForProfile($profile);
+
+            $profile->rp = $this->resolveRpFromJumlahMuridWithKtr(
+                $jumlahMurid,
+                $inputKtr,
+                $profile->rb
+            );
+        } else {
+            $profile->rp = null;
+        }
+    }
+
+    $profile->save();
+
+    $labelBulan = Carbon::now()->locale('id')->translatedFormat('F Y');
+    app(ImbalanRekapController::class)->createRekapsForPeriode($labelBulan);
+
+    return response()->json([
+        'status' => 'ok',
+        'profile' => [
+            'rb'               => $profile->rb,
+            'rb_tambahan'      => $profile->rb_tambahan,
+            'ktr'              => $profile->ktr,
+            'ktr_tambahan'     => $profile->ktr_tambahan,
             'rp'               => $profile->rp,
             'jumlah_rombim'    => $profile->jumlah_rombim,
             'jumlah_murid_jadwal' => $profile->jumlah_murid_jadwal,
@@ -606,41 +614,45 @@ protected function calculateAndSaveMasaKerjaJabatan(Profile $profile)
     // ===================================================================
     private function calculateGuruData(Profile $profile): void
 {
-    // === INI YANG HARUS DITAMBAHKAN: HITUNG ULANG DARI BUKU INDUK! ===
-    $jumlahMuridMba = $this->getJumlahMuridMBA($profile->nama);
-    $profile->jumlah_murid_mba = $jumlahMuridMba;
+    $jumlahMurid = (int) $this->getJumlahMuridMBA($profile->nama);
 
-    $jadwal = (int) $jumlahMuridMba;  // sekarang pakai nilai REAL dari Buku Induk
+    $profile->jumlah_murid_mba     = $jumlahMurid;
+    $profile->jumlah_murid_jadwal  = $jumlahMurid;
+    $profile->jumlah_rombim        = $this->resolveSlotRombimFromCount($jumlahMurid);
 
-    $profile->jumlah_murid_jadwal = $jadwal > 0 ? $jadwal : null;
-    $profile->jumlah_rombim       = $this->resolveSlotRombimFromCount($jadwal);
+    // ===============================
+    // DEFAULT (ANTI NULL)
+    // ===============================
+    $profile->rb  = 'RB30';
+    $profile->ktr = 'KTR 1A';
 
-    if ($jadwal === 0) {
-        $profile->rb = 'RB30';
-        $profile->ktr = 'KTR 1A';
-    } else {
-        $rbDariSistem = $this->resolveRbFromCount($jadwal);
-        $rbSekarang   = $profile->rb ? (int) preg_replace('/\D/', '', $profile->rb) : null;
+    // ===============================
+    // LOGIC BERDASARKAN MURID
+    // ===============================
+    if ($jumlahMurid > 0) {
 
-        if ($rbSekarang !== $rbDariSistem && $rbDariSistem !== null) {
+        $rbDariSistem = $this->resolveRbFromCount($jumlahMurid);
+        if ($rbDariSistem !== null) {
             $profile->rb = 'RB' . $rbDariSistem;
         }
 
-        if (empty($profile->rb) && $rbDariSistem !== null) {
-            $profile->rb = 'RB' . $rbDariSistem;
-        }
-
-        if (empty($profile->ktr)) {
-            $profile->ktr = $this->formatKtrFromCountForGuru($jadwal);
+        $ktr = $this->formatKtrFromCountForGuru($jumlahMurid);
+        if ($ktr) {
+            $profile->ktr = $ktr;
         }
     }
 
+    // ===============================
+    // TURUNAN
+    // ===============================
     $profile->rb_tambahan  = $profile->rb;
     $profile->ktr_tambahan = $profile->ktr;
-    $profile->rp = $this->resolveRpFromJumlahMuridWithKtr($jadwal, $profile->ktr, $profile->rb);
 
-    // === TAMBAHKAN SAVE BIAR DATA TERSIMPAN PERMANEN ===
-    $profile->save();
+    $profile->rp = $this->resolveRpFromJumlahMuridWithKtr(
+        $jumlahMurid,
+        $profile->ktr,
+        $profile->rb
+    );
 }
 
    private function calculateKepalaUnitData(Profile $profile): void
@@ -1107,34 +1119,42 @@ if (array_search($ktrOtomatis, $ktrList) < array_search('KTR 2A', $ktrList)) {
 
 protected function calculateAndSaveMasaKerja($profile)
 {
+    // ✅ PRIORITAS: tgl_selesai_magang > tgl_masuk
+    $startDate = null;
+    
     if ($profile->tgl_selesai_magang) {
-        $start = Carbon::parse($profile->tgl_selesai_magang);
+        $startDate = Carbon::parse($profile->tgl_selesai_magang);
     } elseif ($profile->tgl_masuk) {
-        $start = Carbon::parse($profile->tgl_masuk);
-    } else {
+        $startDate = Carbon::parse($profile->tgl_masuk);
+    }
+    
+    if (!$startDate) {
         $profile->masa_kerja = 0;
         $profile->saveQuietly();
         return;
     }
 
-    if ($profile->tgl_resign) {
-        $end = Carbon::parse($profile->tgl_resign);
-    } elseif ($profile->tgl_non_aktif) {
-        $end = Carbon::parse($profile->tgl_non_aktif);
-    } else {
-        $end = Carbon::today();
+    // ✅ SELALU sampai HARI INI (tidak peduli resign/non-aktif)
+    $today = Carbon::today();
+    
+    // Reset jam untuk perbandingan akurat (sama seperti JS)
+    $startDate->startOfDay();
+    $today->startOfDay();
+
+    // ✅ LOGIKA BULAN YANG SAMA PERSIS DENGAN JAVASCRIPT
+    $years = $today->year - $startDate->year;
+    $months = $today->month - $startDate->month;
+    
+    // Jika bulan sudah tepat TAPI tanggal hari ini < tanggal mulai → kurangi 1 bulan
+    if ($months < 0 || ($months === 0 && $today->day < $startDate->day)) {
+        $months += 12;
+        $years--;
     }
+    
+    $totalMonths = $years * 12 + $months;
+    $totalMonths = max(0, $totalMonths);
 
-    $months = $start->diffInMonths($end);
-
-    $startNextMonth = $start->copy()->addMonths($months);
-    $remainingDays = $end->diffInDays($startNextMonth);
-
-    if ($remainingDays >= 15) {
-        $months++;
-    }
-
-    $profile->masa_kerja = max(0, $months);
+    $profile->masa_kerja = $totalMonths;
     $profile->saveQuietly();
 }
 

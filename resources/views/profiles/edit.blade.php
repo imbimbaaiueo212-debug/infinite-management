@@ -446,41 +446,48 @@ document.addEventListener('DOMContentLoaded', function () {
     const hiddenMasaJab     = document.getElementById('masa_kerja_jabatan_hidden');
 
     // ==================== FUNGSI MASA KERJA (DIPERBAIKI) ====================
-    function hitungMasaKerja() {
-        let startDate = null;
+function hitungMasaKerja() {
+    let startDate = null;
 
-        // Prioritas 1: Tanggal Selesai Magang (jika diisi)
-        if (tglSelesaiMagang && tglSelesaiMagang.value) {
-            startDate = new Date(tglSelesaiMagang.value);
-        } 
-        // Prioritas 2: Tanggal Masuk
-        else if (tglMasuk && tglMasuk.value) {
-            startDate = new Date(tglMasuk.value);
-        }
-
-        if (!startDate || isNaN(startDate.getTime())) {
-            if (masaKerjaDisplay) masaKerjaDisplay.value = '-';
-            if (masaKerjaHidden) masaKerjaHidden.value = '';
-            return;
-        }
-
-        const sekarang = new Date();
-        let bulan = (sekarang.getFullYear() - startDate.getFullYear()) * 12 + 
-                    (sekarang.getMonth() - startDate.getMonth());
-
-        if (sekarang.getDate() < startDate.getDate()) bulan--;
-        if (bulan < 0) bulan = 0;
-
-        const tahun = Math.floor(bulan / 12);
-        const sisa  = bulan % 12;
-
-        const text = tahun > 0 
-            ? `${tahun} tahun ${sisa} bulan` 
-            : `${sisa} bulan`;
-
-        if (masaKerjaDisplay) masaKerjaDisplay.value = text;
-        if (masaKerjaHidden) masaKerjaHidden.value = bulan;
+    if (tglSelesaiMagang && tglSelesaiMagang.value) {
+        startDate = new Date(tglSelesaiMagang.value);
+    } else if (tglMasuk && tglMasuk.value) {
+        startDate = new Date(tglMasuk.value);
     }
+
+    if (!startDate || isNaN(startDate.getTime())) {
+        masaKerjaDisplay.value = '-';
+        masaKerjaHidden.value = '';
+        return;
+    }
+
+    const today = new Date();
+    
+    // Reset jam untuk perbandingan yang akurat
+    startDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    // Hitung selisih bulan dengan lebih akurat
+    let years = today.getFullYear() - startDate.getFullYear();
+    let months = today.getMonth() - startDate.getMonth();
+    
+    // Jika bulan sudah tepat tapi tanggal hari ini < tanggal mulai, kurangi 1 bulan
+    if (months < 0 || (months === 0 && today.getDate() < startDate.getDate())) {
+        months += 12;
+        years--;
+    }
+    
+    // Total bulan
+    let totalMonths = years * 12 + months;
+    
+    if (totalMonths < 0) totalMonths = 0;
+
+    let th = Math.floor(totalMonths / 12);
+    let bl = totalMonths % 12;
+
+    masaKerjaDisplay.value = `${th} th ${bl} bl`;
+    masaKerjaHidden.value = totalMonths;
+}
 
     // Fungsi lain (tetap sama)
     function updateRbKtrRp() {

@@ -20,7 +20,7 @@ class AbsensiRelawanController extends Controller
     $q              = trim((string) $request->input('q', ''));
     $filterNik      = $request->input('nik');
     $filterUnit     = $request->input('bimba_unit');
-    $filterTanggal  = $request->input('tanggal'); // ✅ filter tanggal
+    $filterTanggal  = $request->input('tanggal');
 
     $user = Auth::user();
 
@@ -31,14 +31,11 @@ class AbsensiRelawanController extends Controller
             ->distinct()
             ->orderBy('bimba_unit')
             ->pluck('bimba_unit')
-            ->values()
         : collect();
 
-    // === DROPDOWN NAMA / NIK ===
+    // === DROPDOWN NIK / NAMA ===
     $muridQuery = Profile::select('nik as nim', 'nama as nama_murid')
-        ->orderBy('nama_murid');
-        $relawanQuery = Profile::select('nik', 'nama', 'bimba_unit', 'no_cabang')
-    ->orderBy('nama');
+        ->orderBy('nama');
 
     if (!$user->is_admin && $user->bimba_unit ?? false) {
         $muridQuery->where('bimba_unit', $user->bimba_unit);
@@ -49,34 +46,54 @@ class AbsensiRelawanController extends Controller
     }
 
     $muridOptions = $muridQuery->get();
-    $relawanOptions = $relawanQuery->get();
 
-    // === QUERY ABSENSI ===
-    $query = AbsensiRelawan::query();
+    // ============================
+    // ✅ QUERY UTAMA (JOIN 🔥)
+    // ============================
+    $query = AbsensiRelawan::query()
+        ->leftJoin('absensi_volunteer as av', function ($join) {
+            $join->on('absensi_relawan.nik', '=', 'av.nik')
+                 ->on('absensi_relawan.tanggal', '=', 'av.tanggal');
+        })
+        ->leftJoin('profiles as p', 'absensi_relawan.nik', '=', 'p.nik')
+        ->select([
+            'absensi_relawan.*',
+            'av.alasan as volunteer_alasan',
+            'av.keterangan as volunteer_keterangan',
+            'p.jabatan',
+            'p.departemen',
+        ]);
+
+    // ============================
+    // FILTER
+    // ============================
 
     if ($filterNik) {
-        $query->where('nik', $filterNik);
+        $query->where('absensi_relawan.nik', $filterNik);
     } elseif ($q !== '') {
         $query->where(function ($w) use ($q) {
-            $w->where('nama_relawan', 'like', "%{$q}%")
-              ->orWhere('nik', 'like', "%{$q}%");
+            $w->where('absensi_relawan.nama_relawaan', 'like', "%{$q}%")
+              ->orWhere('absensi_relawan.nik', 'like', "%{$q}%");
         });
     }
 
     if ($filterUnit) {
-        $query->where('bimba_unit', $filterUnit);
+        $query->where('absensi_relawan.bimba_unit', $filterUnit);
     }
 
     if (!$user->is_admin && $user->bimba_unit ?? false) {
-        $query->where('bimba_unit', $user->bimba_unit);
+        $query->where('absensi_relawan.bimba_unit', $user->bimba_unit);
     }
 
-    // ✅ FILTER TANGGAL
     if ($filterTanggal) {
-        $query->whereDate('tanggal', $filterTanggal);
+        $query->whereDate('absensi_relawan.tanggal', $filterTanggal);
     }
 
-    $absensi = $query->orderByDesc('tanggal')
+    if ($request->status) {
+        $query->where('absensi_relawan.status', $request->status);
+    }
+
+    $absensi = $query->orderByDesc('absensi_relawan.tanggal')
         ->paginate($perPage)
         ->appends($request->query());
 
@@ -86,12 +103,12 @@ class AbsensiRelawanController extends Controller
         'nik'         => $filterNik,
         'bimba_unit'  => $filterUnit,
         'tanggal'     => $filterTanggal,
+        'status'      => $request->status,
     ];
 
     return view('absensi-relawan.index', compact(
         'absensi',
         'muridOptions',
-        'relawanOptions',
         'unitOptions',
         'filters'
     ));

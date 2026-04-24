@@ -21,7 +21,7 @@ class RekapAbsensiController extends Controller
 
         $rekap = RekapAbsensi::orderBy('bimba_unit')
                             ->orderBy('no_cabang')
-                            ->orderBy('nama_relawan')
+                            ->orderBy('nik', 'asc')
                             ->get();
 
         return view('rekap.index', compact('rekap'));
@@ -31,26 +31,31 @@ class RekapAbsensiController extends Controller
      * Sinkronisasi Guru Aktif + jumlah_rombim dari Profile
      */
     private function syncGuruAktif()
-    {
-        $guruProfiles = Profile::where('jabatan', 'Guru')
-            ->where('status_karyawan', 'Aktif')
-            ->get();
+{
+    $guruProfiles = Profile::where('jabatan', 'Guru')
+        ->where('status_karyawan', 'Aktif')
+        ->get();
 
-        foreach ($guruProfiles as $guru) {
-            RekapAbsensi::updateOrCreate(
-                ['nama_relawan' => $guru->nama],
-                [
-                    'nik'            => $guru->nik ?? null,
-                    'jabatan'        => $guru->jabatan,
-                    'departemen'     => $guru->departemen ?? null,
-                    'bimba_unit'     => $guru->bimba_unit ?? null,
-                    'no_cabang'      => $guru->no_cabang ?? null,
-                    'penyesuaian_rb' => 0,
-                    'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,     // ← PENTING
-                ]
-            );
-        }
+    foreach ($guruProfiles as $guru) {
+
+        $nama = trim(strtoupper($guru->nama));
+
+        RekapAbsensi::updateOrCreate(
+            [
+                'nama_relawan' => $nama,
+                'bimba_unit'   => $guru->bimba_unit,
+                'no_cabang'    => $guru->no_cabang,
+            ],
+            [
+                'nik'            => $guru->nik ?? null,
+                'jabatan'        => $guru->jabatan,
+                'departemen'     => $guru->departemen ?? null,
+                'penyesuaian_rb' => 0,
+                'jumlah_rombim'  => $guru->jumlah_rombim ?? 0,
+            ]
+        );
     }
+}
 
     /**
      * Hitung Jadwal & Jumlah Murid dari Buku Induk

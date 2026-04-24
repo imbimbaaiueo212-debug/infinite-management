@@ -156,18 +156,37 @@ class StudentController extends Controller
     // -------------------------------------------------------------------------
     // INDEX
     // -------------------------------------------------------------------------
-    public function index(Request $request)
+   public function index(Request $request)
 {
     $q           = trim((string) $request->input('q', ''));
     $statusTrial = trim((string) $request->input('status_trial', ''));
-    $unitId      = $request->input('unit_id');
+    $user        = Auth::user();
 
+    // =========================
+    // 🏫 HANDLE UNIT
+    // =========================
+    if ($user && !in_array($user->role ?? '', ['admin', 'superadmin'])) {
+
+        // User biasa → paksa ke unit dia
+        $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
+
+        $unitId = $unit?->id;
+
+    } else {
+
+        // Admin → dari dropdown
+        $unitId = $request->input('unit_id');
+    }
+
+    // =========================
+    // QUERY UTAMA
+    // =========================
     $query = Student::query()
         ->with('muridTrial')
         ->latest('id');
 
     // =========================
-    // 🔍 SEARCH NIM / NAMA
+    // 🔍 SEARCH
     // =========================
     if ($q !== '') {
         $query->where(function ($w) use ($q) {
@@ -178,7 +197,7 @@ class StudentController extends Controller
     }
 
     // =========================
-    // 🎯 FILTER STATUS TRIAL
+    // 🎯 STATUS TRIAL
     // =========================
     if ($statusTrial !== '') {
         $key = strtolower($statusTrial);
@@ -202,13 +221,17 @@ class StudentController extends Controller
     }
 
     // =========================
-    // 🏫 FILTER UNIT (CABANG + biMBA)
+    // 🏫 FILTER UNIT (PENTING)
     // =========================
     if ($unitId) {
         $unit = Unit::find($unitId);
+
         if ($unit) {
             $query->where('no_cabang', $unit->no_cabang)
                   ->where('bimba_unit', $unit->biMBA_unit);
+        } else {
+            // jika unit tidak valid → kosongkan
+            $query->whereRaw('1 = 0');
         }
     }
 
@@ -218,19 +241,32 @@ class StudentController extends Controller
     $students = $query->paginate(20)->withQueryString();
 
     // =========================
-    // 🔽 DROPDOWN SEARCH NIM
+    // 🔽 DROPDOWN SEARCH (SUDAH FILTER UNIT)
     // =========================
-    $studentOptions = Student::select('nim', 'nama')
+    $studentOptionsQuery = Student::query();
+
+    if ($unitId) {
+        $unit = Unit::find($unitId);
+
+        if ($unit) {
+            $studentOptionsQuery->where('no_cabang', $unit->no_cabang)
+                                ->where('bimba_unit', $unit->biMBA_unit);
+        }
+    }
+
+    $studentOptions = $studentOptionsQuery
+        ->select('nim', 'nama')
         ->orderBy('nama')
         ->limit(1000)
         ->get()
         ->map(fn($s) => [
             'value' => $s->nim,
             'label' => "{$s->nim} | {$s->nama}",
-        ])->toArray();
+        ])
+        ->toArray();
 
     // =========================
-    // 🔽 DROPDOWN UNIT (CABANG + UNIT)
+    // 🔽 DROPDOWN UNIT
     // =========================
     $unitOptions = Unit::orderBy('no_cabang')
         ->get()

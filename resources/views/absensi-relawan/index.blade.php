@@ -79,7 +79,7 @@
                                     <option value="">-- Cari NIK atau Nama --</option>
                                     @foreach($muridOptions as $m)
                                         <option value="{{ $m->nim }}" {{ ($filters['nik'] ?? '') == $m->nim ? 'selected' : '' }}>
-                                            {{ $m->nim }} • {{ $m->nama_murid }}
+                                            {{ $m->nim }} | {{ $m->nama_murid }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -157,7 +157,7 @@
                                                         data-absensi="{{ $item->absensi ?? '-' }}"
                                                         data-status-sistem="{{ $item->status }}"
                                                         data-keterangan="{{ $item->keterangan ?? '-' }}"
-                                                        data-alasan="{{ $item->alasan ?? '-' }}">
+                                                        data-alasan="{{ $item->volunteer_alasan ?? '-' }}">
                                                     <i class="bi bi-info-circle"></i> Info
                                                 </button>
                                             </td>                                           
@@ -325,8 +325,7 @@
                 $('#nikFilter').select2({
                     width: '100%',
                     placeholder: '-- Cari NIK atau Nama --',
-                    allowClear: true,
-                    minimumInputLength: 2
+                    allowClear: true
                 });
 
                 $('#unitFilter').select2({
@@ -348,7 +347,7 @@
                     $('#modal-unit').text(button.data('unit'));
                     $('#modal-cabang').text(button.data('cabang'));
                     $('#modal-tanggal').text(button.data('tanggal'));
-                    $('#modal-absensi').text(button.data('absensi'));
+                    $('#modal-absensi').text(button.data('status-sistem'));
                     $('#modal-keterangan').text(button.data('keterangan'));
                     $('#modal-alasan').text(button.data('alasan'));
                 });

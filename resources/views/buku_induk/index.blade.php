@@ -272,121 +272,135 @@
                                                 aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <dl class="row">
+
+                                        {{-- =========================
+                                            📌 IDENTITAS MURID
+                                        ========================= --}}
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-primary mb-3">📌 Identitas Murid</h6>
+                                            <dl class="row mb-0">
                                                 <dt class="col-sm-4">NIM</dt>
                                                 <dd class="col-sm-8">: {{ $item->nim }}</dd>
+
                                                 <dt class="col-sm-4">Nama</dt>
                                                 <dd class="col-sm-8">: {{ $item->nama }}</dd>
+
                                                 <dt class="col-sm-4">Unit / Cabang</dt>
                                                 <dd class="col-sm-8">
-                                                    : {{ $item->bimba_unit ?? '-' }}
+                                                    : {{ $item->no_cabang ?? '-' }} | {{ $item->bimba_unit ?? '-' }}
                                                     @if($item->no_cabang)
-                                                        <br><small class="text-muted">No Cabang: {{ $item->no_cabang }}</small>
+                                                        
                                                     @endif
                                                 </dd>
                                                 <dt class="col-sm-4">Tempat Lahir</dt>
                                                 <dd class="col-sm-8">: {{ $item->tmpt_lahir }}</dd>
+
                                                 <dt class="col-sm-4">Tanggal Lahir</dt>
                                                 <dd class="col-sm-8">: {{ $item->tgl_lahir_formatted }}</dd>
+
                                                 <dt class="col-sm-4">Usia</dt>
                                                 @php
+                                                    $usiaText = '-';
                                                     if ($item->tgl_lahir) {
                                                         $diff = \Carbon\Carbon::parse($item->tgl_lahir)->diff(now());
                                                         $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
-                                                    } else {
-                                                        $usiaText = '-';
                                                     }
                                                 @endphp
-
+                                                <dd class="col-sm-8">: {{ $usiaText }}</dd>
+                                                 <dt class="col-sm-4">Tempat Lahir</dt>
+                                                <dd class="col-sm-8">: {{ $item->tmpt_lahir }}</dd>
+                                                <dt class="col-sm-4">Usia</dt>
+                                                @php
+                                                    $usiaText = '-';
+                                                    if ($item->tgl_lahir) {
+                                                        $diff = \Carbon\Carbon::parse($item->tgl_lahir)->diff(now());
+                                                        $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
+                                                    }
+                                                @endphp
                                                 <dd class="col-sm-8">: {{ $usiaText }}</dd>
                                                 <dt class="col-sm-4">Tanggal Daftar</dt>
-                                                <dd class="col-sm-8">: <strong>{{ $item->tgl_daftar?->format('d-m-Y') }}</strong></dd>
+                                                <dd class="col-sm-8">: {{ $item->tgl_daftar?->format('d-m-Y') }}</dd>
+
                                                 <dt class="col-sm-4">Tanggal Masuk</dt>
                                                 <dd class="col-sm-8">: {{ $item->tgl_masuk_formatted }}</dd>
-                                                <dt class="col-sm-4">Sisa Jadwal Bulan Aktif</dt>
-                                                <dd class="col-sm-8">
-                                                    @if($item->info_jadwal['status'] === 'ok')
-                                                       : Bulan aktif <strong>{{ $item->info_jadwal['bulan_tampil'] }}</strong><br>
-                                                       : <strong>{{ $item->info_jadwal['shift'] }}</strong><br>
-                                                       : Total per bulan (fixed): <strong>{{ $item->info_jadwal['total_hardcode'] }}</strong> kali<br>
-                                                        @if($item->info_jadwal['pertemuan_diambil'] > 0)
-                                                       :    Pertemuan dari tgl masuk s.d akhir bulan: <strong>{{ $item->info_jadwal['pertemuan_diambil'] }}</strong> kali<br>
-                                                        @endif
-                                                        <strong class="text-success">: Sisa yang masih bisa diambil: {{ $item->info_jadwal['sisa'] }} kali</strong><br>
-                                                        @if($item->info_jadwal['catatan'])
-                                                       :     <small class="text-info">{{ $item->info_jadwal['catatan'] }}</small>
-                                                        @endif
-                                                    @else
-                                                        {{ $item->info_jadwal['pesan'] }}
-                                                    @endif
-                                                </dd>
+
                                                 <dt class="col-sm-4">Lama Belajar</dt>
                                                 <dd class="col-sm-8">: {{ $item->lama_bljr }}</dd>
+
                                                 <dt class="col-sm-4">Tahap</dt>
                                                 <dd class="col-sm-8">: {{ $item->tahap }}</dd>
-                                                <dt class="col-sm-4">Tanggal Keluar</dt>
-                                                <dd class="col-sm-8">: {{ $item->tgl_keluar }}</dd>
-                                                <dt class="col-sm-4">Kategori Keluar</dt>
-                                                <dd class="col-sm-8">: {{ $item->kategori_keluar }}</dd>
-                                                <dt class="col-sm-4">Alasan</dt>
-                                                <dd class="col-sm-8">: {{ $item->alasan }}</dd>
+
                                                 <dt class="col-sm-4">Kelas</dt>
                                                 <dd class="col-sm-8">: {{ $item->kelas }}</dd>
+
                                                 <dt class="col-sm-4">Golongan</dt>
-                                                <dd class="col-sm-8">: {{ $item->gol }}</dd>
-                                                <dt class="col-sm-4">Kode</dt>
-                                                <dd class="col-sm-8">: {{ $item->kd }}</dd>
-                                                <dt class="col-sm-4">SPP</dt>
-                                                <dd class="col-sm-8">:
-                                                    Rp.
-                                                    {{ number_format((int) str_replace('.', '', $item->spp), 0, ',', '.') }}
-                                                </dd>
-                                                <dt class="col-sm-4">Status</dt>
-                                                <dd class="col-sm-8">: {{ $item->status }}</dd>
-                                                <dt class="col-sm-4">Petugas Trial</dt>
-                                                <dd class="col-sm-8">: {{ $item->petugas_trial }}</dd>
-                                                <dt class="col-sm-4">Guru</dt>
-                                                <dd class="col-sm-8">: {{ $item->guru }}</dd>
-                                                <dt class="col-sm-4">Orangtua</dt>
-                                                <dd class="col-sm-8">: {{ $item->orangtua }}</dd>
-                                                <dt class="col-sm-4">No. Telp / HP</dt>
-                                                <dd class="col-sm-8">: {{ $item->no_telp_hp }}</dd>
-                                                <dt class="col-sm-4">Alamat Murid</dt>
-                                                <dd class="col-sm-8">: {{ $item->alamat_murid }}</dd>
-                                                <dt class="col-sm-4">Note</dt>
-                                                <dd class="col-sm-8">: {{ $item->note }}</dd>
-                                                <dt class="col-sm-4">No Cabang Merge</dt>
-                                                <dd class="col-sm-8">: {{ $item->no_cab_merge }}</dd>
-                                                <dt class="col-sm-4">No Pembayaran Murid</dt>
-                                                <dd class="col-sm-8">: {{ $item->no_pembayaran_murid }}</dd>
-                                                <dt class="col-sm-4">Note Garansi</dt>
-                                                <dd class="col-sm-8">: {{ $item->note_garansi }}</dd>
-                                                <dt class="col-sm-4">Periode BNF</dt>
-                                                <dd class="col-sm-8">: {{ $item->periode }}</dd>
-                                                <dt class="col-sm-4">Tanggal Mulai BNF</dt>
-                                                <dd class="col-sm-8">:
-                                                    {{ $item->tgl_mulai ? \Carbon\Carbon::parse($item->tgl_mulai)->translatedFormat('d F Y') : '-' }}
-                                                </dd>
-                                                <dt class="col-sm-4">Tanggal Akhir BNF</dt>
-                                                <dd class="col-sm-8">:
-                                                    {{ $item->tgl_akhir ? \Carbon\Carbon::parse($item->tgl_akhir)->translatedFormat('d F Y') : '-'  }}
-                                                </dd>
-                                                <dt class="col-sm-4">Alert BNF</dt>
-                                                <dd class="col-sm-8">: {{ $item->alert }}</dd>
-                                                <dt class="col-sm-4">Tanggal Bayar</dt>
-                                                <dd class="col-sm-8">: {{ $item->tgl_bayar }}</dd>
-                                                <dt class="col-sm-4">Tanggal Selesai</dt>
-                                                <dd class="col-sm-8">: {{ $item->tgl_selesai }}</dd>
-                                                <dt class="col-sm-4">Alert 2</dt>
-                                                <dd class="col-sm-8">: {{ $item->alert2 }}</dd>
-                                                <dt class="col-sm-4">Asal Modul</dt>
-                                                <dd class="col-sm-8">: {{ $item->asal_modul }}</dd>
-                                                <dt class="col-sm-4">Keterangan Optional</dt>
-                                                <dd class="col-sm-8">: {{ $item->keterangan_optional }}</dd>
+                                                <dd class="col-sm-8">: {{ $item->gol }} | {{ $item->kd }}</dd>
+                                                 <dt class="col-sm-4">Jenis KBM</dt>
+                                                <dd class="col-sm-8">: {{ $item->jenis_kbm }}</dd>
                                                 <dt class="col-sm-4">Level</dt>
                                                 <dd class="col-sm-8">: {{ $item->level }}</dd>
-                                                <dt class="col-sm-4">Jenis KBM</dt>
-                                                <dd class="col-sm-8">: {{ $item->jenis_kbm }}</dd>
+                                                <dt class="col-sm-4">Keterangan Level</dt>
+                                                <dd class="col-sm-8">: {{ $item->keterangan_level }}</dd>
+                                                <dt class="col-sm-4">Tanggal Perubahan Level</dt>
+                                                <dd class="col-sm-8">: {{ $item->tgl_level_formatted }}</dd>
+                                                <dt class="col-sm-4">Bulan Aktif</dt>
+                                                <dd class="col-sm-8">
+                                                    :
+                                                    @if($item->info_jadwal['status'] === 'ok')
+                                                        <span class="text-primary fw-semibold">
+                                                            {{ $item->info_jadwal['bulan_tampil'] }}
+                                                        </span>
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </dd>
+                                                <dt class="col-sm-4">Orangtua</dt>
+                                                <dd class="col-sm-8">: {{ $item->orangtua }}</dd>
+
+                                                <dt class="col-sm-4">No HP</dt>
+                                                <dd class="col-sm-8">: {{ $item->no_telp_hp }}</dd>
+
+                                                <dt class="col-sm-4">Alamat</dt>
+                                                <dd class="col-sm-8">: {{ $item->alamat_murid }}</dd>
+                                                <dt class="col-sm-4">SPP</dt>
+                                                <dd class="col-sm-8">: Rp {{ number_format((int) str_replace('.', '', $item->spp), 0, ',', '.') }}</dd>
+
+                                                <dt class="col-sm-4">No Pembayaran</dt>
+                                                <dd class="col-sm-8">: {{ $item->no_pembayaran_murid }}</dd>
+                                                <dt class="col-sm-4">Status</dt>
+                                                <dd class="col-sm-8">: {{ $item->status }}</dd>
+
+                                                <dt class="col-sm-4">Kategori Keluar</dt>
+                                                <dd class="col-sm-8">: {{ $item->kategori_keluar }}</dd>
+
+                                                <dt class="col-sm-4">Alasan</dt>
+                                                <dd class="col-sm-8">: {{ $item->alasan }}</dd>
+
+                                                <dt class="col-sm-4">Tanggal Keluar</dt>
+                                                <dd class="col-sm-8">: {{ $item->tgl_keluar }}</dd>
+                                                <dt class="col-sm-4">Keterangan Optional</dt>
+                                                <dd class="col-sm-8">: {{ $item->keterangan_optional }}</dd>
+
+                                                <dt class="col-sm-4">No Cabang Merge</dt>
+                                                <dd class="col-sm-8">: {{ $item->no_cab_merge }}</dd>
+
+                                                
+
+                                                <dt class="col-sm-4">Petugas Trial</dt>
+                                                <dd class="col-sm-8">: {{ $item->petugas_trial }}</dd>
+
+                                                <dt class="col-sm-4">Guru</dt>
+                                                <dd class="col-sm-8">: {{ $item->guru }}</dd>
+                                            </dl>
+                                        </div>
+
+                                        {{-- =========================
+                                            📊 JADWAL & AKTIVITAS
+                                        ========================= --}}
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-info mb-3">📊 Jadwal biMBA</h6>
+                                            <dl class="row mb-0">
+
                                                 <dt class="col-sm-4">Kode Jadwal</dt>
                                                 <dd class="col-sm-8">: {{ $item->kode_jadwal }}</dd>
                                                 <dt class="col-sm-4">Hari & Jam</dt>
@@ -395,9 +409,13 @@
                                                     @php
                                                         $shift = '-';
                                                         $hariList = [];
+                                                        $jam = '-';
 
                                                         $kode = (int) ($item->kode_jadwal ?? 0);
 
+                                                        // =====================
+                                                        // SHIFT + HARI
+                                                        // =====================
                                                         if ($kode >= 108 && $kode <= 116) {
                                                             $shift = 'SRJ';
                                                             $hariList = ['Senin', 'Rabu', 'Jumat'];
@@ -406,27 +424,123 @@
                                                             $hariList = ['Selasa', 'Kamis', 'Sabtu'];
                                                         } elseif ($kode >= 308 && $kode <= 311) {
                                                             $shift = 'S6';
-                                                            $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                                                            $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+                                                        }
+
+                                                        // =====================
+                                                        // JAM
+                                                        // =====================
+                                                        if ($kode > 0) {
+                                                            $jamAngka = substr($kode, -2);
+                                                            $jam = str_pad($jamAngka, 2, '0', STR_PAD_LEFT) . ':00';
                                                         }
                                                     @endphp
 
                                                     @if ($shift !== '-')
-                                                        <strong>{{ $shift }}</strong> ({{ implode(' | ', $hariList) }})
+                                                        <strong>{{ $shift }}</strong>
+                                                        <span class="text-muted">({{ implode(' | ', $hariList) }})</span>
+                                                        -
+                                                        <span class="fw-bold text-primary">{{ $jam }}</span>
                                                     @else
                                                         -
                                                     @endif
                                                 </dd>
+                                            </dl>
+                                        </div>
 
+                                        {{-- =========================
+                                            📦 BNF dan DU'AFA
+                                        ========================= --}}
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-dark mb-3">📦 BNF dan DU'AFA</h6>
+                                            <dl class="row mb-0">
+
+                                                <dt class="col-sm-4">Periode</dt>
+                                                <dd class="col-sm-8">: {{ $item->periode }}</dd>
+
+                                                <dt class="col-sm-4">Tanggal Mulai</dt>
+                                                <dd class="col-sm-8">
+                                                    {{ $item->tgl_mulai ? \Carbon\Carbon::parse($item->tgl_mulai)->translatedFormat('d F Y') : '-' }}
+                                                </dd>
+
+                                                <dt class="col-sm-4">Tanggal Akhir</dt>
+                                                <dd class="col-sm-8">
+                                                    {{ $item->tgl_akhir ? \Carbon\Carbon::parse($item->tgl_akhir)->translatedFormat('d F Y') : '-' }}
+                                                </dd>
+
+                                                <dt class="col-sm-4">Alert</dt>
+                                                <dd class="col-sm-8">: {{ $item->alert }}</dd>
+                                            </dl>
+                                        </div>
+                                        
+                                        {{-- =========================
+                                            Paket 72
+                                        ========================= --}}
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-muted mb-3">📦 Paket 72
+                                            </h6>
+                                            <dl class="row mb-0">
+
+                                                <dt class="col-sm-4">Tanggal Bayar</dt>
+                                                <dd class="col-sm-8">: {{ $item->tgl_bayar }}</dd>
+
+                                                <dt class="col-sm-4">Tanggal Selesai</dt>
+                                                <dd class="col-sm-8">: {{ $item->tgl_selesai }}</dd>
+
+                                                <dt class="col-sm-4">Alert 2</dt>
+                                                <dd class="col-sm-8">: {{ $item->alert2 }}</dd>
+                                            </dl>
+                                        </div>
+                                        {{-- =========================
+                                            Supply Modul
+                                            ========================= --}}
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-muted mb-3">📦 Supply Modul
+                                            </h6>
+                                            <dl class="row mb-0">
+                                    
+                                                <dt class="col-sm-4">Asal Modul</dt>
+                                                <dd class="col-sm-8">: {{ $item->asal_modul }}</dd>
+
+                                                <dt class="col-sm-4">Note Garansi</dt>
+                                                <dd class="col-sm-8">: {{ $item->note_garansi }}</dd>
+                                            </dl>
+                                        </div>
+
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-muted mb-3">📌 MURID PINDAH KE INTERVIO (ONLINE)</h6>
+                                            <dl class="row mb-0">
                                                 <dt class="col-sm-4">Status Pindah</dt>
                                                 <dd class="col-sm-8">: {{ $item->status_pindah }}</dd>
+
                                                 <dt class="col-sm-4">Tanggal Pindah</dt>
                                                 <dd class="col-sm-8">: {{ $item->tanggal_pindah }}</dd>
+
                                                 <dt class="col-sm-4">Ke Bimba Intervio</dt>
                                                 <dd class="col-sm-8">: {{ $item->ke_bimba_intervio }}</dd>
+
                                                 <dt class="col-sm-4">Keterangan</dt>
                                                 <dd class="col-sm-8">: {{ $item->keterangan }}</dd>
                                             </dl>
                                         </div>
+
+                                        {{-- =========================
+                                            Surat Garansi BCA 372 Bebas
+                                            ========================= --}}
+
+                                        <div class="border rounded p-3 mb-3">
+                                            <h6 class="fw-bold text-muted mb-3">📌 SURAT GARANSI BCA 372 BEBAS</h6>
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-4">Tanggal diberikan Surat Garansi</dt>
+                                                <dd class="col-sm-8">: {{ $item->tgl_surat_garansi_formatted }}</dd>
+                                                <dt class="col-sm-4">Note</dt>
+                                                <dd class="col-sm-8">: {{ $item->note }}</dd>
+
+                                                
+                                            </dl>
+                                        </div>
+
+                                    </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary"
                                                 data-bs-dismiss="modal">Tutup</button>

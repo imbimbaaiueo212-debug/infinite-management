@@ -107,7 +107,7 @@
                                 <label class="form-label fw-bold small">Status Kehadiran</label>
                                 <select name="status" class="form-select form-select-sm">
                                     <option value="">-- Semua Status --</option>
-                                    @foreach(['Hadir', 'Izin', 'Sakit', 'Alpa', 'DT', 'PC', 'Tidak Aktif', 'Cuti', 'Minggu', 'Libur Nasional'] as $s)
+                                    @foreach(['Izin', 'Sakit', 'Alpa', 'DT', 'PC', 'Tidak Aktif', 'Cuti', 'Minggu', 'Libur Nasional'] as $s)
                                         <option value="{{ $s }}" {{ ($filters['status'] ?? '') == $s ? 'selected' : '' }}>
                                             {{ $s }}
                                         </option>

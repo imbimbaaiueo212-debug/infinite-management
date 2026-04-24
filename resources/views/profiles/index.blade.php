@@ -231,7 +231,7 @@
                                 <td class="text-center">
                                     @if(auth()->user()->is_admin ?? false)
                                         <select class="inline-rb-select form-select form-select-sm" data-id="{{ $profile->id }}">
-                                            <option value="">-</option>
+                                            <option value="auto">Auto</option>
                                             @foreach($rbOptions as $rb)
                                                 <option value="{{ $rb }}" {{ $profile->rb == $rb ? 'selected' : '' }}>{{ $rb }}</option>
                                             @endforeach
@@ -919,7 +919,11 @@ $(document).ready(function () {
     $('.inline-rb-select').on('change', function () {
         const $this = $(this);
         const id = $this.data('id');
-        const value = $this.val() || null;
+        let value = $this.val();
+
+        if (value === '' || value === 'auto') {
+            value = 'auto';
+        }
         const $saving = $this.parent().find('.saving-rb');
 
         $saving.show();
