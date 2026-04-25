@@ -100,6 +100,12 @@
                 <input type="date" name="tgl_lahir" id="tgl_lahir" class="form-control" value="{{ old('tgl_lahir') }}">
             </div>
 
+             {{-- Usia --}}
+            <div class="col-md-6 mb-3">
+                <label for="usia">Usia</label>
+                <input type="number" name="usia" id="usia" class="form-control" readonly>
+            </div>
+
             <div class="col-md-6 mb-3">
                 <label for="tgl_daftar">Tanggal Daftar</label>
                 <input type="date" name="tgl_daftar" id="tgl_daftar" class="form-control" value="{{ old('tgl_daftar') }}">
@@ -113,10 +119,10 @@
                 @error('tgl_masuk') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
-            {{-- Usia --}}
             <div class="col-md-6 mb-3">
-                <label for="usia">Usia</label>
-                <input type="number" name="usia" id="usia" class="form-control" readonly>
+                <label for="tgl_aktif">Tanggal Aktif <span class="text-danger">*</span></label>
+                <input type="date" name="tgl_aktif" id="tgl_aktif" class="form-control" value="{{ old('tgl_aktif') }}" required>
+                @error('tgl_aktif') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
             {{-- Lama Belajar --}}
@@ -136,6 +142,11 @@
                 </select>
             </div>
 
+            <div class="col-md-6 mb-3">
+                <label for="tgl_tahapan">Tanggal Tahapan</label>
+                <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control" value="{{ old('tgl_tahapan') }}">
+            </div>
+
             {{-- Sumber Informasi --}}
             <div class="col-md-6 mb-3">
                 <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
@@ -148,6 +159,10 @@
                 @error('info') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
+            <div class="col-md-6 mb-3" id="keterangan_info_wrapper" style="display: none;">
+    <label for="keterangan_info">Keterangan Info</label>
+    <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
+</div>
             <!-- Kelas -->
             <div class="col-md-6 mb-3">
                 <label for="kelas">Kelas <span class="text-danger">*</span></label>
@@ -337,21 +352,28 @@
 
             <h4 class="col-12 mb-3">⏰ Jadwal biMBA</h4>
 
-            <div class="col-md-6 mb-3">
-                <label for="kode_jadwal">Kode Jadwal <span class="text-danger">*</span></label>
-                <select name="kode_jadwal" id="kode_jadwal" class="form-control" required>
-                    <option value="">-- Pilih --</option>
-                    @foreach($kodeJadwalOptions as $kj)
-                        <option value="{{ $kj }}">{{ $kj }}</option>
-                    @endforeach
-                </select>
-                @error('kode_jadwal') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
+            <div class="col-md-2 mb-3">
+    <label class="form-label fw-bold text-info">
+        Kode Jadwal <span class="text-danger">*</span>
+    </label>
 
-            <div class="col-md-6 mb-3">
-                <label for="hari_jam">Hari & Jam</label>
-                <input type="text" name="hari_jam" id="hari_jam" class="form-control" value="{{ old('hari_jam') }}">
-            </div>
+    <select name="kode_jadwal" id="kode_jadwal" class="form-control" required>
+        <option value="">-- Pilih Kode Jadwal --</option>
+        @foreach($kodeJadwalOptions as $kode)
+            <option value="{{ $kode }}" {{ old('kode_jadwal') == $kode ? 'selected' : '' }}>
+                {{ $kode }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
+<div class="col-md-4 mb-3">
+    <label class="form-label fw-bold text-info">Hari & Jam</label>
+
+    <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light text-muted">
+        Pilih kode jadwal dulu
+    </div>
+</div>
 
             <div class="col-12"><hr class="my-4"></div>
 
@@ -400,6 +422,16 @@
                     @endforeach
                 </select>
             </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="tgl_level">Tanggal Level</label>
+                <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+    <label for="keterangan_level">Keterangan Level</label>
+    <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="2">{{ old('keterangan_level') }}</textarea>
+</div>
 
             <div class="col-md-6 mb-3">
                 <label for="jenis_kbm">Jenis KBM</label>
@@ -527,5 +559,118 @@ document.addEventListener('DOMContentLoaded', function () {
     kdSelect?.addEventListener('change', updateSPP);
     updateSPP();
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const tahapSelect = document.getElementById('tahap');
+    const tglTahapan = document.getElementById('tgl_tahapan');
+
+    function handleTahapChange() {
+        if (!tahapSelect || !tglTahapan) return;
+
+        if (tahapSelect.value === 'Persiapan') {
+
+            // 🔥 TAMPILKAN + isi otomatis kalau kosong
+            tglTahapan.parentElement.style.display = 'block';
+
+            if (!tglTahapan.value) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+
+                tglTahapan.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+        } else {
+            // ❌ selain Persiapan → sembunyikan + kosongkan
+            tglTahapan.value = '';
+            tglTahapan.parentElement.style.display = 'none';
+        }
+    }
+
+    tahapSelect?.addEventListener('change', handleTahapChange);
+
+    // jalankan saat pertama load
+    handleTahapChange();
+});
+document.addEventListener('DOMContentLoaded', function () {
+    const infoSelect = document.getElementById('info');
+    const wrapper = document.getElementById('keterangan_info_wrapper');
+
+    function toggleKeterangan() {
+        if (!infoSelect || !wrapper) return;
+
+        if (infoSelect.value === 'Lainnya') {
+            wrapper.style.display = 'block';
+        } else {
+            wrapper.style.display = 'none';
+
+            // optional: kosongkan isi kalau tidak dipakai
+            const input = wrapper.querySelector('textarea');
+            if (input) input.value = '';
+        }
+    }
+
+    infoSelect.addEventListener('change', toggleKeterangan);
+
+    // jalankan saat load (biar kalau old value tetap muncul)
+    toggleKeterangan();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const level = document.getElementById('level');
+    const tgl = document.getElementById('tgl_level');
+
+    level?.addEventListener('change', function () {
+        if (this.value && !tgl.value) {
+            const today = new Date().toISOString().split('T')[0];
+            tgl.value = today;
+        }
+    });
+});
+const kodeJadwal = document.getElementById('kode_jadwal');
+const preview = document.getElementById('jadwal_preview');
+
+
+const jadwalMap = {
+    108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
+    109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
+    110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
+    111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
+    112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
+    113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
+    114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
+    115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
+    116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
+
+    208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
+    209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
+    210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
+    211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
+
+    308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
+    309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
+    310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
+    311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
+};
+
+function updateJadwal() {
+    const val = kodeJadwal.value;
+
+    if (jadwalMap[val]) {
+        const j = jadwalMap[val];
+        preview.innerHTML = `
+            <strong>${j.shift}</strong>
+            <br>
+            <span>${j.hari}</span>
+            - <span class="text-primary fw-bold">${j.jam}</span>
+        `;
+    } else {
+        preview.innerHTML = 'Belum ada jadwal';
+    }
+}
+
+kodeJadwal?.addEventListener('change', updateJadwal);
+updateJadwal();
 </script>
 @endsection

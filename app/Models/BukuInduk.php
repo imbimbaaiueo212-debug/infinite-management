@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\RekapAbsensi;
 use Carbon\Carbon;
 use App\Models\Unit;
+use App\Models\LevelHistory;
 use Illuminate\Support\Facades\Auth;
 
 class BukuInduk extends Model
@@ -25,7 +26,7 @@ class BukuInduk extends Model
         'tgl_selesai', 'alert2', 'asal_modul', 'keterangan_optional', 'level',
         'jenis_kbm', 'kode_jadwal', 'hari_jam', 'alamat_murid', 'status_pindah',
         'tanggal_pindah', 'ke_bimba_intervio', 'keterangan', 'bimba_unit', 'no_cabang', 'info', 'tgl_daftar',
-        'tgl_surat_garansi', 'keterangan_level', 'tgl_level',
+        'tgl_surat_garansi', 'keterangan_level', 'tgl_level', 'tgl_aktif', 'tgl_tahapan', 'keterangan_info',
     ];
 
     // =================================================================
@@ -43,7 +44,11 @@ class BukuInduk extends Model
         'tgl_selesai'      => 'date',
         'tanggal_pindah'   => 'date',
         'tgl_daftar'       => 'date',
-    ];
+        'tgl_surat_garansi' => 'date',
+        'tgl_level'        => 'date',
+        'tgl_aktif'        => 'date',
+        'tgl_tahapan'      => 'date',
+        ];
 
     // =================================================================
     // AUTO TRIM NIM — INI YANG MEMBUAT EDIT SELALU BERHASIL!
@@ -225,5 +230,11 @@ public function getTglLevelFormattedAttribute()
     return $this->tgl_level
         ? $this->tgl_level->translatedFormat('d F Y')
         : '-';
+}
+
+public function levelHistories()
+{
+    return $this->hasMany(LevelHistory::class)
+                ->orderByDesc('tgl_level');
 }
 }

@@ -6,6 +6,7 @@ use Illuminate\Validation\Rule;
 use App\Models\BukuInduk;
 use App\Models\HargaSaptataruna;
 use App\Models\Profile;
+use App\Models\LevelHistory;
 use App\Models\Unit;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\BukuIndukImport;
@@ -321,6 +322,8 @@ if (!$isAdmin && $userUnit) {
             'info' => 'required|string|in:Brosur,Event,Humas,Internet,Spanduk,Lainnya',
             'bimba_unit' => 'required|string|exists:units,bimba_unit',
             'no_cabang' => 'required|string|max:20',
+            'tgl_aktif'   => 'nullable|date',
+            'keterangan_info' => 'nullable|string',
         ]);
 
         // ← TAMBAHKAN INI setelah $data = $request->validate([...])
@@ -512,6 +515,8 @@ if (!$isAdmin && $userUnit) {
 
         'asal_modul' => 'nullable|string',
         'level' => 'nullable|string',
+        'tgl_level' => 'nullable|date',
+        'keterangan_level' => 'nullable|string',
         'jenis_kbm' => 'nullable|string',
         'kode_jadwal' => 'required|string',
         'hari_jam' => 'nullable|string',
@@ -527,6 +532,10 @@ if (!$isAdmin && $userUnit) {
         'bimba_unit' => 'required|string|exists:units,bimba_unit',
         'no_cabang'  => 'required|string',
         'info'       => 'required|string',
+        'tgl_surat_garansi' => 'nullable|date',
+        'tgl_aktif'   => 'nullable|date',
+        'tgl_tahapan' => 'nullable|date',
+        'keterangan_info' => 'nullable|string',
     ]);
 
     // ← TAMBAHKAN INI
@@ -538,13 +547,16 @@ if (!$isAdmin && $userUnit) {
      * NORMALISASI TANGGAL KOSONG
      * ===================================================== */
     foreach ([
-        'tgl_lahir','tgl_masuk','tgl_keluar','tgl_mulai',
-        'tgl_akhir','tgl_bayar','tgl_selesai','tanggal_pindah'
-    ] as $f) {
-        if (empty($data[$f])) {
-            $data[$f] = null;
-        }
+    'tgl_lahir','tgl_masuk','tgl_keluar','tgl_mulai',
+    'tgl_akhir','tgl_bayar','tgl_selesai','tanggal_pindah',
+    'tgl_level',
+    'tgl_tahapan',
+    'tgl_aktif'
+] as $f) {
+    if (empty($data[$f])) {
+        $data[$f] = null;
     }
+}
 
     /* =====================================================
      * HITUNG USIA & LAMA BELAJAR
@@ -595,6 +607,27 @@ if (!$isAdmin && $userUnit) {
      * SIMPAN & HISTORY
      * ===================================================== */
     $bukuInduk->update($data);
+
+    // 🔥 SIMPAN HISTORY LEVEL
+if ($bukuInduk->wasChanged('level') && !empty($data['level'])) {
+
+    $last = LevelHistory::where('buku_induk_id', $bukuInduk->id)
+        ->latest()
+        ->first();
+
+    // hindari duplicate level yang sama
+    if (!$last || $last->level !== $data['level']) {
+
+        LevelHistory::create([
+            'buku_induk_id' => $bukuInduk->id,
+            'level' => $data['level'],
+
+            // pakai input kalau ada, kalau tidak pakai sekarang
+            'tgl_level' => $data['tgl_level'] ?? now(),
+            'keterangan' => $data['keterangan_level'] ?? null,
+        ]);
+    }
+}
 
     $newData = $bukuInduk->fresh()->toArray();
     $changedOld = [];

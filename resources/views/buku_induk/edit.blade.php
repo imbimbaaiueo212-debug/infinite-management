@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Data Murid - {{ $bukuInduk->nama }}')
+@section('title', 'Edit Data Murid - ' . $bukuInduk->nama)
 
 @section('content')
 <div class="container-fluid py-4">
@@ -70,14 +70,7 @@
                                     <input type="hidden" name="bimba_unit" value="{{ $user->bimba_unit }}">
                                 @endif
 
-                            <div class="col-lg-3">
-                                <label class="form-label">NIM <span class="text-danger"> *</span></label>
-                                <input type="text" name="nim" class="form-control @error('nim') is-invalid @enderror"
-                                       value="{{ old('nim', $bukuInduk->nim) }}" required>
-                                @error('nim') <div class="text-danger small">{{ $message }}</div> @enderror
-                            </div>
-
-                            <div class="col-lg-3">
+                                 <div class="col-lg-3">
                                 <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                                 <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror"
                                        value="{{ old('nama', $bukuInduk->nama) }}" required>
@@ -96,30 +89,11 @@
                                        value="{{ old('tgl_lahir', $bukuInduk->tgl_lahir?->format('Y-m-d')) }}">
                             </div>
 
-                            @php
-                                    $user = auth()->user();
-                                @endphp
-
-                                @if($user && empty($user->no_cabang))
-                                    {{-- ADMIN / belum punya no cabang → tampilkan --}}
-                                    <div class="col-lg-3">
-                                        <label class="form-label fw-bold">No Cabang</label>
-
-                                        <input type="text"
-                                            id="no_cabang_display"
-                                            class="form-control bg-light text-center fw-bold fs-5 text-primary"
-                                            readonly
-                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '-') }}">
-
-                                        <input type="hidden"
-                                            name="no_cabang"
-                                            id="no_cabang_hidden"
-                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '') }}">
-                                    </div>
-                                @else
-                                    {{-- USER → tidak tampil, pakai dari login --}}
-                                    <input type="hidden" name="no_cabang" value="{{ $user->no_cabang }}">
-                                @endif
+                            <div class="col-md-3">
+                                <label class="form-label">Usia</label>
+                                <input type="text" class="form-control bg-light text-center" readonly
+                                       value="{{ $bukuInduk->usia ?? '-' }} tahun">
+                            </div>
 
                             <div class="col-md-3">
                                 <label class="form-label">Tanggal Daftar</label>
@@ -135,9 +109,9 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Usia</label>
-                                <input type="text" class="form-control bg-light text-center" readonly
-                                       value="{{ $bukuInduk->usia ?? '-' }} tahun">
+                                <label class="form-label">Tanggal Aktif</label>
+                                <input type="date" name="tgl_aktif" class="form-control"
+                                    value="{{ old('tgl_aktif', $bukuInduk->tgl_aktif?->format('Y-m-d')) }}">
                             </div>
 
                             <div class="col-md-3">
@@ -146,7 +120,15 @@
                                        value="{{ $bukuInduk->lama_bljr ?? '-' }}">
                             </div>
 
-                            <div class="col-md-3">
+                            <!--NIM DI hidden -->
+                            <div class="col-lg-3">
+                                <input type="hidden" name="nim" value="{{ old('nim', $bukuInduk->nim) }}">
+                                @error('nim') 
+                                    <div class="text-danger small">{{ $message }}</div> 
+                                @enderror
+                            </div>
+                            <!--- End -->
+                            <div class="col-md-12">
                                 <label class="form-label fw-bold">Status Saat Ini</label>
                                 <div class="form-control text-center fs-5 fw-bold
                                     {{ $bukuInduk->status == 'Aktif' ? 'bg-success text-white' :
@@ -162,21 +144,28 @@
                             </div>
 
                             <div class="col-md-3">
+                                <label class="form-label">Kategori Keluar</label>
+                                <select name="kategori_keluar" class="form-select">
+                                    <option value="">-- Pilih Kategori --</option>
+                                    @foreach($kategoriKeluarOptions as $kk)
+                                        <option value="{{ $kk }}" {{ old('kategori_keluar', $bukuInduk->kategori_keluar) == $kk ? 'selected' : '' }}>{{ $kk }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Alasan Keluar</label>
+                                <input type="text" name="alasan" class="form-control"
+                                       value="{{ old('alasan', $bukuInduk->alasan) }}">
+                            </div>
+                            <!-- Batas Akhir Murid Detail -->
+
+                            <div class="col-md-3">
                                 <label class="form-label">Kelas <span class="text-danger">*</span></label>
                                 <select name="kelas" class="form-select" required>
                                     <option value="">-- Pilih Kelas --</option>
                                     @foreach($kelasOptions as $k)
                                         <option value="{{ $k }}" {{ old('kelas', $bukuInduk->kelas) == $k ? 'selected' : '' }}>{{ $k }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label">Tahap</label>
-                                <select name="tahap" class="form-select">
-                                    <option value="">-- Pilih Tahap --</option>
-                                    @foreach($tahapanOptions as $t)
-                                        <option value="{{ $t }}" {{ old('tahap', $bukuInduk->tahap) == $t ? 'selected' : '' }}>{{ $t }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -205,11 +194,49 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">SPP <span class="text-danger">*</span></label>
                                 <input type="text" id="spp_display" class="form-control bg-light text-success fw-bold text-center" readonly
                                        value="{{ $bukuInduk->spp ? 'Rp ' . number_format($bukuInduk->spp,0,',','.') : 'Belum ditentukan' }}">
                                 <input type="hidden" name="spp" id="spp" value="{{ old('spp', $bukuInduk->spp) }}">
+                            </div>
+
+                            <!-- No Cabang tidak muncul untuk User -->
+
+                            <!-- END -->
+                            <div class="col-md-3">
+                                <label class="form-label">Tahap</label>
+                                <select name="tahap" id="tahap_select" class="form-select">
+                                    <option value="">-- Pilih Tahap --</option>
+                                    @foreach($tahapanOptions as $t)
+                                        <option value="{{ $t }}"
+                                            {{ old('tahap', $bukuInduk->tahap) == $t ? 'selected' : '' }}>
+                                            {{ $t }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Tanggal Tahap</label>
+                                <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control"
+                                    value="{{ old('tgl_tahapan', $bukuInduk->tgl_tahapan?->format('Y-m-d')) }}">
+                            </div>
+
+                            <div class="w-100"></div> <!-- 🔥 ini bikin turun ke baris baru -->
+                            
+
+                            <div class="col-md-4">
+                                <label class="form-label">Petugas Trial</label>
+                                <select name="petugas_trial" class="form-select">
+                                    <option value="">-- Tidak Ada --</option>
+                                    @foreach($profil as $p)
+                                        <option value="{{ $p->nama }}"
+                                            {{ old('petugas_trial', $bukuInduk->petugas_trial) == $p->nama ? 'selected' : '' }}>
+                                            {{ $p->nama }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="col-md-4">
@@ -225,30 +252,9 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Petugas Trial</label>
-                                <select name="petugas_trial" class="form-select">
-                                    <option value="">-- Tidak Ada --</option>
-                                    @foreach($profil as $p)
-                                        <option value="{{ $p->nama }}"
-                                            {{ old('petugas_trial', $bukuInduk->petugas_trial) == $p->nama ? 'selected' : '' }}>
-                                            {{ $p->nama }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            <div class="w-100"></div> <!-- 🔥 ini bikin turun ke baris baru -->
 
-                             <div class="col-md-4">
-                                <label class="form-label">Level</label>
-                                <select name="level" class="form-select">
-                                    <option value="">-- Pilih Level --</option>
-                                    @foreach($levelOptions as $l)
-                                        <option value="{{ $l }}" {{ old('level', $bukuInduk->level) == $l ? 'selected' : '' }}>{{ $l }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-4">
+                             <div class="col-md-2">
                                 <label class="form-label">Jenis KBM</label>
                                 <select name="jenis_kbm" class="form-select">
                                     <option value="">-- Pilih Jenis --</option>
@@ -258,16 +264,46 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-2">
+                                <label class="form-label">Level</label>
+                                <select name="level" id="level" class="form-select">
+                                    <option value="">-- Pilih Level --</option>
+                                    @foreach($levelOptions as $l)
+                                        <option value="{{ $l }}" {{ old('level', $bukuInduk->level) == $l ? 'selected' : '' }}>
+                                            {{ $l }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
                                 <label class="form-label">Tanggal Kenaikan Level</label>
-                                <input type="date" name="tgl_level" class="form-control"
-                                       value="{{ old('tgl_level', $bukuInduk->tgl_level?->format('Y-m-d')) }}">
+                                <input type="date" name="tgl_level" id="tgl_level" class="form-control"
+                                    value="{{ old('tgl_level', $bukuInduk->tgl_level?->format('Y-m-d')) }}">
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Keterangan Level</label>
                                 <textarea name="keterangan_level" class="form-control">{{ old('keterangan_level', $bukuInduk->keterangan_level) }}</textarea>
                             </div>
+
+                            <ul class="list-group mt-2">
+                            @foreach($bukuInduk->levelHistories as $h)
+                                <li class="list-group-item">
+                                    <strong>{{ $h->level }}</strong> - 
+                                    {{ \Carbon\Carbon::parse($h->tgl_level)->format('d M Y') }}
+
+                                    @if($h->keterangan)
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ $h->keterangan }}
+                                        </small>
+                                    @endif
+                                </li>
+                            @endforeach
+                            </ul>
+
+                            
 
                             <div class="col-md-6">
                                 <label class="form-label">Nama Orang Tua <span class="text-danger">*</span></label>
@@ -296,38 +332,40 @@
                                 </select>
                             </div>
 
-                             <div class="col-md-6">
-                                <label class="form-label">Kategori Keluar</label>
-                                <select name="kategori_keluar" class="form-select">
-                                    <option value="">-- Pilih Kategori --</option>
-                                    @foreach($kategoriKeluarOptions as $kk)
-                                        <option value="{{ $kk }}" {{ old('kategori_keluar', $bukuInduk->kategori_keluar) == $kk ? 'selected' : '' }}>{{ $kk }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="col-md-3">
+                                    <label class="form-label">Info <span class="text-danger">*</span></label>
+                                    <select name="info" id="info_select" class="form-select" required>
+                                        <option value="">-- Pilih Info --</option>
+                                        @foreach($infoOptions as $i)
+                                            <option value="{{ $i }}"
+                                                {{ old('info', $bukuInduk->info) == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- 🔥 KETERANGAN (AWALNYA DIHIDE) --}}
+                                <div class="col-md-3 mt-2" id="keterangan_info_wrapper" style="display: none;">
+                                    <label class="form-label">Keterangan Info</label>
+                                    <textarea name="keterangan_info" class="form-control" rows="2">
+                                {{ old('keterangan_info', $bukuInduk->keterangan_info ?? '') }}
+                                    </textarea>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label">Alasan Keluar</label>
-                                <input type="text" name="alasan" class="form-control"
-                                       value="{{ old('alasan', $bukuInduk->alasan) }}">
+                            <div class="col-md-3">
+                                <label class="form-label">No Cab/Marge</label>
+                                <input name="no_pembayaran_murid" class="form-control" rows="2">{{ old('no_pembayaran_murid', $bukuInduk->no_pembayaran_murid) }}</input>
                             </div>
 
-                            
-
-                            <div class="col-md-6">
-                                <label class="form-label">Info <span class="text-danger">*</span></label>
-                                <select name="info" class="form-select" required>
-                                    <option value="">-- Pilih Info --</option>
-                                    @foreach($infoOptions as $i)
-                                        <option value="{{ $i }}" {{ old('info', $bukuInduk->info) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="col-md-3">
+                                <label class="form-label">No Pembayaran Murid</label>
+                                <input name="no_cab_marge" class="form-control" rows="2">{{ old('no_cab_marge', $bukuInduk->no_cab_marge) }}</input>
                             </div>
 
                             <!-- 5. KBM & JADWAL -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">JADWAL biMBA</h5>
-                            </div>
+                            <div class="col-12"><hr class="my-4"></div>
+                                <h4 class="col-12 mb-3">⏰ Jadwal biMBA</h4>
 
                             <div class="col-md-2">
                                 <label class="form-label fw-bold text-info">Kode Jadwal <span class="text-danger">*</span></label>
@@ -393,9 +431,8 @@
                                 </div>
 
                             {{-- ================= BEASISWA ================= --}}
-                             <div class="col-12 mt-4">
-                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">MASA AKTIF (DHUAFA & BNF)</h5>
-                            </div>
+                             <div class="col-12"><hr class="my-4"></div>
+                                <h4 class="col-12 mb-3">🗓️ Masa Aktif (Dhuafa & BNF)</h4>
 
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Periode</label>
@@ -450,10 +487,9 @@
                             </div>
 
 
-                            <!-- 7. NOTE & LAIN-LAIN -->
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary fw-bold border-bottom pb-0 mb-0">SUPPLY MODUL</h5>
-                            </div>
+                            <!-- Supply Modul -->
+                            <div class="col-12"><hr class="my-4"></div>
+                                <h4 class="col-12 mb-3">📚 Supply Modul</h4>
 
                             <div class="col-md-6">
                                 <label class="form-label">Asal Modul</label>
@@ -464,6 +500,32 @@
                             <div class="col-md-12">
                                 <label class="form-label text-primary fw-bold">KETERANGAN OPTIONAL</label>
                                 <textarea name="keterangan_optional" class="form-control" rows="2">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
+                            </div>
+
+                                                        @php
+                                    $user = auth()->user();
+                                @endphp
+
+                                @if($user && empty($user->no_cabang))
+                                    {{-- ADMIN / belum punya no cabang → tampilkan --}}
+                                    <div class="col-lg-3">
+                                        <label class="form-label fw-bold">No Cabang</label>
+
+                                        <input type="text"
+                                            id="no_cabang_display"
+                                            class="form-control bg-light text-center fw-bold fs-5 text-primary"
+                                            readonly
+                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '-') }}">
+
+                                        <input type="hidden"
+                                            name="no_cabang"
+                                            id="no_cabang_hidden"
+                                            value="{{ old('no_cabang', $bukuInduk->no_cabang ?? '') }}">
+                                    </div>
+                                @else
+                                    {{-- USER → tidak tampil, pakai dari login --}}
+                                    <input type="hidden" name="no_cabang" value="{{ $user->no_cabang }}">
+                                @endif
                             </div>
 
                         </div>
@@ -553,6 +615,65 @@ document.addEventListener('DOMContentLoaded', function () {
     end?.addEventListener('change', cekBeasiswa);
 
     cekBeasiswa();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const infoSelect = document.getElementById('info_select');
+    const keteranganWrapper = document.getElementById('keterangan_info_wrapper');
+
+    function toggleKeterangan() {
+        if (infoSelect.value === 'Lainnya') {
+            keteranganWrapper.style.display = 'block';
+        } else {
+            keteranganWrapper.style.display = 'none';
+        }
+    }
+
+    // saat berubah
+    infoSelect.addEventListener('change', toggleKeterangan);
+
+    // saat load (biar tetap muncul kalau edit)
+    toggleKeterangan();
+});
+document.addEventListener('DOMContentLoaded', function () {
+    const tahapSelect = document.getElementById('tahap_select');
+    const tglTahapan = document.getElementById('tgl_tahapan');
+
+    function handleTahapChange() {
+        if (tahapSelect.value === 'Lanjutan') {
+
+            // isi otomatis kalau kosong
+            if (!tglTahapan.value) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+
+                tglTahapan.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+        } else if (tahapSelect.value === 'Persiapan') {
+
+            // 🔥 kosongkan kalau pilih Persiapan
+            tglTahapan.value = '';
+
+        }
+    }
+
+    tahapSelect.addEventListener('change', handleTahapChange);
+
+    // jalankan saat pertama load
+    handleTahapChange();
+});
+
+document.getElementById('level').addEventListener('change', function () {
+    let tglInput = document.getElementById('tgl_level');
+
+    // kalau level dipilih & tanggal masih kosong → isi otomatis
+    if (this.value && !tglInput.value) {
+        let today = new Date().toISOString().split('T')[0];
+        tglInput.value = today;
+    }
 });
 </script>
 @endpush
