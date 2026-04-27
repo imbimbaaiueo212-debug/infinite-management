@@ -201,7 +201,7 @@
         </a>
         <a class="nav-link {{ request()->routeIs('garansi-bca.*') ? 'active' : '' }}"
             href="{{ route('garansi-bca.index') }}">
-            <i class="fas fa-shield-alt me-2"></i> Garansi BCA
+            <i class="fas fa-shield-alt me-2"></i> Garansi BCA 372
         </a>
         <a class="nav-link {{ request()->routeIs('mbc-murid.*') ? 'active' : '' }}"
             href="{{ route('mbc-murid.index') }}">

@@ -310,7 +310,7 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Keterangan Level</label>
-                                <textarea name="keterangan_level" class="form-control">{{ old('keterangan_level', $bukuInduk->keterangan_level) }}</textarea>
+                                <textarea name="keterangan_level" class="form-control" rows="1">{{ old('keterangan_level', $bukuInduk->keterangan_level) }}</textarea>
                             </div>
 
                             <ul class="list-group mt-2">
@@ -345,7 +345,7 @@
 
                             <div class="col-md-12">
                                 <label class="form-label">Alamat Murid</label>
-                                <textarea name="alamat_murid" class="form-control" rows="2">{{ old('alamat_murid', $bukuInduk->alamat_murid) }}</textarea>
+                                <textarea name="alamat_murid" class="form-control" rows="1">{{ old('alamat_murid', $bukuInduk->alamat_murid) }}</textarea>
                             </div>
 
                             <div class="col-md-4">
@@ -391,7 +391,7 @@
 
                             <!-- 5. KBM & JADWAL -->
                             <div class="col-12"><hr class="my-4"></div>
-                                <h4 class="col-12 mb-3">⏰ Jadwal biMBA</h4>
+                                <h4 class="col-12 mb-3">⏰ JADWAL biMBA</h4>
 
                             <div class="col-md-2">
                                 <label class="form-label fw-bold text-info">Kode Jadwal <span class="text-danger">*</span></label>
@@ -458,7 +458,7 @@
 
                             {{-- ================= BEASISWA ================= --}}
                              <div class="col-12"><hr class="my-4"></div>
-                                <h4 class="col-12 mb-3">🗓️ Masa Aktif (Dhuafa & BNF)</h4>
+                                <h4 class="col-12 mb-3">🗓️ MASA AKTIF (DHUAFA & BNF)</h4>
 
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Periode</label>
@@ -515,7 +515,7 @@
 
                             <!-- Supply Modul -->
                             <div class="col-12"><hr class="my-4"></div>
-                                <h4 class="col-12 mb-3">📚 Supply Modul</h4>
+                                <h4 class="col-12 mb-3">📚 SUPLLY MODUL</h4>
                                 
 
                             <div class="col-md-6">
@@ -526,7 +526,29 @@
 
                             <div class="col-md-12">
                                 <label class="form-label text-primary fw-bold">KETERANGAN OPTIONAL</label>
-                                <textarea name="keterangan_optional" class="form-control" rows="2">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
+                                <textarea name="keterangan_optional" class="form-control" rows="1">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
+                            </div>
+
+                            <div class="col-12"><hr class="my-4"></div>
+                            <h4 class="col-12 mb-3">📝 SURAT GARANSI BCA 372 BEBAS</h4>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Tanggal Surat Garansi</label>
+                                <input type="date" name="tgl_surat_garansi" class="form-control"
+                                    value="{{ old('tgl_surat_garansi', $bukuInduk->tgl_surat_garansi) }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Note Garansi</label>
+                                <select name="note_garansi" class="form-select">
+                                    <option value="">-- Pilih Note --</option>
+                                    @foreach($noteGaransiOptions as $ng)
+                                        <option value="{{ $ng }}"
+                                            {{ old('note_garansi', $bukuInduk->note_garansi) == $ng ? 'selected' : '' }}>
+                                            {{ $ng }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                                   

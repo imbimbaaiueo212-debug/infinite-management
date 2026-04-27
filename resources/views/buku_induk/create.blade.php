@@ -203,6 +203,12 @@
                 @error('kd') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
+            <!-- SPP -->
+            <div class="col-md-6 mb-3">
+                <label for="spp">SPP</label>
+                <input type="text" id="spp" name="spp" class="form-control" readonly>
+            </div>
+
             <!-- Petugas Trial -->
             <div class="col-md-6 mb-3">
                 <label for="petugas_trial">Petugas Trial</label>
@@ -239,6 +245,12 @@
                 <input type="text" name="no_telp_hp" id="no_telp_hp" class="form-control" value="{{ old('no_telp_hp') }}">
             </div>
 
+            <!-- Alamat Murid -->
+            <div class="col-md-6 mb-3">
+                <label for="alamat_murid">Alamat Murid</label>
+                <textarea name="alamat_murid" id="alamat_murid" class="form-control" rows="1">{{ old('alamat_murid') }}</textarea>
+            </div>
+
             <!-- Note -->
             <div class="col-md-6 mb-3">
                 <label for="note">Note</label>
@@ -250,15 +262,14 @@
                 </select>
             </div>
 
-            <!-- Note Garansi -->
             <div class="col-md-6 mb-3">
-                <label for="note_garansi">Note Garansi</label>
-                <select name="note_garansi" id="note_garansi" class="form-control">
-                    <option value="">-- Pilih --</option>
-                    @foreach($noteGaransiOptions as $ng)
-                        <option value="{{ $ng }}">{{ $ng }}</option>
-                    @endforeach
-                </select>
+                <label for="no_cab_merge">No Cab Merge</label>
+                <input type="text" name="no_cab_merge" id="no_cab_merge" class="form-control" value="{{ old('no_cab_merge') }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="no_pembayaran_murid">No Pembayaran Murid</label>
+                <input type="text" name="no_pembayaran_murid" id="no_pembayaran_murid" class="form-control" value="{{ old('no_pembayaran_murid') }}">
             </div>
 
             <!-- Tgl Keluar -->
@@ -267,11 +278,53 @@
                 <input type="date" name="tgl_keluar" id="tgl_keluar" class="form-control" value="{{ old('tgl_keluar') }}">
             </div>
 
-            <!-- SPP -->
             <div class="col-md-6 mb-3">
-                <label for="spp">SPP</label>
-                <input type="text" id="spp" name="spp" class="form-control" readonly>
+                <label class="form-label">Kategori Keluar</label>
+                <select name="kategori_keluar" class="form-select">
+                    <option value="">-- Pilih Kategori --</option>
+                    @foreach($kategoriKeluarOptions as $kk)
+                        <option value="{{ $kk }}" {{ old('kategori_keluar') == $kk ? 'selected' : '' }}>
+                            {{ $kk }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="alasan">Alasan Keluar</label>
+                <textarea name="alasan" id="alasan" class="form-control" rows="1">{{ old('alasan') }}</textarea>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="jenis_kbm">Jenis KBM</label>
+                <select name="jenis_kbm" id="jenis_kbm" class="form-control">
+                    <option value="">-- Pilih --</option>
+                    @foreach($jenisKbmOptions as $jk)
+                        <option value="{{ $jk }}">{{ $jk }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="level">Level</label>
+                <select name="level" id="level" class="form-control">
+                    <option value="">-- Pilih --</option>
+                    @foreach($levelOptions as $l)
+                        <option value="{{ $l }}">{{ $l }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="tgl_level">Tanggal Level</label>
+                <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label for="keterangan_level">Keterangan Level</label>
+                <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="1">{{ old('keterangan_level') }}</textarea>
+            </div>
+
 
             <!-- Status -->
             <div class="col-md-6 mb-3">
@@ -353,27 +406,27 @@
             <h4 class="col-12 mb-3">⏰ Jadwal biMBA</h4>
 
             <div class="col-md-2 mb-3">
-    <label class="form-label fw-bold text-info">
-        Kode Jadwal <span class="text-danger">*</span>
-    </label>
+                <label class="form-label fw-bold text-info">
+                    Kode Jadwal <span class="text-danger">*</span>
+                </label>
 
-    <select name="kode_jadwal" id="kode_jadwal" class="form-control" required>
-        <option value="">-- Pilih Kode Jadwal --</option>
-        @foreach($kodeJadwalOptions as $kode)
-            <option value="{{ $kode }}" {{ old('kode_jadwal') == $kode ? 'selected' : '' }}>
-                {{ $kode }}
-            </option>
-        @endforeach
-    </select>
-</div>
+                <select name="kode_jadwal" id="kode_jadwal" class="form-control" required>
+                    <option value="">-- Pilih Kode Jadwal --</option>
+                    @foreach($kodeJadwalOptions as $kode)
+                        <option value="{{ $kode }}" {{ old('kode_jadwal') == $kode ? 'selected' : '' }}>
+                            {{ $kode }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-<div class="col-md-4 mb-3">
-    <label class="form-label fw-bold text-info">Hari & Jam</label>
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold text-info">Hari & Jam</label>
 
-    <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light text-muted">
-        Pilih kode jadwal dulu
-    </div>
-</div>
+                <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light text-muted">
+                    Pilih kode jadwal dulu
+                </div>
+            </div>
 
             <div class="col-12"><hr class="my-4"></div>
 
@@ -406,57 +459,39 @@
 
             <div class="col-md-6 mb-3">
                 <label for="keterangan">Keterangan (Pindah)</label>
-                <textarea name="keterangan" id="keterangan" class="form-control" rows="3">{{ old('keterangan') }}</textarea>
+                <textarea name="keterangan" id="keterangan" class="form-control" rows="1">{{ old('keterangan') }}</textarea>
             </div>
 
             <div class="col-12"><hr class="my-4"></div>
 
-            <h4 class="col-12 mb-3">Detail Lainnya</h4>
+            <h4 class="col-12 mb-3">📝 SURAT GARANSI BCA 372 BEBAS</h4>
 
             <div class="col-md-6 mb-3">
-                <label for="level">Level</label>
-                <select name="level" id="level" class="form-control">
+                <label for="tgl_surat_garansi">Tanggal Diberikan Surat</label>
+                <input type="date" name="tgl_surat_garansi" id="tgl_surat_garansi" class="form-control" value="{{ old('tgl_surat_garansi')}}">
+            </div>
+
+            <!-- Note Garansi -->
+            <div class="col-md-6 mb-3">
+                <label for="note_garansi">Note Garansi</label>
+                <select name="note_garansi" id="note_garansi" class="form-control">
                     <option value="">-- Pilih --</option>
-                    @foreach($levelOptions as $l)
-                        <option value="{{ $l }}">{{ $l }}</option>
+                    @foreach($noteGaransiOptions as $ng)
+                        <option value="{{ $ng }}">{{ $ng }}</option>
                     @endforeach
                 </select>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label for="tgl_level">Tanggal Level</label>
-                <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
-            </div>
 
-            <div class="col-md-6 mb-3">
-    <label for="keterangan_level">Keterangan Level</label>
-    <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="2">{{ old('keterangan_level') }}</textarea>
-</div>
 
-            <div class="col-md-6 mb-3">
-                <label for="jenis_kbm">Jenis KBM</label>
-                <select name="jenis_kbm" id="jenis_kbm" class="form-control">
-                    <option value="">-- Pilih --</option>
-                    @foreach($jenisKbmOptions as $jk)
-                        <option value="{{ $jk }}">{{ $jk }}</option>
-                    @endforeach
-                </select>
-            </div>
 
-            <div class="col-md-6 mb-3">
-                <label for="no_cab_merge">No Cab Merge</label>
-                <input type="text" name="no_cab_merge" id="no_cab_merge" class="form-control" value="{{ old('no_cab_merge') }}">
-            </div>
+            
 
-            <div class="col-md-6 mb-3">
-                <label for="no_pembayaran_murid">No Pembayaran Murid</label>
-                <input type="text" name="no_pembayaran_murid" id="no_pembayaran_murid" class="form-control" value="{{ old('no_pembayaran_murid') }}">
-            </div>
+            
 
-            <div class="col-md-6 mb-3">
-                <label for="alamat_murid">Alamat Murid</label>
-                <textarea name="alamat_murid" id="alamat_murid" class="form-control" rows="3">{{ old('alamat_murid') }}</textarea>
-            </div>
+            
+
+            
 
             <!-- Submit -->
             <div class="col-12 mt-5">

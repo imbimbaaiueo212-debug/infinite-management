@@ -169,7 +169,7 @@ class BukuIndukController extends Controller
         $kategoriKeluarOptions = ['Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK', 'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah', 'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain', 'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'];
         $kelasOptions = ['biMBA-AIUEO', 'English biMBA'];
         $noteOptions = ['Aktif Kembali', 'Cuti', 'Ganti Gol', 'Pindahan', 'Belum Bayar SPP', 'Murid Mutasi Masuk', 'Murid Mutasi Keluar', 'Garansi'];
-        $noteGaransiOptions = ['Sudah Diberikan'];
+        $noteGaransiOptions = ['Berkebutuhan Khusus', 'Tidak Memenuhi Syarat'];
         $periodeOptions = ['Ke1', 'Ke2', 'Ke3', 'Ke4', 'Ke5', 'Ke6', 'Ke7', 'Ke8', 'Ke9', 'Ke10', 'Ke11', 'Ke12'];
         $asalModulOptions = ['biMBA IM', 'biMBA Unit'];
         $levelOptions = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];

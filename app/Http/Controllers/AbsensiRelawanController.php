@@ -35,7 +35,7 @@ class AbsensiRelawanController extends Controller
 
     // === DROPDOWN NIK / NAMA ===
     $muridQuery = Profile::select('nik as nim', 'nama as nama_murid')
-        ->orderBy('nama');
+        ->orderBy('nik');
 
     if (!$user->is_admin && $user->bimba_unit ?? false) {
         $muridQuery->where('bimba_unit', $user->bimba_unit);
