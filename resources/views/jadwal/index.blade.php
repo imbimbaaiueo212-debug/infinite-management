@@ -25,10 +25,10 @@
         }
         .table-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-        .header-srj { background-color: #3b82f6 !important; color: white; }
+        .header-srj { background-color: #3b82f6 !important; color: rgb(0, 0, 0); }
         .cell-srj   { background-color: #dbeafe !important; }
-        .header-sks { background-color: #f59e0b !important; color: white; }
-        .header-s6  { background-color: #0ea5e9 !important; color: white; }
+        .header-sks { background-color: #f59e0b !important; color: rgb(0, 0, 0); }
+        .header-s6  { background-color: #0ea5e9 !important; color: rgb(0, 0, 0); }
         .cell-s6    { background-color: #e0f2fe !important; }
 
         /* Warna Unit - PASTIKAN INI AKTIF */
@@ -162,8 +162,8 @@
 
                 <div class="table-container">
                     <table class="table table-bordered table-hover m-0 text-center" style="min-width: 2800px;">
-                        <thead class="table-dark">
-                            <tr>
+                        <thead class="table-light">
+                            <tr c>
                                 <th rowspan="2" style="width:50px;">NO</th>
                                 <th rowspan="2" style="width:80px;">JAM</th>
                                 <th colspan="12" class="header-srj">SHIFT (SRJ)</th>

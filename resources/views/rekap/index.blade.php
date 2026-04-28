@@ -28,11 +28,11 @@
                         @if (auth()->check() && (auth()->user()->is_admin ?? false))
                             <div class="col-md-4 col-lg-3">
                                 <label class="form-label fw-bold small">Unit & Cabang</label>
-                                <select id="filterUnitCabang" class="form-select">
-                                    <option value="">— Semua Unit & Cabang —</option>
+                                <select id="filterUnitCabang" class="form-select text-center">
+                                    <option value="">— Semua Unit —</option>
                                     @foreach($rekap->unique(fn($r) => ($r->bimba_unit ?? '').'|'.($r->no_cabang ?? ''))->sortBy(['bimba_unit', 'no_cabang']) as $row)
                                         <option value="{{ ($row->bimba_unit ?? '').'|'.($row->no_cabang ?? '') }}">
-                                            {{ $row->bimba_unit ?? '—' }} @if($row->no_cabang)({{ $row->no_cabang }})@endif
+                                            {{ $row->bimba_unit ?? '—' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -59,18 +59,48 @@
                     </div>
                 </form>
 
+                <style>
+/* Semua cell */
+#rekapTable th,
+#rekapTable td {
+    white-space: nowrap;
+    text-align: center;
+    padding: 3px 4px;
+    font-size: 15px;
+}
+
+
+/* SRJ */
+#rekapTable th:nth-child(n+5):nth-child(-n+12),
+#rekapTable td:nth-child(n+5):nth-child(-n+12) {
+    background-color: #e6f4ea;
+}
+
+/* SKS */
+#rekapTable th:nth-child(n+13):nth-child(-n+16),
+#rekapTable td:nth-child(n+13):nth-child(-n+16) {
+    background-color: #e7f3ff;
+}
+
+/* S6 */
+#rekapTable th:nth-child(n+17):nth-child(-n+20),
+#rekapTable td:nth-child(n+17):nth-child(-n+20) {
+    background-color: #fff4e5;
+}
+</style>
+
                 <!-- TABEL -->
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover table-sm" id="rekapTable">
                         <thead class="table-light">
                             <tr>
                                 <th rowspan="2" class="text-center">No</th>
-                                <th rowspan="2">NIK</th>
-                                <th rowspan="2" class="text-start">Nama Relawan</th>
+                                <th rowspan="2" class="text-center">NIK</th>
+                                <th rowspan="2" class="text-center">Nama Relawan</th>
                                 <th rowspan="2" class="text-center" style="width: 70px;">Info</th>
-                                <th colspan="8" class="bg-success-subtle text-success fw-bold">SRJ</th>
-                                <th colspan="4" class="bg-info-subtle text-info fw-bold">SKS</th>
-                                <th colspan="4" class="bg-warning-subtle text-warning-emphasis fw-bold">S6</th>
+                                <th colspan="8" class="bg-success-subtle text-success text-center fw-bold">SRJ</th>
+                                <th colspan="4" class="bg-info-subtle text-info fw-bold text-center">SKS</th>
+                                <th colspan="4" class="bg-warning-subtle text-warning-emphasis fw-bold text-center">S6</th>
                                 <th rowspan="2">Murid</th>
                                 <th rowspan="2">Rombim</th>
                                 <th rowspan="2">Adj. RB</th>
