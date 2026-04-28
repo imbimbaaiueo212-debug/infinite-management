@@ -458,59 +458,130 @@
 
                             {{-- ================= BEASISWA ================= --}}
                              <div class="col-12"><hr class="my-4"></div>
-                                <h4 class="col-12 mb-3">🗓️ MASA AKTIF (DHUAFA & BNF)</h4>
+                                <h4 class="col-12 mb-3 fw-bold">🗓️ MASA AKTIF (DHUAFA & BNF)</h4>
 
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Periode</label>
+                       
 
-                                {{-- TAMPILAN SAJA --}}
-                                <input type="text"
-                                    class="form-control bg-light fw-bold text-danger"
-                                    value="{{ $bukuInduk->periode ?? '-' }}"
-                                    readonly>
+                            <div class="row g-3">
 
-                                {{-- NILAI ASLI UNTUK SUBMIT --}}
-                                <input type="hidden"
-                                    name="periode"
-                                    value="{{ $bukuInduk->periode }}">
-                            </div>
+                                {{-- PERIODE --}}
+                                <div class="col-md-3">
+                                    <label class="form-label">Periode</label>
 
+                                    @php
+                                        $selectedPeriode = old('periode', $bukuInduk->periode ?? '');
+                                        preg_match('/\d+/', $selectedPeriode, $match);
+                                        $selectedNumber = $match[0] ?? '';
+                                    @endphp
 
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">
-                                    Tanggal Mulai
-                                </label>
-                                <input type="date"
-                                    name="tgl_mulai"
-                                    class="form-control"
-                                    value="{{ old('tgl_mulai', $bukuInduk->tgl_mulai?->format('Y-m-d')) }}">
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">
-                                    Tanggal Akhir
-                                </label>
-                                <input type="date"
-                                    name="tgl_akhir"
-                                    class="form-control"
-                                    value="{{ old('tgl_akhir', $bukuInduk->tgl_akhir?->format('Y-m-d')) }}">
-                            </div>
-
-                            <div class="col-md-6 mt-3">
-                                <div class="form-check">
-                                    <input
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        name="alert"
-                                        id="alert"
-                                        value="aktif"
-                                        {{ old('alert', $bukuInduk->alert) === 'aktif' ? 'checked' : '' }}
-                                    >
-                                    <label class="form-check-label fw-bold text-info" for="alert">
-                                        Beasiswa Aktif
-                                    </label>
+                                    <select name="periode" class="form-control text-danger">
+                                        <option value="">-- Pilih --</option>
+                                        @for ($i = 1; $i <= 10; $i++)
+                                            <option value="Ke-{{ $i }}" {{ $selectedNumber == $i ? 'selected' : '' }}>
+                                                Ke-{{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
                                 </div>
+
+                                {{-- TGL MULAI --}}
+                                <div class="col-md-3">
+                                    <label class="form-label">Tanggal Mulai</label>
+                                    <input type="date"
+                                        name="tgl_mulai"
+                                        id="tgl_mulai"
+                                        class="form-control"
+                                        value="{{ old('tgl_mulai', $bukuInduk->tgl_mulai?->format('Y-m-d')) }}">
+                                </div>
+                                
+                                {{-- TGL AKHIR --}}
+                                <div class="col-md-3">
+                                    <label class="form-label">Tanggal Akhir</label>
+                                    <input type="date"
+                                        name="tgl_akhir"
+                                        id="tgl_akhir"
+                                        class="form-control"
+                                        value="{{ old('tgl_akhir', $bukuInduk->tgl_akhir?->format('Y-m-d')) }}">
+                                </div>
+
+                                {{-- JUMLAH --}}
+                                <div class="col-md-3">
+                                    <label class="form-label">Jumlah Beasiswa</label>
+                                    <input type="number"
+                                        name="jumlah_beasiswa"
+                                        id="jumlah_beasiswa"
+                                        class="form-control"
+                                        value="{{ old('jumlah_beasiswa', $bukuInduk->jumlah_beasiswa ?? '') }}">
+                                </div>
+
+                            
+
+                            {{-- CHECKBOX BARIS BARU --}}
+                            <div class="row mt-3">
+
+                                <div class="col-md-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                            type="checkbox"
+                                            name="alert"
+                                            id="alert"
+                                            value="aktif"
+                                            {{ old('alert', $bukuInduk->alert) === 'aktif' ? 'checked' : '' }}>
+
+                                        <label class="form-check-label text-info" for="alert">
+                                            Beasiswa Aktif
+                                        </label>
+                                    </div>
+                                </div>
+
                             </div>
+                            </div>
+                            <div class="col-12">
+                                <hr class="my-4">
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <h4 class="fw-bold">⏱️ Masa Aktif Paket 72</h4>
+                            </div>
+
+                            <div class="row">
+
+    {{-- TANGGAL BAYAR --}}
+    <div class="col-md-4 mb-3">
+        <label for="tgl_bayar" class="form-label">Tanggal Bayar</label>
+        <input type="date"
+            name="tgl_bayar"
+            id="tgl_bayar"
+            class="form-control"
+            value="{{ old('tgl_bayar', optional($bukuInduk->tgl_bayar)->format('Y-m-d')) }}">
+    </div>
+
+    {{-- TANGGAL SELESAI --}}
+    <div class="col-md-4 mb-3">
+        <label for="tgl_selesai" class="form-label">Tanggal Selesai</label>
+        <input type="date"
+            name="tgl_selesai"
+            id="tgl_selesai"
+            class="form-control"
+            value="{{ old('tgl_selesai', optional($bukuInduk->tgl_selesai)->format('Y-m-d')) }}">
+    </div>
+
+    {{-- ALERT --}}
+    <div class="col-md-4 mb-3 d-flex align-items-end">
+        <div class="form-check">
+            <input class="form-check-input"
+                type="checkbox"
+                name="alert2"
+                id="alert2"
+                value="aktif"
+                {{ old('alert2', $bukuInduk->alert2 ?? '') === 'aktif' ? 'checked' : '' }}>
+            <label class="form-check-label fw-bold text-info" for="alert2">
+                Paket 72 Aktif
+            </label>
+        </div>
+    </div>
+
+</div>
 
 
                             <!-- Supply Modul -->
@@ -753,5 +824,89 @@ document.querySelector('[name="tgl_pengajuan_garansi"]').addEventListener('chang
     // isi masa aktif
     document.querySelector('[name="masa_aktif_garansi"]').value = "6 bulan";
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const tglMulai = document.getElementById('tgl_mulai');
+    const tglAkhir = document.getElementById('tgl_akhir');
+    const jumlahBeasiswa = document.getElementById('jumlah_beasiswa');
+    const section = document.getElementById('beasiswaSection');
+
+    function resetField() {
+        tglAkhir.value = '';
+        jumlahBeasiswa.value = '';
+        section.style.display = 'none'; // 👈 HILANGKAN
+    }
+
+    function showField() {
+        section.style.display = 'block'; // 👈 MUNCULKAN
+    }
+
+    tglMulai.addEventListener('change', function () {
+
+        if (!this.value) {
+            resetField();
+            return;
+        }
+
+        showField();
+
+        let startDate = new Date(this.value);
+        startDate.setMonth(startDate.getMonth() + 6);
+
+        let year = startDate.getFullYear();
+        let month = String(startDate.getMonth() + 1).padStart(2, '0');
+        let day = String(startDate.getDate()).padStart(2, '0');
+
+        tglAkhir.value = `${year}-${month}-${day}`;
+
+        jumlahBeasiswa.value = 0;
+    });
+
+    // initial state
+    if (!tglMulai.value) {
+        resetField();
+    } else {
+        showField();
+    }
+});
+document.addEventListener('DOMContentLoaded', function () {
+
+    const tglBayar = document.getElementById('tgl_bayar');
+    const tglSelesai = document.getElementById('tgl_selesai');
+    const alert2 = document.getElementById('alert2');
+
+    function reset() {
+        tglSelesai.value = '';
+        alert2.checked = false;
+    }
+
+    tglBayar.addEventListener('change', function () {
+
+        if (!this.value) {
+            reset();
+            return;
+        }
+
+        let date = new Date(this.value);
+
+        // +72 hari
+        date.setDate(date.getDate() + 72);
+
+        let year = date.getFullYear();
+        let month = String(date.getMonth() + 1).padStart(2, '0');
+        let day = String(date.getDate()).padStart(2, '0');
+
+        tglSelesai.value = `${year}-${month}-${day}`;
+
+        // aktifkan alert otomatis
+        alert2.checked = true;
+    });
+
+    if (!tglBayar.value) {
+        reset();
+    }
+});
+
 </script>
 @endpush

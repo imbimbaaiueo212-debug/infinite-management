@@ -35,18 +35,25 @@ class BukuIndukStatistikController extends Controller
     $userUnit = $user->bimba_unit ?? null;
 
     // ================== UNIT ==================
-    $selectedUnit = $request->input('unit_id');
+    $selectedUnit = $request->input('unit_id'); // FIX INI
 
-    if (!$isAdmin) {
-        $selectedUnit = $userUnit;
-    }
+$queryBase = BukuInduk::query();
+
+if (!$isAdmin) {
+    $queryBase->where('bimba_unit', $userUnit);
+} elseif (!empty($selectedUnit)) {
+    $queryBase->where('bimba_unit', $selectedUnit);
+}
 
     // ================== QUERY BASE ==================
     $queryBase = BukuInduk::query();
 
-    if ($selectedUnit && $selectedUnit !== 'semua') {
-        $queryBase->where('bimba_unit', $selectedUnit);
-    }
+if (!$isAdmin) {
+    $queryBase->where('bimba_unit', $userUnit);
+} elseif ($selectedUnit && $selectedUnit !== '') {
+    $queryBase->where('bimba_unit', $selectedUnit);
+}
+    
 
     // ================== DATA ==================
 
@@ -164,13 +171,15 @@ class BukuIndukStatistikController extends Controller
 
     // ================== UNIT ==================
     $unitOptions = [];
-    if ($isAdmin) {
-        $unitOptions = DB::table('units')
-            ->pluck('bimba_unit', 'bimba_unit')
-            ->toArray();
 
-        $unitOptions = ['' => 'Semua Unit'] + $unitOptions;
-    }
+if ($isAdmin) {
+    $unitOptions = DB::table('units')
+        ->orderBy('bimba_unit')
+        ->pluck('bimba_unit', 'bimba_unit')
+        ->toArray();
+
+    $unitOptions = ['' => 'Semua Unit'] + $unitOptions;
+}
 
     // ================== LABEL ==================
     $namaUnitTerpilih = (!$isAdmin && $userUnit)

@@ -96,6 +96,21 @@
         }
     @endphp
 
+<!-- Unit Filter -->
+@if($isAdmin)
+    <div class="col-md-2">
+        <label class="fw-bold">Unit</label>
+        <select name="unit_id" class="form-control">
+            @foreach($unitOptions as $key => $label)
+                <option value="{{ $key }}"
+                    {{ ($selectedUnit ?? '') == $key ? 'selected' : '' }}>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+@endif
+
     <!-- Periode Awal -->
     <div class="col-md-5">
         <label class="fw-bold">Periode Awal</label>

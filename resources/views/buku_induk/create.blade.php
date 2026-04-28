@@ -61,9 +61,12 @@
                     @error('bimba_unit') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
-                <div class="col-md-6">
+               <div class="col-md-6">
                     <label for="no_cabang">No. Cabang</label>
-                    <input type="text" name="no_cabang" id="no_cabang" class="form-control" readonly>
+                    <input type="text" name="no_cabang" id="no_cabang"
+                    class="form-control"
+                    value=""
+                    readonly>
                 </div>
             @else
                 {{-- Non-admin: hidden input saja --}}
@@ -160,9 +163,9 @@
             </div>
 
             <div class="col-md-6 mb-3" id="keterangan_info_wrapper" style="display: none;">
-    <label for="keterangan_info">Keterangan Info</label>
-    <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
-</div>
+                <label for="keterangan_info">Keterangan Info</label>
+                <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
+            </div>
             <!-- Kelas -->
             <div class="col-md-6 mb-3">
                 <label for="kelas">Kelas <span class="text-danger">*</span></label>
@@ -480,20 +483,8 @@
                         <option value="{{ $ng }}">{{ $ng }}</option>
                     @endforeach
                 </select>
-            </div>
-
-
-
-
-            
-
-            
-
-            
-
-            
-
-            <!-- Submit -->
+            </div>    
+                <!-- Submit -->
             <div class="col-12 mt-5">
                 <button type="submit" class="btn btn-success btn-lg">Simpan Data</button>
                 <a href="{{ route('buku_induk.index') }}" class="btn btn-secondary btn-lg">Kembali</a>
@@ -505,17 +496,26 @@
 <!-- JavaScript -->
 <script>
 window.unitsData = {!! $unitsJson !!};
+window.guruByUnit = {!! json_encode($guruByUnit ?? []) !!};
 
 document.addEventListener('DOMContentLoaded', function () {
+
     const isAdmin = {{ $isAdmin ? 'true' : 'false' }};
+    let currentUnit = '{{ $userUnit ?? '' }}';
 
-    // ==================== LOGIC NIM OTOMATIS ====================
-    let currentUnit = '{{ $userUnit ?? '' }}'; // default untuk non-admin
+    const unitSelect = document.getElementById('bimba_unit');
+    const guruSelect = document.getElementById('guru');
 
-    function updateNim(unitValue = currentUnit) {
+    const nimPreview = document.getElementById('nim-preview');
+    const nimInput = document.getElementById('nim');
+    const nimSuffix = document.getElementById('nim_suffix');
+    const noCabangInput = document.getElementById('no_cabang');
+
+    // ==================== UPDATE NIM ====================
+    function updateNim(unitValue) {
         if (!unitValue) {
-            document.getElementById('nim-preview').textContent = '-----';
-            document.getElementById('nim').value = '';
+            if (nimPreview) nimPreview.textContent = '-----';
+            if (nimInput) nimInput.value = '';
             return;
         }
 
@@ -523,79 +523,126 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 const nextSuffix = data.next_suffix || '0001';
-                const padded = nextSuffix.toString().padStart(4, '0');
-                const prefix = window.unitsData[unitValue] || '-----';
+                const padded = String(nextSuffix).padStart(4, '0');
+                const prefix = window.unitsData?.[unitValue] || '-----';
                 const fullNim = prefix + padded;
 
-                document.getElementById('nim-preview').textContent = fullNim;
-                document.getElementById('nim').value = fullNim;
-                document.getElementById('nim_suffix').value = padded;
+                if (nimPreview) nimPreview.textContent = fullNim;
+                if (nimInput) nimInput.value = fullNim;
+                if (nimSuffix) nimSuffix.value = padded;
             })
             .catch(() => {
-                document.getElementById('nim-preview').textContent = 'Error load NIM';
+                if (nimPreview) nimPreview.textContent = 'Error load NIM';
             });
     }
 
-    // Untuk ADMIN: update saat pilih unit
-    if (isAdmin) {
-        const unitSelect = document.getElementById('bimba_unit');
-        unitSelect?.addEventListener('change', () => {
-            currentUnit = unitSelect.value;
-            updateNim(currentUnit);
+    // ==================== UPDATE NO CABANG ====================
+    function updateNoCabang(unitValue) {
+        if (!noCabangInput) return;
+        noCabangInput.value = window.unitsData?.[unitValue] || '';
+    }
+
+    // ==================== FILTER GURU BY UNIT (FIX 100%) ====================
+    function filterGuruByUnit(unitValue) {
+        if (!guruSelect) return;
+
+        const allowedGuru = window.guruByUnit?.[unitValue] || [];
+
+        // HAPUS SEMUA OPTION (kecuali placeholder)
+        while (guruSelect.options.length > 1) {
+            guruSelect.remove(1);
+        }
+
+        if (allowedGuru.length > 0) {
+            // TAMPILKAN GURU SESUAI UNIT
+            allowedGuru.forEach(guruNama => {
+                const option = new Option(guruNama, guruNama);
+                guruSelect.appendChild(option);
+            });
+        } else {
+            // FALLBACK: SEMUA GURU (jika tidak ada mapping unit)
+            @foreach($profil as $g)
+                const option{{ $loop->index }} = new Option('{{ addslashes($g->nama) }}', '{{ addslashes($g->nama) }}');
+                guruSelect.appendChild(option{{ $loop->index }});
+            @endforeach
+        }
+
+        // RESET PILIHAN
+        guruSelect.value = '';
+    }
+
+    // ==================== HANDLE UNIT CHANGE ====================
+    function handleUnitChange(unitValue) {
+        currentUnit = unitValue;
+
+        updateNim(unitValue);
+        updateNoCabang(unitValue);
+        filterGuruByUnit(unitValue);
+    }
+
+    // ==================== EVENT UNIT (ADMIN ONLY) ====================
+    if (isAdmin && unitSelect) {
+
+        unitSelect.addEventListener('change', function () {
+            handleUnitChange(this.value);
         });
 
-        // Jalankan awal jika ada old value
-        if (unitSelect?.value) {
-            updateNim(unitSelect.value);
-        }
-    } else {
-        // Non-admin: langsung jalankan dengan unit user
-        if (currentUnit) {
-            updateNim(currentUnit);
+        // initial load
+        if (unitSelect.value) {
+            handleUnitChange(unitSelect.value);
         }
     }
 
-    // ==================== LOGIC LAINNYA (usia, lama belajar, SPP) ====================
+    // ==================== USIA ====================
     document.getElementById('tgl_lahir')?.addEventListener('change', function () {
         if (!this.value) return;
+
         const tgl = new Date(this.value);
         const today = new Date();
+
         let age = today.getFullYear() - tgl.getFullYear();
         const m = today.getMonth() - tgl.getMonth();
+
         if (m < 0 || (m === 0 && today.getDate() < tgl.getDate())) age--;
+
         document.getElementById('usia').value = age > 0 ? age : '';
     });
 
+    // ==================== LAMA BELAJAR ====================
     document.getElementById('tgl_masuk')?.addEventListener('change', function () {
         if (!this.value) return;
+
         const tgl = new Date(this.value);
         const today = new Date();
+
         let bulan = (today.getFullYear() - tgl.getFullYear()) * 12 + (today.getMonth() - tgl.getMonth());
         if (today.getDate() < tgl.getDate()) bulan--;
+
         document.getElementById('lama_bljr').value = bulan >= 0 ? bulan + ' bulan' : '';
     });
 
+    // ==================== SPP ====================
     const sppMapping = @json($sppMapping);
     const golSelect = document.getElementById('gol');
     const kdSelect = document.getElementById('kd');
     const sppInput = document.getElementById('spp');
 
     function updateSPP() {
-        const gol = golSelect?.value;
-        const kd = kdSelect?.value;
-        if (gol && kd && sppMapping[gol] && sppMapping[gol][kd] !== undefined) {
-            sppInput.value = 'Rp. ' + new Intl.NumberFormat('id-ID').format(sppMapping[gol][kd]);
-        } else {
-            sppInput.value = '';
-        }
+    const gol = golSelect?.value;
+    const kd = kdSelect?.value;
+
+    if (gol && kd && sppMapping[gol]?.[kd] !== undefined) {  // ← FIXED
+        sppInput.value = 'Rp. ' + new Intl.NumberFormat('id-ID').format(sppMapping[gol][kd]);
+    } else {
+        sppInput.value = '';
     }
+}
 
     golSelect?.addEventListener('change', updateSPP);
     kdSelect?.addEventListener('change', updateSPP);
     updateSPP();
-});
 
-document.addEventListener('DOMContentLoaded', function () {
+    // ==================== TAHAP ====================
     const tahapSelect = document.getElementById('tahap');
     const tglTahapan = document.getElementById('tgl_tahapan');
 
@@ -603,8 +650,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!tahapSelect || !tglTahapan) return;
 
         if (tahapSelect.value === 'Persiapan') {
-
-            // 🔥 TAMPILKAN + isi otomatis kalau kosong
             tglTahapan.parentElement.style.display = 'block';
 
             if (!tglTahapan.value) {
@@ -615,20 +660,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 tglTahapan.value = `${yyyy}-${mm}-${dd}`;
             }
-
         } else {
-            // ❌ selain Persiapan → sembunyikan + kosongkan
             tglTahapan.value = '';
             tglTahapan.parentElement.style.display = 'none';
         }
     }
 
     tahapSelect?.addEventListener('change', handleTahapChange);
-
-    // jalankan saat pertama load
     handleTahapChange();
-});
-document.addEventListener('DOMContentLoaded', function () {
+
+    // ==================== INFO LAINNYA ====================
     const infoSelect = document.getElementById('info');
     const wrapper = document.getElementById('keterangan_info_wrapper');
 
@@ -640,72 +681,69 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             wrapper.style.display = 'none';
 
-            // optional: kosongkan isi kalau tidak dipakai
             const input = wrapper.querySelector('textarea');
             if (input) input.value = '';
         }
     }
 
-    infoSelect.addEventListener('change', toggleKeterangan);
-
-    // jalankan saat load (biar kalau old value tetap muncul)
+    infoSelect?.addEventListener('change', toggleKeterangan);
     toggleKeterangan();
-});
 
-document.addEventListener('DOMContentLoaded', function () {
+    // ==================== LEVEL ====================
     const level = document.getElementById('level');
-    const tgl = document.getElementById('tgl_level');
+    const tglLevel = document.getElementById('tgl_level');
 
     level?.addEventListener('change', function () {
-        if (this.value && !tgl.value) {
-            const today = new Date().toISOString().split('T')[0];
-            tgl.value = today;
+        if (this.value && !tglLevel.value) {
+            tglLevel.value = new Date().toISOString().split('T')[0];
         }
     });
-});
-const kodeJadwal = document.getElementById('kode_jadwal');
-const preview = document.getElementById('jadwal_preview');
 
+    // ==================== JADWAL ====================
+    const kodeJadwal = document.getElementById('kode_jadwal');
+    const preview = document.getElementById('jadwal_preview');
 
-const jadwalMap = {
-    108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
-    109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
-    110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
-    111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
-    112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
-    113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
-    114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
-    115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
-    116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
+    const jadwalMap = {
+        108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
+        109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
+        110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
+        111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
+        112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
+        113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
+        114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
+        115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
+        116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
 
-    208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
-    209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
-    210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
-    211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
+        208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
+        209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
+        210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
+        211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
 
-    308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
-    309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
-    310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
-    311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
-};
+        308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
+        309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
+        310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
+        311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
+    };
 
-function updateJadwal() {
-    const val = kodeJadwal.value;
+    function updateJadwal() {
+        const val = kodeJadwal?.value;
 
-    if (jadwalMap[val]) {
-        const j = jadwalMap[val];
-        preview.innerHTML = `
-            <strong>${j.shift}</strong>
-            <br>
-            <span>${j.hari}</span>
-            - <span class="text-primary fw-bold">${j.jam}</span>
-        `;
-    } else {
-        preview.innerHTML = 'Belum ada jadwal';
+        if (jadwalMap[val]) {
+            const j = jadwalMap[val];
+
+            preview.innerHTML = `
+                <strong>${j.shift}</strong><br>
+                <span>${j.hari}</span> - 
+                <span class="text-primary fw-bold">${j.jam}</span>
+            `;
+        } else {
+            preview.innerHTML = 'Belum ada jadwal';
+        }
     }
-}
 
-kodeJadwal?.addEventListener('change', updateJadwal);
-updateJadwal();
+    kodeJadwal?.addEventListener('change', updateJadwal);
+    updateJadwal();
+
+});
 </script>
 @endsection

@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Validation\Rule;
 use App\Models\BukuInduk;
+use App\Models\BukuIndukBeasiswaHistory;
 use App\Models\HargaSaptataruna;
 use App\Models\Profile;
 use App\Models\LevelHistory;
+use App\Models\Paket72History;
 use App\Models\Unit;
 use App\Models\PengajuanGaransi;
 use Maatwebsite\Excel\Facades\Excel;
@@ -208,6 +210,23 @@ if (!$isAdmin && $userUnit) {
     $autoNimSuffix = null;
 }
 
+// ==================== TAMBAHAN BARU: GURU BY UNIT ====================
+    $guruByUnit = [];
+    foreach ($profil as $guru) {
+        // Cek field unit di tabel Profile (sesuaikan nama field)
+        $unit = $guru->bimba_unit ?? $guru->unit ?? null;
+        
+        if ($unit && isset($units[$unit])) {
+            $guruByUnit[$unit][] = $guru->nama;
+        }
+    }
+
+    // Clean up: unique & sort
+    foreach ($guruByUnit as $unit => &$gurus) {
+        $gurus = array_unique($gurus);
+        sort($gurus);
+    }
+
         return view('buku_induk.create', compact(
             'HargaSaptataruna',
             'profil',
@@ -233,7 +252,9 @@ if (!$isAdmin && $userUnit) {
             'userUnit',
             'userNoCabang',
             'autoNim',          // ← baru
-    'autoNimSuffix'     // ← baru
+            'autoNimSuffix',     // ← baru
+    'guruByUnit',  // ← TAMBAHAN INI
+        'unitsJson'    // ← PASTIKAN INI JUGA ADA
         ));
     }
 
@@ -367,6 +388,9 @@ if (!$isAdmin && $userUnit) {
             $message = 'Data murid berhasil diperbarui (NIM sudah ada sebelumnya)';
         } else {
             $newRecord = BukuInduk::create($data);
+
+            // 🔥 sync juga
+            $this->syncBukuIndukToBeasiswa($newRecord);
 
             BukuIndukHistory::create([
                 'buku_induk_id' => $newRecord->id,
@@ -547,6 +571,7 @@ if (!$isAdmin && $userUnit) {
         'tgl_selesai_garansi' => 'nullable|date',
         'perpanjang_garansi' => 'nullable|string',
         'alasan_garansi' => 'nullable|string',
+        'jumlah_beasiswa' => 'nullable|numeric|min:0',
     ]);
 
     // ← TAMBAHKAN INI
@@ -594,14 +619,62 @@ if (!$isAdmin && $userUnit) {
     /* =====================================================
      * ALERT BEASISWA OTOMATIS
      * ===================================================== */
-    if ($data['tgl_mulai'] && $data['tgl_akhir']) {
-        $now = Carbon::today();
-        $data['alert'] = $now->between(
-            Carbon::parse($data['tgl_mulai']),
-            Carbon::parse($data['tgl_akhir'])
-        ) ? 'aktif' : null;
+if (!empty($data['tgl_mulai'])) {
+
+    $tglMulai = Carbon::parse($data['tgl_mulai']);
+    $tglAkhir = !empty($data['tgl_akhir'])
+        ? Carbon::parse($data['tgl_akhir'])
+        : $tglMulai->copy()->addMonths(6);
+
+    $data['tgl_akhir'] = $tglAkhir;
+
+    $now = Carbon::today();
+
+    $data['alert'] = $now->between($tglMulai, $tglAkhir)
+        ? 'aktif'
+        : 'nonaktif';
+} else {
+    $data['alert'] = null;
+}
+
+/* =====================================================
+ * FIX JUMLAH BEASISWA (ANTI ERROR MYSQL)
+ * ===================================================== */
+$data['jumlah_beasiswa'] = is_numeric($data['jumlah_beasiswa'] ?? null)
+    ? (float) $data['jumlah_beasiswa']
+    : 0;
+
+    // ===============================
+    // PAKET 72 SAFE HANDLING
+    // ===============================
+    if ($request->filled('tgl_bayar')) {
+
+    try {
+        $bayar = Carbon::parse($request->tgl_bayar);
+    } catch (\Exception $e) {
+        $bayar = null;
     }
 
+    if ($bayar) {
+        $selesai = $bayar->copy()->addDays(72);
+
+        $data['tgl_selesai'] = $selesai->format('Y-m-d');
+
+        $today = Carbon::today();
+
+        if ($today->between($bayar, $selesai)) {
+            $data['alert2'] = 'aktif';
+        } elseif ($today->gt($selesai)) {
+            $data['alert2'] = 'expired';
+        } else {
+            $data['alert2'] = 'menunggu';
+        }
+    }
+
+} else {
+    $data['tgl_selesai'] = null;
+    $data['alert2'] = null;
+}
     /* =====================================================
      * VALIDASI CABANG & NIM
      * ===================================================== */
@@ -648,10 +721,46 @@ if (!empty($data['tgl_pengajuan_garansi'])) {
     $data['perpanjang_garansi']  = null;
 }
 
-    /* =====================================================
-     * SIMPAN & HISTORY
-     * ===================================================== */
     $bukuInduk->update($data);
+
+    $this->syncBukuIndukToBeasiswa($bukuInduk);
+
+/**
+ * ambil perubahan setelah update
+ */
+$changes = $bukuInduk->getChanges();
+
+/* =====================================================
+ * BEASISWA HISTORY (AMAN + TERFILTER)
+ * ===================================================== */
+if (
+    !empty($data['periode']) &&
+    (
+        isset($changes['periode']) ||
+        isset($changes['tgl_mulai']) ||
+        isset($changes['tgl_akhir']) ||
+        isset($changes['jumlah_beasiswa'])
+    )
+) {
+    $this->storeBeasiswaHistory($bukuInduk);
+}
+
+/* =====================================================
+ * PAKET 72 HISTORY (HANYA JIKA ADA PERUBAHAN)
+ * ===================================================== */
+if ($request->filled('tgl_bayar')) {
+
+    $bayar = Carbon::parse($request->tgl_bayar);
+    $selesai = $bayar->copy()->addDays(72);
+
+    $data['tgl_selesai'] = $selesai->format('Y-m-d');
+
+    $today = Carbon::today();
+
+    $data['alert2'] =
+        $today->between($bayar, $selesai) ? 'aktif' :
+        ($today->gt($selesai) ? 'expired' : 'menunggu');
+}
 
     // 🔥 SIMPAN HISTORY LEVEL
 if ($bukuInduk->wasChanged('level') && !empty($data['level'])) {
@@ -942,5 +1051,104 @@ public function exportToSheet(GoogleFormService $service)
     $service->exportBukuInduk($data, 'buku_induk');
 
     return 'Export berhasil ke Google Sheet';
+}
+
+private function syncBukuIndukToBeasiswa($bukuInduk)
+{
+    if (!$bukuInduk->nim) return;
+
+    // Cari beasiswa berdasarkan NIM
+    $beasiswa = \App\Models\SertifikatBeasiswa::where('nim', $bukuInduk->nim)->first();
+
+    $data = [
+        'nim'               => $bukuInduk->nim,
+        'nama'              => $bukuInduk->nama,
+        'bimba_unit'        => $bukuInduk->bimba_unit,
+        'periode_bea_ke'    => $bukuInduk->periode,
+        'tanggal_mulai'     => $bukuInduk->tgl_mulai,
+        'tanggal_selesai'   => $bukuInduk->tgl_akhir,
+        'golongan'          => $bukuInduk->gol,
+        'nama_orang_tua'    => $bukuInduk->orangtua,
+        'alamat'            => $bukuInduk->alamat_murid,
+        'tanggal_lahir'     => $bukuInduk->tgl_lahir,
+        'jumlah_beasiswa' => $bukuInduk->jumlah_beasiswa,
+        'virtual_account'   => $bukuInduk->no_pembayaran_murid,
+    ];
+
+    if ($beasiswa) {
+        // update jika sudah ada
+        $beasiswa->update($data);
+    } else {
+        // buat baru jika belum ada
+        \App\Models\SertifikatBeasiswa::create($data);
+    }
+}
+
+private function storeBeasiswaHistory($bukuInduk)
+{
+    // ❌ jangan jalan kalau tidak ada periode
+    if (empty($bukuInduk->periode)) {
+        return;
+    }
+
+    // ❌ jangan jalan kalau semua field beasiswa kosong
+    if (
+        empty($bukuInduk->tgl_mulai) &&
+        empty($bukuInduk->tgl_akhir) &&
+        empty($bukuInduk->jumlah_beasiswa)
+    ) {
+        return;
+    }
+
+    $last = BukuIndukBeasiswaHistory::where('nim', $bukuInduk->nim)
+        ->where('status', 'aktif')
+        ->latest()
+        ->first();
+
+    // kalau sama persis periode + tanggal → skip
+    if ($last && $last->periode === $bukuInduk->periode) {
+        return;
+    }
+
+    // tutup history lama
+    if ($last) {
+        $last->update(['status' => 'selesai']);
+    }
+
+    BukuIndukBeasiswaHistory::create([
+        'nim' => $bukuInduk->nim,
+        'nama' => $bukuInduk->nama,
+        'alamat_murid' => $bukuInduk->alamat_murid ?? null,
+        'orangtua' => $bukuInduk->orangtua ?? null,
+
+        'periode' => $bukuInduk->periode,
+        'tgl_mulai' => $bukuInduk->tgl_mulai,
+        'tgl_akhir' => $bukuInduk->tgl_akhir,
+        'jumlah_beasiswa' => $bukuInduk->jumlah_beasiswa ?? null,
+
+        'status' => 'aktif',
+    ]);
+}
+private function storePaket72History($bukuInduk)
+{
+    if (empty($bukuInduk->tgl_bayar)) {
+        return;
+    }
+
+    $exists = \App\Models\Paket72History::where('buku_induk_id', $bukuInduk->id)
+        ->whereDate('tgl_bayar', $bukuInduk->tgl_bayar)
+        ->exists();
+
+    if ($exists) return;
+
+    \App\Models\Paket72History::create([
+        'buku_induk_id' => $bukuInduk->id,
+        'nim' => $bukuInduk->nim,
+        'nama' => $bukuInduk->nama,
+
+        'tgl_bayar' => $bukuInduk->tgl_bayar,
+        'tgl_selesai' => $bukuInduk->tgl_selesai,
+        'alert2' => $bukuInduk->alert2,
+    ]);
 }
 }

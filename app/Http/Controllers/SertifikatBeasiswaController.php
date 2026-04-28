@@ -220,33 +220,43 @@ class SertifikatBeasiswaController extends Controller
      * SYNC KE BUKU INDUK
      * ===================================================== */
     private function syncBeasiswaToBukuInduk(
-        string $nim,
-        ?string $periode,
-        ?string $tglMulai,
-        ?string $tglAkhir
-    ): void {
-        $bukuInduk = BukuInduk::where('nim', $nim)->first();
+    string $nim,
+    ?string $periode,
+    ?string $tglMulai,
+    ?string $tglAkhir
+): void {
 
-        if (!$bukuInduk) {
-            return;
-        }
+    $bukuInduk = BukuInduk::where('nim', $nim)->first();
 
-        $alert = null;
+    if (!$bukuInduk) return;
 
-        if ($tglMulai && $tglAkhir) {
-            $today = Carbon::now()->startOfDay();
-            if ($today->between(Carbon::parse($tglMulai), Carbon::parse($tglAkhir))) {
-                $alert = 'Beasiswa Aktif';
-            }
-        }
-
-        $bukuInduk->update([
-            'periode'   => $periode,
-            'tgl_mulai' => $tglMulai,
-            'tgl_akhir' => $tglAkhir,
-            'alert'     => $alert,
-        ]);
+    // kalau semua kosong → JANGAN UPDATE APA PUN
+    if (empty($periode) && empty($tglMulai) && empty($tglAkhir)) {
+        return;
     }
+
+    $alert = null;
+
+    if ($tglMulai && $tglAkhir) {
+        $today = Carbon::today();
+
+        if ($today->between(
+            Carbon::parse($tglMulai),
+            Carbon::parse($tglAkhir)
+        )) {
+            $alert = 'aktif';
+        }
+    }
+
+    $bukuInduk->update([
+        'periode'   => $periode,
+        'tgl_mulai' => $tglMulai,
+        'tgl_akhir' => $tglAkhir,
+        'alert'     => $alert,
+    ]);
+}
+
+
     public function destroy($id)
 {
     $beasiswa = SertifikatBeasiswa::forCurrentUser()->findOrFail($id);
