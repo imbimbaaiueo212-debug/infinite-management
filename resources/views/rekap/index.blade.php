@@ -59,35 +59,35 @@
                     </div>
                 </form>
 
-                <style>
-/* Semua cell */
-#rekapTable th,
-#rekapTable td {
-    white-space: nowrap;
-    text-align: center;
-    padding: 3px 4px;
-    font-size: 15px;
-}
+                                <style>
+                /* Semua cell */
+                #rekapTable th,
+                #rekapTable td {
+                    white-space: nowrap;
+                    text-align: center;
+                    padding: 3px 4px;
+                    font-size: 15px;
+                }
 
 
-/* SRJ */
-#rekapTable th:nth-child(n+5):nth-child(-n+12),
-#rekapTable td:nth-child(n+5):nth-child(-n+12) {
-    background-color: #e6f4ea;
-}
+                /* SRJ */
+                #rekapTable th:nth-child(n+5):nth-child(-n+12),
+                #rekapTable td:nth-child(n+5):nth-child(-n+12) {
+                    background-color: #e6f4ea;
+                }
 
-/* SKS */
-#rekapTable th:nth-child(n+13):nth-child(-n+16),
-#rekapTable td:nth-child(n+13):nth-child(-n+16) {
-    background-color: #e7f3ff;
-}
+                /* SKS */
+                #rekapTable th:nth-child(n+13):nth-child(-n+16),
+                #rekapTable td:nth-child(n+13):nth-child(-n+16) {
+                    background-color: #e7f3ff;
+                }
 
-/* S6 */
-#rekapTable th:nth-child(n+17):nth-child(-n+20),
-#rekapTable td:nth-child(n+17):nth-child(-n+20) {
-    background-color: #fff4e5;
-}
-</style>
+                /* S6 */
+                #rekapTable th:nth-child(n+17):nth-child(-n+20),
+                #rekapTable td:nth-child(n+17):nth-child(-n+20) {
+                    background-color: #fff4e5;
+                }
+                </style>
 
                 <!-- TABEL -->
                 <div class="table-responsive">
