@@ -212,6 +212,18 @@
                 <input type="text" id="spp" name="spp" class="form-control" readonly>
             </div>
 
+                        <!-- Status -->
+            <div class="col-md-6 mb-3">
+    <label class="form-label fw-bold">Status</label>
+
+    <div id="status-display"
+         class="form-control text-center fs-5 fw-bold bg-primary text-white">
+        Baru
+    </div>
+
+    <input type="hidden" name="status" id="status" value="Baru">
+</div>
+
             <!-- Petugas Trial -->
             <div class="col-md-6 mb-3">
                 <label for="petugas_trial">Petugas Trial</label>
@@ -275,29 +287,6 @@
                 <input type="text" name="no_pembayaran_murid" id="no_pembayaran_murid" class="form-control" value="{{ old('no_pembayaran_murid') }}">
             </div>
 
-            <!-- Tgl Keluar -->
-            <div class="col-md-6 mb-3">
-                <label for="tgl_keluar">Tanggal Keluar</label>
-                <input type="date" name="tgl_keluar" id="tgl_keluar" class="form-control" value="{{ old('tgl_keluar') }}">
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Kategori Keluar</label>
-                <select name="kategori_keluar" class="form-select">
-                    <option value="">-- Pilih Kategori --</option>
-                    @foreach($kategoriKeluarOptions as $kk)
-                        <option value="{{ $kk }}" {{ old('kategori_keluar') == $kk ? 'selected' : '' }}>
-                            {{ $kk }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="alasan">Alasan Keluar</label>
-                <textarea name="alasan" id="alasan" class="form-control" rows="1">{{ old('alasan') }}</textarea>
-            </div>
-
             <div class="col-md-6 mb-3">
                 <label for="jenis_kbm">Jenis KBM</label>
                 <select name="jenis_kbm" id="jenis_kbm" class="form-control">
@@ -328,63 +317,7 @@
                 <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="1">{{ old('keterangan_level') }}</textarea>
             </div>
 
-
-            <!-- Status -->
-            <div class="col-md-6 mb-3">
-                <label>Status</label>
-                <input type="text" class="form-control" value="Baru" readonly>
-                <input type="hidden" name="status" value="Baru">
-            </div>
-
             <!-- Separator -->
-            <div class="col-12"><hr class="my-4"></div>
-
-            <h4 class="col-12 mb-3">🗓️ Masa Aktif (Dhuafa & BNF)</h4>
-
-            <div class="col-md-6 mb-3">
-                <label for="periode">Periode</label>
-                <select name="periode" id="periode" class="form-control">
-                    <option value="">-- Pilih --</option>
-                    @foreach($periodeOptions as $p)
-                        <option value="{{ $p }}">{{ $p }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="alert">Alert Dhuafa</label>
-                <input type="text" name="alert" id="alert" class="form-control" value="{{ old('alert') }}">
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="tgl_mulai">Tanggal Mulai</label>
-                <input type="date" name="tgl_mulai" id="tgl_mulai" class="form-control" value="{{ old('tgl_mulai') }}">
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="tgl_akhir">Tanggal Akhir</label>
-                <input type="date" name="tgl_akhir" id="tgl_akhir" class="form-control" value="{{ old('tgl_akhir') }}">
-            </div>
-
-            <div class="col-12"><hr class="my-4"></div>
-
-            <h4 class="col-12 mb-3">⏱️ Masa Aktif Paket 72</h4>
-
-            <div class="col-md-4 mb-3">
-                <label for="tgl_bayar">Tanggal Bayar</label>
-                <input type="date" name="tgl_bayar" id="tgl_bayar" class="form-control" value="{{ old('tgl_bayar') }}">
-            </div>
-
-            <div class="col-md-4 mb-3">
-                <label for="tgl_selesai">Tanggal Selesai</label>
-                <input type="date" name="tgl_selesai" id="tgl_selesai" class="form-control" value="{{ old('tgl_selesai') }}">
-            </div>
-
-            <div class="col-md-4 mb-3">
-                <label for="alert2">Alert Paket (72)</label>
-                <input type="text" name="alert2" id="alert2" class="form-control" value="{{ old('alert2') }}">
-            </div>
-
             <div class="col-12"><hr class="my-4"></div>
 
             <h4 class="col-12 mb-3">📚 Supply Modul</h4>
@@ -429,40 +362,6 @@
                 <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light text-muted">
                     Pilih kode jadwal dulu
                 </div>
-            </div>
-
-            <div class="col-12"><hr class="my-4"></div>
-
-            <h4 class="col-12 mb-3">🔄 Murid Pindah ke Intervio</h4>
-
-            <div class="col-md-6 mb-3">
-                <label for="status_pindah">Status Pindah</label>
-                <select name="status_pindah" id="status_pindah" class="form-control">
-                    <option value="">-- Pilih --</option>
-                    @foreach($statusPindahOptions as $sp)
-                        <option value="{{ $sp }}">{{ $sp }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="tanggal_pindah">Tanggal Pindah</label>
-                <input type="date" name="tanggal_pindah" id="tanggal_pindah" class="form-control" value="{{ old('tanggal_pindah') }}">
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="ke_bimba_intervio">Ke biMBA Intervio</label>
-                <select name="ke_bimba_intervio" id="ke_bimba_intervio" class="form-control">
-                    <option value="">-- Pilih --</option>
-                    @foreach($keBimbaIntervioOptions as $kbi)
-                        <option value="{{ $kbi }}">{{ $kbi }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="keterangan">Keterangan (Pindah)</label>
-                <textarea name="keterangan" id="keterangan" class="form-control" rows="1">{{ old('keterangan') }}</textarea>
             </div>
 
             <div class="col-12"><hr class="my-4"></div>
