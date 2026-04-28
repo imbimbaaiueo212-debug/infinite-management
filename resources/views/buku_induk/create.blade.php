@@ -117,15 +117,9 @@
 
             {{-- Tgl Masuk --}}
             <div class="col-md-6 mb-3">
-                <label for="tgl_masuk">Tanggal Masuk <span class="text-danger">*</span></label>
+                <label for="tgl_masuk">Tanggal Aktif <span class="text-danger">*</span></label>
                 <input type="date" name="tgl_masuk" id="tgl_masuk" class="form-control" value="{{ old('tgl_masuk') }}" required>
                 @error('tgl_masuk') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label for="tgl_aktif">Tanggal Aktif <span class="text-danger">*</span></label>
-                <input type="date" name="tgl_aktif" id="tgl_aktif" class="form-control" value="{{ old('tgl_aktif') }}" required>
-                @error('tgl_aktif') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
 
             {{-- Lama Belajar --}}
@@ -214,15 +208,15 @@
 
                         <!-- Status -->
             <div class="col-md-6 mb-3">
-    <label class="form-label fw-bold">Status</label>
+                <label class="form-label fw-bold">Status</label>
 
-    <div id="status-display"
-         class="form-control text-center fs-5 fw-bold bg-primary text-white">
-        Baru
-    </div>
+                <div id="status-display"
+                    class="form-control text-center fs-5 fw-bold bg-primary text-white">
+                    Baru
+                </div>
 
-    <input type="hidden" name="status" id="status" value="Baru">
-</div>
+                <input type="hidden" name="status" id="status" value="Baru">
+            </div>
 
             <!-- Petugas Trial -->
             <div class="col-md-6 mb-3">

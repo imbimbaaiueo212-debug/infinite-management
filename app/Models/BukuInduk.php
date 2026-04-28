@@ -6,6 +6,9 @@ use App\Models\Scopes\UnitScope;        // TAMBAHKAN BARIS INI
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\RekapAbsensi;
+use App\Models\BukuIndukHistory;
+use App\Models\JadwalDetail;
+use App\Models\PengajuanGaransi;
 use Carbon\Carbon;
 use App\Models\Unit;
 use App\Models\LevelHistory;
@@ -114,42 +117,51 @@ class BukuInduk extends Model
     // =================================================================
     // TAMBAHKAN INI DI BAGIAN booted() — GABUNGKAN DENGAN YANG SUDAH ADA
     protected static function booted()
-    {
-        // AKTIFKAN SCOPE UNIT — HANYA INI YANG DITAMBAHKAN
-        static::addGlobalScope(new UnitScope);
+{
+    static::addGlobalScope(new UnitScope);
 
-        // 1. Saat dihapus → simpan history + update rekap absensi
-        static::deleted(function ($bukuInduk) {
-            BukuIndukHistory::create([
-                'buku_induk_id' => $bukuInduk->id,
-                'action'        => 'delete',
-                'user'          => Auth::user()?->name ?? 'system',
-                'data'          => $bukuInduk->toArray(),
-            ]);
+    // DELETE
+    static::deleted(function ($bukuInduk) {
+        \App\Models\BukuIndukHistory::create([
+            'buku_induk_id' => $bukuInduk->id,
+            'action'        => 'delete',
+            'user'          => Auth::user()?->name ?? 'system',
+            'data'          => $bukuInduk->toArray(),
+        ]);
 
-            RekapAbsensi::where('nama_relawan', $bukuInduk->guru)
-                ->get()
-                ->each->syncFromBukuInduk();
-        });
+        RekapAbsensi::where('nama_relawan', $bukuInduk->guru)
+            ->get()
+            ->each->syncFromBukuInduk();
+    });
 
-        // 2. Sebelum simpan → otomatis set status Keluar
-        static::saving(function ($bukuInduk) {
-            if (!empty($bukuInduk->tgl_keluar)) {
-                $bukuInduk->status = 'Keluar';
+    // SAVE (INI YANG PALING PENTING)
+    static::saving(function ($bukuInduk) {
+
+        // PRIORITAS 1: kalau keluar
+        if (!empty($bukuInduk->tgl_keluar)) {
+            $bukuInduk->status = 'keluar';
+            return;
+        }
+
+        // PRIORITAS 2: auto aktif setelah 30 hari
+        if ($bukuInduk->tgl_masuk) {
+            $tglMasuk = Carbon::parse($bukuInduk->tgl_masuk);
+
+            if ($tglMasuk->lte(now()->subDays(30))) {
+                $bukuInduk->status = 'aktif';
             } else {
-                if ($bukuInduk->isDirty('tgl_keluar')) {
-                    $bukuInduk->status = 'Aktif';
-                }
+                $bukuInduk->status = 'baru';
             }
-        });
+        }
+    });
 
-        // 3. Setelah simpan → update rekap absensi
-        static::saved(function ($bukuInduk) {
-            RekapAbsensi::where('nama_relawan', $bukuInduk->guru)
-                ->get()
-                ->each->syncFromBukuInduk();
-        });
-    }
+    // AFTER SAVE
+    static::saved(function ($bukuInduk) {
+        RekapAbsensi::where('nama_relawan', $bukuInduk->guru)
+            ->get()
+            ->each->syncFromBukuInduk();
+    });
+}
     public function getTglMasukFormattedAttribute()
 {
     return $this->tgl_masuk
@@ -191,7 +203,7 @@ public function getPertemuanTerlewatAttribute()
 
     for ($i = 0; $i < $sisaHari; $i++) {
         $tanggal = $semesterMulai->copy()->addDays($i);
-        if ($jadwalHari->contains($tanggal->translatedFormat('l'))) { // 'Monday', 'Tuesday', dll
+        if ($jadwalHari->contains($tanggal->locale('id')->isoFormat('dddd'))) { // 'Monday', 'Tuesday', dll
             $hariTambahan++;
         }
     }

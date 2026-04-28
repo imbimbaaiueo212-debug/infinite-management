@@ -253,8 +253,8 @@ if (!$isAdmin && $userUnit) {
             'userNoCabang',
             'autoNim',          // ← baru
             'autoNimSuffix',     // ← baru
-    'guruByUnit',  // ← TAMBAHAN INI
-        'unitsJson'    // ← PASTIKAN INI JUGA ADA
+            'guruByUnit',  // ← TAMBAHAN INI
+            'unitsJson'    // ← PASTIKAN INI JUGA ADA
         ));
     }
 
@@ -345,7 +345,6 @@ if (!$isAdmin && $userUnit) {
             'info' => 'required|string|in:Brosur,Event,Humas,Internet,Spanduk,Lainnya',
             'bimba_unit' => 'required|string|exists:units,bimba_unit',
             'no_cabang' => 'required|string|max:20',
-            'tgl_aktif'   => 'nullable|date',
             'keterangan_info' => 'nullable|string',
         ]);
 

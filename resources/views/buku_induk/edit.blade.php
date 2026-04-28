@@ -154,12 +154,22 @@
                                 @endif
                             
                             <!--- End -->
-                            <div class="col-md-12">
+                           <div class="col-md-12">
                                 <label class="form-label fw-bold">Status Saat Ini</label>
-                                <div class="form-control text-center fs-5 fw-bold
-                                    {{ $bukuInduk->status == 'Aktif' ? 'bg-success text-white' :
-                                       ($bukuInduk->status == 'Keluar' ? 'bg-danger text-white' : 'bg-warning text-dark') }}">
-                                    {{ $bukuInduk->status ?? 'Baru' }}
+
+                                @php
+                                    $status = strtolower($bukuInduk->status ?? 'baru');
+
+                                    $class = match($status) {
+                                        'aktif' => 'bg-success text-white',
+                                        'keluar' => 'bg-danger text-white',
+                                        'baru' => 'bg-primary text-white',
+                                        default => 'bg-secondary text-white',
+                                    };
+                                @endphp
+
+                                <div class="form-control text-center fs-5 fw-bold {{ $class }}">
+                                    {{ ucfirst($status) }}
                                 </div>
                             </div>
 
