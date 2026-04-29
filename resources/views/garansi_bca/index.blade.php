@@ -67,25 +67,14 @@
 
                                 <td>{{ $d->nama_orang_tua_wali }}</td>
 
-                                {{-- 🔥 SUMBER GARANSI --}}
                                 <td>
-                                    @if($d->sumber == 'manual')
-    <span 
-        class="badge bg-primary"
-        data-bs-toggle="tooltip"
-        data-bs-placement="top"
-        title="Garansi diberikan langsung oleh admin (tanpa pengajuan)">
-        Pemberian
-    </span>
-@else
-    <span 
-        class="badge bg-success"
-        data-bs-toggle="tooltip"
-        data-bs-placement="top"
-        title="Garansi berasal dari pengajuan orang tua murid dan sudah disetujui">
-        Pengajuan
-    </span>
-@endif
+                                    <span 
+                                        class="badge bg-success"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="Garansi diberikan otomatis dari unit">
+                                        Pemberian
+                                    </span>
                                 </td>
 
                                 <td class="text-nowrap">

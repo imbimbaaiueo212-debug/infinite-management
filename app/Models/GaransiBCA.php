@@ -12,6 +12,7 @@ class GaransiBCA extends Model
     protected $table = 'garansi_bca';
 
     protected $fillable = [
+        'nim',
         'virtual_account',
         'nama_murid',
         'tempat_tanggal_lahir',

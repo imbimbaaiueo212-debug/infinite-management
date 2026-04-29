@@ -106,31 +106,32 @@ class GaransiBCAController extends Controller
     /* ================= AMBIL DATA BUKU INDUK ================= */
     $murid = BukuInduk::where('nim', trim($request->nim))->firstOrFail();
 
-    // 🔥 simpan tanggal ke variable (biar dipakai ulang)
     $tanggalDiberikan = Carbon::today();
 
-    /* ================= SIMPAN GARANSI ================= */
-    GaransiBCA::create([
-        'virtual_account' => $request->virtual_account,
+    /* ================= GARANSI (ANTI DOUBLE) ================= */
+    GaransiBCA::updateOrCreate(
+        ['nim' => $murid->nim], // 🔥 kunci utama
+        [
+            'virtual_account' => $request->virtual_account,
 
-        'nama_murid' => $murid->nama,
+            'nama_murid' => $murid->nama,
 
-        'tempat_tanggal_lahir' => trim(
-            ($murid->tmpt_lahir ?: '-') . ', ' .
-            ($murid->tgl_lahir
-                ? $murid->tgl_lahir->format('d-m-Y')
-                : '-'
-            )
-        ),
+            'tempat_tanggal_lahir' => trim(
+                ($murid->tmpt_lahir ?: '-') . ', ' .
+                ($murid->tgl_lahir
+                    ? Carbon::parse($murid->tgl_lahir)->format('d-m-Y')
+                    : '-'
+                )
+            ),
 
-        'tanggal_masuk'       => $murid->tgl_masuk,
-        'nama_orang_tua_wali' => $murid->orangtua,
-        'bimba_unit'          => $murid->bimba_unit,
+            'tanggal_masuk'       => $murid->tgl_masuk,
+            'nama_orang_tua_wali' => $murid->orangtua,
+            'bimba_unit'          => $murid->bimba_unit,
 
-        // ✅ tanggal garansi
-        'tanggal_diberikan'   => $tanggalDiberikan,
-        'sumber' => 'manual', // 🔥 tambah ini
-    ]);
+            'tanggal_diberikan'   => $tanggalDiberikan,
+            'sumber'              => 'manual',
+        ]
+    );
 
     /* ================= UPDATE KE BUKU INDUK ================= */
     $murid->update([
@@ -139,7 +140,7 @@ class GaransiBCAController extends Controller
 
     return redirect()
         ->route('garansi-bca.index')
-        ->with('success', 'Data Garansi BCA berhasil ditambahkan & tersinkron ke buku induk');
+        ->with('success', 'Garansi berhasil dibuat / diperbarui');
 }
 
     /* =====================================================
@@ -223,12 +224,13 @@ public function approve($id)
 
     // simpan ke garansi_bca
     GaransiBCA::create([
+        'nim'   => $murid->nim,
         'nama_murid' => $murid->nama,
         'tanggal_masuk' => $murid->tgl_masuk,
         'nama_orang_tua_wali' => $murid->orangtua,
         'bimba_unit' => $murid->bimba_unit,
         'tanggal_diberikan' => $tanggal,
-        'sumber' => 'pengajuan', // 🔥 tambah ini
+        'sumber' => 'pemberian', // 🔥 tambah ini
     ]);
 
     // update buku induk

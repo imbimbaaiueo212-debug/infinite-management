@@ -9,6 +9,7 @@ use App\Models\HargaSaptataruna;
 use App\Models\Profile;
 use App\Models\LevelHistory;
 use App\Models\Paket72History;
+use App\Models\GaransiBCA;
 use App\Models\Unit;
 use App\Models\PengajuanGaransi;
 use Maatwebsite\Excel\Facades\Excel;
@@ -346,6 +347,8 @@ if (!$isAdmin && $userUnit) {
             'bimba_unit' => 'required|string|exists:units,bimba_unit',
             'no_cabang' => 'required|string|max:20',
             'keterangan_info' => 'nullable|string',
+            'tgl_surat_garansi' => 'nullable|date',
+            'tgl_tahapan'   => 'nullable|data',
         ]);
 
         // ← TAMBAHKAN INI setelah $data = $request->validate([...])
@@ -389,7 +392,7 @@ if (!$isAdmin && $userUnit) {
             $newRecord = BukuInduk::create($data);
 
             // 🔥 sync juga
-            $this->syncBukuIndukToBeasiswa($newRecord);
+            $this->syncGaransiBCA($newRecord);
 
             BukuIndukHistory::create([
                 'buku_induk_id' => $newRecord->id,
@@ -492,10 +495,11 @@ if (!$isAdmin && $userUnit) {
     // pastikan NIM bersih
     $request->merge(['nim' => trim($request->nim)]);
 
-    if (!in_array($request->note_garansi, ['Tidak Memenuhi Syarat', 'Berkebutuhan Khusus'])) {
+ if (empty($request->tgl_surat_garansi)) {
     $request->merge([
         'tgl_surat_garansi' => null
     ]);
+
 }
     /* =====================================================
      * VALIDASI — SELARAS 100% DENGAN MODEL
@@ -627,13 +631,16 @@ if (!empty($data['tgl_mulai'])) {
 
     $data['tgl_akhir'] = $tglAkhir;
 
-    $now = Carbon::today();
-
-    $data['alert'] = $now->between($tglMulai, $tglAkhir)
+    $data['alert'] = Carbon::today()->between($tglMulai, $tglAkhir)
         ? 'aktif'
         : 'nonaktif';
+
 } else {
+
+    // 🔥 reset total kalau bukan beasiswa
+    $data['tgl_akhir'] = null;
     $data['alert'] = null;
+    $data['jumlah_beasiswa'] = null;
 }
 
 /* =====================================================
@@ -641,7 +648,7 @@ if (!empty($data['tgl_mulai'])) {
  * ===================================================== */
 $data['jumlah_beasiswa'] = is_numeric($data['jumlah_beasiswa'] ?? null)
     ? (float) $data['jumlah_beasiswa']
-    : 0;
+    : null;
 
     // ===============================
     // PAKET 72 SAFE HANDLING
@@ -690,17 +697,15 @@ $data['jumlah_beasiswa'] = is_numeric($data['jumlah_beasiswa'] ?? null)
     }
 
 /* =====================================================
- * AUTO GARANSI 6 BULAN + NOTIF
+ * GARANSI 372 FINAL LOGIC (FIX ALL CASE)
  * ===================================================== */
 if (!empty($data['tgl_pengajuan_garansi'])) {
 
+    // ✅ SUDAH DIAJUKAN
     $tglPengajuan = Carbon::parse($data['tgl_pengajuan_garansi']);
-
     $tglSelesai = $tglPengajuan->copy()->addMonths(6);
 
     $data['tgl_selesai_garansi'] = $tglSelesai;
-
-    // ✅ FIX DISINI
     $data['masa_aktif_garansi']  = 6;
 
     $today = Carbon::today();
@@ -709,20 +714,32 @@ if (!empty($data['tgl_pengajuan_garansi'])) {
     if ($sisaHari <= 30 && $sisaHari >= 0) {
         $data['perpanjang_garansi'] = 'Segera perpanjang (' . $sisaHari . ' hari lagi)';
     } elseif ($sisaHari < 0) {
-        $data['perpanjang_garansi'] = 'Sudah habis';
+        $data['perpanjang_garansi'] = 'Habis';
     } else {
         $data['perpanjang_garansi'] = 'Aktif';
     }
 
+} elseif (!empty($data['tgl_surat_garansi'])) {
+
+    // ✅ BARU DIBERIKAN (BELUM DIAJUKAN)
+    $data['tgl_pengajuan_garansi'] = null;   // 🔥 paksa bersih
+    $data['tgl_selesai_garansi']   = null;
+    $data['masa_aktif_garansi']    = null;
+    $data['perpanjang_garansi']    = 'Diberikan';
+
 } else {
-    $data['tgl_selesai_garansi'] = null;
-    $data['masa_aktif_garansi']  = null;
-    $data['perpanjang_garansi']  = null;
+
+    // ❌ TIDAK ADA GARANSI
+    $data['tgl_pengajuan_garansi'] = null;
+    $data['tgl_selesai_garansi']   = null;
+    $data['masa_aktif_garansi']    = null;
+    $data['perpanjang_garansi']    = null;
 }
 
     $bukuInduk->update($data);
 
     $this->syncBukuIndukToBeasiswa($bukuInduk);
+    
 
 /**
  * ambil perubahan setelah update
@@ -759,6 +776,10 @@ if ($request->filled('tgl_bayar')) {
     $data['alert2'] =
         $today->between($bayar, $selesai) ? 'aktif' :
         ($today->gt($selesai) ? 'expired' : 'menunggu');
+}
+// === SINKRONISASI GARANSI BCA ===
+    if (!empty($bukuInduk->tgl_surat_garansi)) {
+    $this->syncGaransiBCA($bukuInduk);
 }
 
     // 🔥 SIMPAN HISTORY LEVEL
@@ -803,17 +824,24 @@ if ($bukuInduk->wasChanged('level') && !empty($data['level'])) {
         ]);
     }
 
-    if ($request->filled('tgl_pengajuan_garansi')) {
+            // HAPUS pengajuan lama kalau ternyata status hanya "Diberikan"
+            if ($data['perpanjang_garansi'] === 'Diberikan') {
 
-    PengajuanGaransi::create([
-        'nim'           => $bukuInduk->nim,
-        'nama_murid'    => $bukuInduk->nama,
-        'bimba_unit'    => $bukuInduk->bimba_unit,
-        'tgl_pengajuan' => $request->tgl_pengajuan_garansi,
-        'alasan'        => $request->alasan_garansi,
-        'status'        => 'pending',
-    ]);
-}
+                PengajuanGaransi::where('nim', $bukuInduk->nim)->delete();
+
+            } elseif (!empty($data['tgl_pengajuan_garansi'])) {
+
+                PengajuanGaransi::updateOrCreate(
+                    ['nim' => $bukuInduk->nim],
+                    [
+                        'nama_murid'    => $bukuInduk->nama,
+                        'bimba_unit'    => $bukuInduk->bimba_unit,
+                        'tgl_pengajuan' => $data['tgl_pengajuan_garansi'],
+                        'alasan'        => $data['alasan_garansi'],
+                        'status'        => 'pending',
+                    ]
+                );
+            }
 
     return redirect()
         ->route('buku_induk.index')
@@ -1054,9 +1082,16 @@ public function exportToSheet(GoogleFormService $service)
 
 private function syncBukuIndukToBeasiswa($bukuInduk)
 {
-    if (!$bukuInduk->nim) return;
+    // ❌ JANGAN BUAT JIKA TIDAK ADA DATA BEASISWA
+    if (
+        empty($bukuInduk->tgl_mulai) &&
+        empty($bukuInduk->tgl_akhir) &&
+        empty($bukuInduk->periode) &&
+        empty($bukuInduk->jumlah_beasiswa)
+    ) {
+        return; // 🔥 STOP disini
+    }
 
-    // Cari beasiswa berdasarkan NIM
     $beasiswa = \App\Models\SertifikatBeasiswa::where('nim', $bukuInduk->nim)->first();
 
     $data = [
@@ -1070,15 +1105,13 @@ private function syncBukuIndukToBeasiswa($bukuInduk)
         'nama_orang_tua'    => $bukuInduk->orangtua,
         'alamat'            => $bukuInduk->alamat_murid,
         'tanggal_lahir'     => $bukuInduk->tgl_lahir,
-        'jumlah_beasiswa' => $bukuInduk->jumlah_beasiswa,
+        'jumlah_beasiswa'   => $bukuInduk->jumlah_beasiswa,
         'virtual_account'   => $bukuInduk->no_pembayaran_murid,
     ];
 
     if ($beasiswa) {
-        // update jika sudah ada
         $beasiswa->update($data);
     } else {
-        // buat baru jika belum ada
         \App\Models\SertifikatBeasiswa::create($data);
     }
 }
@@ -1149,5 +1182,49 @@ private function storePaket72History($bukuInduk)
         'tgl_selesai' => $bukuInduk->tgl_selesai,
         'alert2' => $bukuInduk->alert2,
     ]);
+}
+private function syncGaransiBCA($bukuInduk)
+{
+    // Jika tidak ada tanggal garansi, keluar
+    if (empty($bukuInduk->tgl_surat_garansi)) {
+        return;
+    }
+
+    // Pastikan tanggal dalam format yang benar (Carbon)
+    try {
+        $tanggalDiberikan = Carbon::parse($bukuInduk->tgl_surat_garansi);
+    } catch (\Exception $e) {
+        // Jika tanggal tidak valid, gunakan hari ini sebagai fallback
+        $tanggalDiberikan = Carbon::today();
+    }
+
+    // Cek apakah sudah ada record garansi untuk murid ini
+    $garansi = GaransiBCA::where('nama_murid', $bukuInduk->nama)->first();
+
+    $dataGaransi = [
+        'nim'   => $bukuInduk->nim,
+        'nama_murid'            => $bukuInduk->nama ?? '-',
+        'tempat_tanggal_lahir'  => trim(
+            ($bukuInduk->tmpt_lahir ?: '-') . ', ' .
+            ($bukuInduk->tgl_lahir 
+                ? Carbon::parse($bukuInduk->tgl_lahir)->format('d-m-Y') 
+                : '-'
+            )
+        ),
+        'tanggal_masuk'         => $bukuInduk->tgl_masuk,
+        'nama_orang_tua_wali'   => $bukuInduk->orangtua ?? '-',
+        'bimba_unit'            => $bukuInduk->bimba_unit,
+        'tanggal_diberikan'     => $tanggalDiberikan,           // ← pakai Carbon object
+        'sumber'                => 'Pemberian',
+        'virtual_account'       => $bukuInduk->no_pembayaran_murid ?? null,
+    ];
+
+    if ($garansi) {
+        // Update yang sudah ada
+        $garansi->update($dataGaransi);
+    } else {
+        // Buat record baru
+        GaransiBCA::create($dataGaransi);
+    }
 }
 }
