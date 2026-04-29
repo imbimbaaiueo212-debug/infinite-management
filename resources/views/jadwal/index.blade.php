@@ -135,13 +135,7 @@
         </div>
 
         <!-- Tombol Sinkronisasi: paling kanan (order-md-3) -->
-        <!-- <div class="col-12 col-md-3 col-lg-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} col-xl-{{ Auth::check() && Auth::user()->is_admin ? '3' : '4' }} order-md-3 d-flex align-items-end">
-            <a href="{{ route('jadwal.generate') }}" 
-               class="btn btn-warning btn-lg w-100 shadow"
-               onclick="return confirm('Yakin sinkronisasi jadwal sekarang? Data akan di-update.')">
-                <i class="bi bi-arrow-repeat me-2"></i> Sinkronisasi
-            </a>
-        </div>-->
+        
 
     </div>
 </form>
@@ -349,6 +343,24 @@ $(document).ready(function() {
     $('#unitFilter').on('change', function() {
         $('#filterForm').submit();
     });
+});
+
+document.addEventListener('keydown', function (e) {
+
+    // Deteksi F5
+    if (e.key === 'F5') {
+
+        // hentikan reload default
+        e.preventDefault();
+
+        // konfirmasi
+        if (confirm('Yakin sinkronisasi jadwal sekarang? Data akan di-update.')) {
+
+            // redirect ke route
+            window.location.href = "{{ route('jadwal.generate') }}";
+        }
+    }
+
 });
 </script>
 @endpush
