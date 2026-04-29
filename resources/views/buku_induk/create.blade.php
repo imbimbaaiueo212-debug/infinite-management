@@ -105,7 +105,7 @@
 
              {{-- Usia --}}
             <div class="col-md-6 mb-3">
-                <label for="usia">Usia</label>
+                <label for="usia" class="text-primary fw-bold">Usia</label>
                 <input type="number" name="usia" id="usia" class="form-control" readonly>
             </div>
 
@@ -124,7 +124,7 @@
 
             {{-- Lama Belajar --}}
             <div class="col-md-6 mb-3">
-                <label for="lama_bljr">Lama Belajar</label>
+                <label for="lama_bljr" class="text-primary fw-bold">Lama Belajar</label>
                 <input type="text" name="lama_bljr" id="lama_bljr" class="form-control" readonly>
             </div>
 
@@ -140,7 +140,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="tgl_tahapan">Tanggal Tahapan</label>
+                <label for="tgl_tahapan" class="text-success fw-bold">Tanggal Tahapan</label>
                 <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control" value="{{ old('tgl_tahapan') }}">
             </div>
 
@@ -202,13 +202,13 @@
 
             <!-- SPP -->
             <div class="col-md-6 mb-3">
-                <label for="spp">SPP</label>
+                <label for="spp" class="text-primary fw-bold">SPP</label>
                 <input type="text" id="spp" name="spp" class="form-control" readonly>
             </div>
 
                         <!-- Status -->
             <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Status</label>
+                <label class="form-label text-primary fw-bold">Status</label>
 
                 <div id="status-display"
                     class="form-control text-center fs-5 fw-bold bg-primary text-white">
@@ -302,7 +302,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="tgl_level">Tanggal Level</label>
+                <label for="tgl_level" class="text-success fw-bold">Tanggal Level</label>
                 <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
             </div>
 
@@ -336,7 +336,7 @@
             <h4 class="col-12 mb-3">⏰ Jadwal biMBA</h4>
 
             <div class="col-md-2 mb-3">
-                <label class="form-label fw-bold text-info">
+                <label class="form-label fw-bold text-primary">
                     Kode Jadwal <span class="text-danger">*</span>
                 </label>
 
@@ -351,7 +351,7 @@
             </div>
 
             <div class="col-md-4 mb-3">
-                <label class="form-label fw-bold text-info">Hari & Jam</label>
+                <label class="form-label fw-bold text-primary">Hari & Jam</label>
 
                 <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light text-muted">
                     Pilih kode jadwal dulu

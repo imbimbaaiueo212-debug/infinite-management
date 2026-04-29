@@ -90,7 +90,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Usia</label>
+                                <label class="form-label text-primary fw-bold">Usia</label>
                                 <input type="text" class="form-control bg-light text-center" readonly
                                        value="{{ $bukuInduk->usia ?? '-' }} tahun">
                             </div>
@@ -109,9 +109,8 @@
                             </div>
 
                             
-
                             <div class="col-md-3">
-                                <label class="form-label">Lama Belajar</label>
+                                <label class="form-label text-primary fw-bold">Lama Belajar</label>
                                 <input type="text" class="form-control bg-light text-center" readonly
                                        value="{{ $bukuInduk->lama_bljr ?? '-' }}">
                             </div>
@@ -151,7 +150,7 @@
                             
                             <!--- End -->
                            <div class="col-md-12">
-                                <label class="form-label fw-bold">Status Saat Ini</label>
+                                <label class="form-label fw-bold text-primary">Status Saat Ini</label>
 
                                 @php
                                     $status = strtolower($bukuInduk->status ?? 'baru');
@@ -227,7 +226,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">SPP <span class="text-danger">*</span></label>
+                                <label class="form-label text-primary fw-bold">SPP <span class="text-danger">*</span></label>
                                 <input type="text" id="spp_display" class="form-control bg-light text-success fw-bold text-center" readonly
                                        value="{{ $bukuInduk->spp ? 'Rp ' . number_format($bukuInduk->spp,0,',','.') : 'Belum ditentukan' }}">
                                 <input type="hidden" name="spp" id="spp" value="{{ old('spp', $bukuInduk->spp) }}">
@@ -250,7 +249,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tanggal Tahap</label>
+                                <label class="form-label text-success fw-bold">Tanggal Tahap</label>
                                 <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control"
                                     value="{{ old('tgl_tahapan', $bukuInduk->tgl_tahapan?->format('Y-m-d')) }}">
                             </div>
@@ -309,7 +308,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tanggal Kenaikan Level</label>
+                                <label class="form-label text-success fw-bold">Tanggal Kenaikan Level</label>
                                 <input type="date" name="tgl_level" id="tgl_level" class="form-control"
                                     value="{{ old('tgl_level', $bukuInduk->tgl_level?->format('Y-m-d')) }}">
                             </div>
@@ -379,7 +378,7 @@
 
                                 {{-- 🔥 KETERANGAN (AWALNYA DIHIDE) --}}
                                 <div class="col-md-3 mt-2" id="keterangan_info_wrapper" style="display: none;">
-                                    <label class="form-label">Keterangan Info</label>
+                                    <label class="form-label text-success fw-bold">Keterangan Info</label>
                                     <textarea name="keterangan_info" class="form-control" rows="2">
                                 {{ old('keterangan_info', $bukuInduk->keterangan_info ?? '') }}
                                     </textarea>
@@ -406,7 +405,7 @@
                                 <h4 class="col-12 mb-3">⏰ JADWAL biMBA</h4>
 
                             <div class="col-md-2">
-                                <label class="form-label fw-bold text-info">Kode Jadwal <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold text-success">Kode Jadwal <span class="text-danger">*</span></label>
                                 <select name="kode_jadwal" class="form-select" required>
                                     <option value="">-- Pilih Kode Jadwal --</option>
                                     @foreach($kodeJadwalOptions as $kode)
@@ -419,7 +418,7 @@
                             </div>
 
                             <div class="col-md-4">
-                                    <label class="form-label fw-bold text-info">Hari & Jam</label>
+                                    <label class="form-label fw-bold text-success">Hari & Jam</label>
                                     <div class="form-control-plaintext border p-2 bg-light">
                                         @php
                                             $details = $bukuInduk->jadwal()
@@ -476,7 +475,7 @@
 
                                     {{-- PERIODE --}}
                                     <div class="col-md-3">
-                                        <label class="form-label">Periode</label>
+                                        <label class="form-label fw-bold text-success">Periode</label>
 
                                         @php
                                             $selectedPeriode = old('periode', $bukuInduk->periode ?? '');
@@ -496,7 +495,7 @@
 
                                     {{-- TGL MULAI --}}
                                     <div class="col-md-3">
-                                        <label class="form-label">Tanggal Mulai</label>
+                                        <label class="form-label fw-bold text-success">Tanggal Mulai</label>
                                         <input type="date"
                                             name="tgl_mulai"
                                             id="tgl_mulai"
@@ -506,7 +505,7 @@
 
                                     {{-- TGL AKHIR --}}
                                     <div class="col-md-3" id="beasiswaSection">
-                                        <label class="form-label">Tanggal Akhir</label>
+                                        <label class="form-label fw-bold text-success">Tanggal Akhir</label>
                                         <input type="date"
                                             name="tgl_akhir"
                                             id="tgl_akhir"
@@ -516,7 +515,7 @@
 
                                     {{-- JUMLAH --}}
                                     <div class="col-md-3" id="beasiswaSection2">
-                                        <label class="form-label">Jumlah Beasiswa</label>
+                                        <label class="form-label fw-bold text-success">Jumlah Beasiswa</label>
                                         <input type="number"
                                             name="jumlah_beasiswa"
                                             id="jumlah_beasiswa"
@@ -565,7 +564,7 @@
 
                                     {{-- TANGGAL SELESAI --}}
                                     <div class="col-md-4 mb-3">
-                                        <label for="tgl_selesai" class="form-label">Tanggal Selesai</label>
+                                        <label for="tgl_selesai" class="form-label fw-bold text-success">Tanggal Selesai</label>
                                         <input type="date"
                                             name="tgl_selesai"
                                             id="tgl_selesai"
@@ -596,13 +595,13 @@
                                 <h4 class="col-12 mb-3">📚 SUPLLY MODUL</h4>
                                 
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">Asal Modul</label>
                                 <input type="text" name="asal_modul" class="form-control"
                                        value="{{ old('asal_modul', $bukuInduk->asal_modul) }}">
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-6">
                                 <label class="form-label text-primary fw-bold">KETERANGAN OPTIONAL</label>
                                 <textarea name="keterangan_optional" class="form-control" rows="1">{{ old('keterangan_optional', $bukuInduk->keterangan_optional) }}</textarea>
                             </div>
@@ -611,7 +610,7 @@
                             <h4 class="col-12 mb-3">📝 SURAT GARANSI BCA 372 BEBAS</h4>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tanggal Surat Diberikan Garansi</label>
+                                <label class="form-label fw-bold text-success">Tanggal Surat Diberikan Garansi</label>
                                 <input type="date" 
                                     name="tgl_surat_garansi" 
                                     id="tgl_surat_garansi"
@@ -620,19 +619,19 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tgl Pengajuan Garansi</label>
+                                <label class="form-label fw-bold text-success">Tgl Pengajuan Garansi</label>
                                 <input type="date" name="tgl_pengajuan_garansi" class="form-control"
                                     value="{{ old('tgl_pengajuan_garansi', $bukuInduk->tgl_pengajuan_garansi?->format('Y-m-d')) }}">
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tgl Selesai Garansi</label>
+                                <label class="form-label fw-bold text-success">Tgl Selesai Garansi</label>
                                 <input type="date" name="tgl_selesai_garansi" class="form-control"
                                     value="{{ old('tgl_selesai_garansi', $bukuInduk->tgl_selesai_garansi?->format('Y-m-d')) }}" readonly>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Masa Aktif</label>
+                                <label class="form-label fw-bold text-primary">Masa Aktif</label>
                                 <input type="text" name="masa_aktif_garansi" class="form-control"
                                     value="{{ old('masa_aktif_garansi', $bukuInduk->masa_aktif_garansi) }}" readonly>
                             </div>
