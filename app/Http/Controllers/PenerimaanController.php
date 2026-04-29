@@ -81,10 +81,16 @@ class PenerimaanController extends Controller
     $totalLainLain    = $queryForSum->sum('lain_lain');
 
     // Data untuk Autocomplete Nama Murid
-    $muridList = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru'])
-        ->select('nim', 'nama as nama_murid')
-        ->orderBy('nama_murid')
-        ->get();
+    $muridQuery = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru']);
+
+if (!empty($bimbaUnit)) {
+    $muridQuery->where('bimba_unit', $bimbaUnit);
+}
+
+$muridList = $muridQuery
+    ->select('nim', 'nama as nama_murid')
+    ->orderBy('nama_murid')
+    ->get();
 
     // Unit List untuk Admin
     $unitList = Unit::orderBy('biMBA_unit')

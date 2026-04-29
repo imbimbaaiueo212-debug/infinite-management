@@ -57,21 +57,35 @@
                             <input type="number" name="per_page" value="{{ request('per_page', 10) }}" min="1" class="form-control form-control-sm" style="width: 90px;">
                         </div>
 
+                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
+                            <div class="col-auto">
+                                <label class="form-label small fw-medium text-muted mb-1">Bimba Unit</label>
+                                <select name="bimba_unit" class="form-select form-select-sm" style="min-width:220px;">
+                                    <option value="">-- Semua Unit --</option>
+                                    @foreach($unitList as $value => $label)
+                                        <option value="{{ $value }}" {{ request('bimba_unit') === $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+
                         <!-- Nama Murid dengan Autocomplete -->
                         <div class="col-md-4">
-    <label class="form-label small fw-medium text-muted mb-1">Nama Murid</label>
-    <select name="search" id="searchSelect" class="form-select form-select-sm">
-        <option value="">-- Semua Murid --</option>
+                            <label class="form-label small fw-medium text-muted mb-1">Nama Murid</label>
+                            <select name="search" id="searchSelect" class="form-select form-select-sm">
+                                <option value="">-- Semua Murid --</option>
 
-        @foreach($muridList as $m)
-            <option value="{{ $m['nama_murid'] }}"
-                {{ request('search') == $m['nama_murid'] ? 'selected' : '' }}>
-                
-                {{ $m['nim'] ?? '-' }} — {{ $m['nama_murid'] }}
-            </option>
-        @endforeach
-    </select>
-</div>
+                                @foreach($muridList as $m)
+                                    <option value="{{ $m['nama_murid'] }}"
+                                        {{ request('search') == $m['nama_murid'] ? 'selected' : '' }}>
+                                        
+                                        {{ $m['nim'] ?? '-' }} — {{ $m['nama_murid'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
                         <!-- Bulan -->
                         <div class="col-auto">
@@ -95,19 +109,7 @@
                             </select>
                         </div>
 
-                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                            <div class="col-auto">
-                                <label class="form-label small fw-medium text-muted mb-1">Bimba Unit</label>
-                                <select name="bimba_unit" class="form-select form-select-sm" style="min-width:220px;">
-                                    <option value="">-- Semua Unit --</option>
-                                    @foreach($unitList as $value => $label)
-                                        <option value="{{ $value }}" {{ request('bimba_unit') === $value ? 'selected' : '' }}>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endif
+                        
 
                         <div class="col-auto d-flex align-items-end gap-2">
                             <button type="submit" class="btn btn-primary btn-sm">
@@ -296,72 +298,104 @@
 
 @push('scripts')
 <script>
-$(document).ready(function() {
+$(function () {
+
     const searchInput = $('#search');
     const dropdown    = $('#murid-dropdown');
-    const muridList   = @json($muridList ?? []);   // ← Pastikan ini $muridList
+    const muridList   = @json($muridList ?? []);
+    const form        = $('#filter-form');
 
+    // ===============================
+    // AUTO FILTER BIMBA UNIT 🔥
+    // ===============================
+    $('select[name="bimba_unit"]').on('change', function () {
+        form.submit();
+    });
+
+    // ===============================
+    // DROPDOWN MANUAL (SEARCH)
+    // ===============================
     function renderDropdown(items) {
         dropdown.empty();
 
-        if (items.length === 0) {
+        if (!items.length) {
             dropdown.append('<div class="dropdown-item text-muted py-2">Tidak ditemukan</div>');
             dropdown.show();
             return;
         }
 
         items.forEach(item => {
-            const display = item.nim ? `${item.nim} — ${item.nama_murid}` : item.nama_murid;
-            const el = $(`<div class="dropdown-item py-2 border-bottom cursor-pointer">${display}</div>`);
-            
-            el.on('click', function() {
+            const display = item.nim 
+                ? `${item.nim} — ${item.nama_murid}` 
+                : item.nama_murid;
+
+            const el = $(`
+                <div class="dropdown-item py-2 border-bottom cursor-pointer">
+                    ${display}
+                </div>
+            `);
+
+            el.on('click', function () {
                 searchInput.val(item.nama_murid);
                 dropdown.hide();
-                $('#filter-form').submit();
+                form.submit();
             });
-            
+
             dropdown.append(el);
         });
+
         dropdown.show();
     }
 
-    searchInput.on('input', function() {
-        const keyword = $(this).val().toLowerCase().trim();
-        
-        if (keyword.length < 1) {
-            dropdown.hide();
-            return;
-        }
+    // ===============================
+    // INPUT SEARCH
+    // ===============================
+    if (searchInput.length) {
+        searchInput.on('input', function () {
+            const keyword = $(this).val().toLowerCase().trim();
 
-        const filtered = muridList.filter(item => 
-            (item.nama_murid && item.nama_murid.toLowerCase().includes(keyword)) ||
-            (item.nim && item.nim.toLowerCase().includes(keyword))
-        );
+            if (keyword.length < 1) {
+                dropdown.hide();
+                return;
+            }
 
-        renderDropdown(filtered);
-    });
+            const filtered = muridList.filter(item =>
+                (item.nama_murid && item.nama_murid.toLowerCase().includes(keyword)) ||
+                (item.nim && item.nim.toLowerCase().includes(keyword))
+            );
 
-    $(document).on('click', function(e) {
+            renderDropdown(filtered);
+        });
+
+        searchInput.on('keypress', function (e) {
+            if (e.which === 13) form.submit();
+        });
+    }
+
+    // ===============================
+    // CLOSE DROPDOWN OUTSIDE CLICK
+    // ===============================
+    $(document).on('click', function (e) {
         if (!$(e.target).closest('#search, #murid-dropdown').length) {
             dropdown.hide();
         }
     });
 
-    searchInput.on('keypress', function(e) {
-        if (e.which === 13) $('#filter-form').submit();
-    });
-});
-$(document).ready(function() {
-    $('#searchSelect').select2({
-        placeholder: "-- Pilih atau ketik nama murid --",
-        allowClear: true,
-        width: '100%'
-    });
+    // ===============================
+    // SELECT2 (SEARCH SELECT)
+    // ===============================
+    if ($('#searchSelect').length) {
+        $('#searchSelect').select2({
+            placeholder: "-- Pilih atau ketik nama murid --",
+            allowClear: true,
+            width: '100%'
+        });
 
-    // auto submit saat pilih
-    $('#searchSelect').on('change', function() {
-        $('#filter-form').submit();
-    });
+        $('#searchSelect').on('change', function () {
+            form.submit();
+        });
+    }
+
 });
 </script>
 @endpush

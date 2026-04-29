@@ -55,10 +55,13 @@ class BukuIndukController extends Controller
         // ========================================================
         // DROPDOWN OPTIONS — KEMBALI KE BENTUK COLLECTION (AMAN UNTUK BLADE LAMA)
         // ========================================================
-        $muridOptions = BukuInduk::orderBy('nim', 'asc')
-            ->get(['nim', 'nama']);
-        // Hasil: Collection of objects {nim: ..., nama: ...}
-        // Cocok dengan @foreach ($muridOptions as $murid) {{ $murid->nim }}
+        $muridOptionsQuery = BukuInduk::orderBy('nim', 'asc');
+
+if ($request->filled('unit')) {
+    $muridOptionsQuery->where('bimba_unit', $request->unit);
+}
+
+$muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
 
         $unitOptions = DB::table('units')
             ->whereNotNull('bimba_unit')
