@@ -116,12 +116,7 @@
                             </div>
 
                             <!--NIM DI hidden -->
-                            <div class="col-lg-3">
-                                <input type="hidden" name="nim" value="{{ old('nim', $bukuInduk->nim) }}">
-                                @error('nim') 
-                                    <div class="text-danger small">{{ $message }}</div> 
-                                @enderror
-                            </div>
+                            
 
                                                   @php
                                     $user = auth()->user();
@@ -147,6 +142,13 @@
                                     {{-- USER → tidak tampil, pakai dari login --}}
                                     <input type="hidden" name="no_cabang" value="{{ $user->no_cabang }}">
                                 @endif
+
+                                <div class="col-lg-3">
+                                <input type="hidden" name="nim" value="{{ old('nim', $bukuInduk->nim) }}">
+                                @error('nim') 
+                                    <div class="text-danger small">{{ $message }}</div> 
+                                @enderror
+                            </div>
                             
                             <!--- End -->
                            <div class="col-md-12">
