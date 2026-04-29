@@ -401,7 +401,7 @@ $(document).ready(function() {
         $('#kdInput').val(opt.data('kd'));
         $('#statusInput').val(opt.data('status'));
         $('#guruInput').val(opt.data('guru'));
-        $('#nilai_spp').val(opt.data('spp') > 0 ? 'Rp ' + formatRupiah(opt.data('spp')) : '-');
+        $('#nilai_spp').val(opt.data('spp') > 0 ? 'Rp ' + formatRupiah(opt.data('spp')) : '0');
 
         // Isi bimba_unit & no_cabang (untuk semua user)
         const unit = opt.data('bimba_unit') || '';

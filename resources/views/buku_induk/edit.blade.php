@@ -932,7 +932,8 @@ document.addEventListener('DOMContentLoaded', function () {
 const beasiswaMapping = {
     'S3B1': 100000,
     'S3B2': 200000,
-    'S3B3': 50000
+    'S3B3': 50000,
+    'D'   : 300000
 };
 </script>
 @endpush

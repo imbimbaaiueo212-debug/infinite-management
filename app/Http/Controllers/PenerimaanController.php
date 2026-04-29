@@ -311,7 +311,7 @@ public function store(Request $request)
         'tanggal'            => 'required|date',
         'nim'                => 'required|exists:buku_induk,nim',
         'nama_murid'         => 'required',
-        'spp'                => 'required|numeric',
+        'spp'                => 'nullable|numeric',
         'bukti_transfer'     => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         'voucher'            => 'nullable|array',
         'voucher.*'          => 'string|distinct',
@@ -502,6 +502,46 @@ public function store(Request $request)
                 'no_cabang'           => $dataMurid['no_cabang'],
             ]);
         }
+
+        // === KHUSUS DHUAFA (SPP 0 & TANPA BIAYA LAIN) ===
+        if ($spp == 0 && !$adaBiayaLain) {
+    $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+
+    $bulanInput = $request->bulan_bayar[0] ?? null;
+    $tahunInput = $request->tahun_bayar[0] ?? null;
+
+    $p = Penerimaan::create([
+        'kwitansi'   => $kwitansi,
+        'via'        => $request->via,
+        'tanggal'    => $request->tanggal,
+        'nim'        => $request->nim,
+        'nama_murid' => $request->nama_murid,
+        'kelas'      => $dataMurid['kelas'],
+        'status'     => $dataMurid['status'],
+        'guru'       => $dataMurid['guru'],
+        'gol'        => $dataMurid['gol'] ?? null,
+        'kd'         => $dataMurid['kd'] ?? null,
+
+        // 🔥 ini yang penting
+        'bulan'      => $bulanInput,
+        'tahun'      => $tahunInput,
+
+        'spp'        => 0,
+        'voucher'    => 0,
+        'total'      => 0,
+        'keterangan' => 'Dhuafa / Gratis',
+
+        'bimba_unit' => $dataMurid['bimba_unit'],
+        'no_cabang'  => $dataMurid['no_cabang'],
+        'RBAS'       => $rbas,
+        'BCABS01'    => $bcabs01,
+        'BCABS02'    => $bcabs02,
+        'bukti_transfer_path' => $buktiPath,
+    ]);
+
+    $kwitansiList[] = $kwitansi;
+    $index++;
+}
 
         // === BIAYA LAIN ===
         if ($adaBiayaLain) {
