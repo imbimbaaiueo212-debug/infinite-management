@@ -288,7 +288,7 @@ if (!$isAdmin && $userUnit) {
         ]);
 
         // Kosongkan tanggal jika tidak diisi
-        $dateFields = ['tgl_lahir', 'tgl_masuk', 'tgl_keluar', 'tgl_mulai', 'tgl_akhir', 'tgl_bayar', 'tgl_selesai', 'tanggal_pindah', 'tgl_surat_garansi'];
+        $dateFields = ['tgl_lahir', 'tgl_masuk', 'tgl_keluar', 'tgl_mulai', 'tgl_akhir', 'tgl_bayar', 'tgl_selesai', 'tanggal_pindah', 'tgl_surat_garansi', 'tgl_tahapan'];
         foreach ($dateFields as $field) {
             if (!$request->filled($field)) $request->merge([$field => null]);
         }
@@ -348,7 +348,7 @@ if (!$isAdmin && $userUnit) {
             'no_cabang' => 'required|string|max:20',
             'keterangan_info' => 'nullable|string',
             'tgl_surat_garansi' => 'nullable|date',
-            'tgl_tahapan'   => 'nullable|data',
+            'tgl_tahapan'   => 'nullable|date',
         ]);
 
         // ← TAMBAHKAN INI setelah $data = $request->validate([...])
