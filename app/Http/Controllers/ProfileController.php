@@ -580,11 +580,11 @@ protected function calculateAndSaveMasaKerjaJabatan(Profile $profile)
     // HITUNG JUMLAH MURID
     // ===================================================================
     private function calculateGuruCounts(array &$data): void
-    {
-        $nama = $data['nama'];
-        $data['jumlah_murid_mba'] = $this->getJumlahMuridMBA($nama);
-        $data['total_murid'] = BukuInduk::where('guru', $nama)->count();
-    }
+{
+    $nama = $data['nama'];
+    $data['jumlah_murid_mba'] = $this->getJumlahMuridMBA($nama);
+    $data['total_murid'] = BukuInduk::where('guru', $nama)->count();
+}
 
     private function getJumlahMuridForProfile(Profile $profile): int
     {
@@ -614,7 +614,7 @@ protected function calculateAndSaveMasaKerjaJabatan(Profile $profile)
     // ===================================================================
     private function calculateGuruData(Profile $profile): void
 {
-    $jumlahMurid = (int) $this->getJumlahMuridMBA($profile->nama);
+    $jumlahMurid = $this->getJumlahMuridAktif($profile->nama);
 
     $profile->jumlah_murid_mba     = $jumlahMurid;
     $profile->jumlah_murid_jadwal  = $jumlahMurid;
@@ -1298,65 +1298,109 @@ public function recalculateMuridDanKtr(Profile $profile): void
         return;
     }
 
-    $totalMurid = 0;
-
+    // ===============================
+    // GURU
+    // ===============================
     if ($profile->jabatan === 'Guru') {
-        // Hitung murid langsung berdasarkan nama guru (MBA + English)
-        $jumlahMba = BukuInduk::where('guru', $profile->nama)
-            ->where('status', 'Aktif')
-            ->where(function ($q) {
-                $possibleCols = ['program', 'departemen', 'kelas', 'jenis_program', 'paket'];
-                foreach ($possibleCols as $col) {
-                    if (Schema::hasColumn('buku_induk', $col)) {
-                        $q->orWhere($col, 'like', '%MBA%');
-                    }
-                }
-                if (empty($q->getQuery()->wheres)) {
-                    $q->whereRaw('1 = 1');
-                }
-            })
-            ->count();
 
-        $jumlahEng = BukuInduk::where('guru', $profile->nama)
-            ->where('status', 'Aktif')
-            ->where(function ($q) {
-                $possibleCols = ['program', 'departemen', 'kelas', 'jenis_program', 'paket'];
-                foreach ($possibleCols as $col) {
-                    if (Schema::hasColumn('buku_induk', $col)) {
-                        $q->orWhere($col, 'like', '%English%');
-                    }
-                }
-                if (empty($q->getQuery()->wheres)) {
-                    $q->whereRaw('1 = 1');
-                }
-            })
-            ->count();
+        // 🔥 1 SUMBER DATA (FIX TOTAL)
+        $totalMurid = BukuInduk::where('guru', $profile->nama)->count();
 
-        $totalMurid = $jumlahMba + $jumlahEng;
+        // 🔥 SAMAKAN SEMUA
+        $profile->jumlah_murid_mba     = $totalMurid;
+        $profile->jumlah_murid_jadwal  = $totalMurid;
+        $profile->total_murid          = $totalMurid;
 
-        $profile->jumlah_murid_mba     = $jumlahMba > 0 ? $jumlahMba : null;
-        $profile->jumlah_murid_jadwal  = $totalMurid > 0 ? $totalMurid : 0;
-        $profile->jumlah_rombim        = $totalMurid > 0 ? $this->resolveSlotRombimFromCount($totalMurid) : null;
+        // ===============================
+        // ROMBIM
+        // ===============================
+        $profile->jumlah_rombim = $totalMurid > 0
+            ? $this->resolveSlotRombimFromCount($totalMurid)
+            : null;
 
-        // Gunakan method yang sudah ada untuk Guru
-        $this->calculateGuruData($profile);
+        // ===============================
+        // RB DEFAULT
+        // ===============================
+        $profile->rb  = 'RB30';
+        $profile->ktr = 'KTR 1A';
 
-    } elseif ($profile->jabatan === 'Kepala Unit') {
-        // Untuk Kepala Unit: total murid bawahan = semua murid aktif di unit/departemen
+        if ($totalMurid > 0) {
+
+            // RB dari sistem
+            $rb = $this->resolveRbFromCount($totalMurid);
+            if ($rb !== null) {
+                $profile->rb = 'RB' . $rb;
+            }
+
+            // KTR dari jumlah murid
+            $ktr = $this->formatKtrFromCountForGuru($totalMurid);
+            if ($ktr) {
+                $profile->ktr = $ktr;
+            }
+        }
+
+        // ===============================
+        // TURUNAN
+        // ===============================
+        $profile->rb_tambahan  = $profile->rb;
+        $profile->ktr_tambahan = $profile->ktr;
+
+        // ===============================
+        // RP
+        // ===============================
+        $profile->rp = $this->resolveRpFromJumlahMuridWithKtr(
+            $totalMurid,
+            $profile->ktr,
+            $profile->rb
+        );
+    }
+
+    // ===============================
+    // KEPALA UNIT
+    // ===============================
+    elseif ($profile->jabatan === 'Kepala Unit') {
+
         $totalMurid = BukuInduk::whereIn('guru', function ($q) use ($profile) {
             $q->select('nama')->from('profiles')
-                ->where('biMBA_unit', $profile->biMBA_unit)  // ← pakai unit, bukan hanya departemen
-                ->where('jabatan', 'Guru');
+                ->where('biMBA_unit', $profile->biMBA_unit)
+                ->where('jabatan', 'Guru')
+                ->where('status_karyawan', 'Aktif');
         })
         ->where('status', 'Aktif')
         ->count();
 
         $profile->total_murid_bawahan = $totalMurid;
 
-        // Gunakan method yang sudah ada untuk Kepala Unit
-        $this->calculateKepalaUnitData($profile, $totalMurid, null);
+        // RB default Kepala Unit
+        if (empty(trim($profile->rb ?? ''))) {
+            $profile->rb = 'RB40';
+        }
+
+        // KTR otomatis
+        $ktr = $this->formatKtrFromCountForKepala($totalMurid);
+
+        if (!empty(trim($profile->ktr_tambahan ?? ''))) {
+            $profile->ktr = $profile->ktr_tambahan;
+        } else {
+            $profile->ktr = $ktr ?? 'KTR 2A';
+        }
+
+        $profile->rb_tambahan = $profile->rb;
+
+        $finalKtr = !empty(trim($profile->ktr_tambahan ?? ''))
+            ? $profile->ktr_tambahan
+            : $profile->ktr;
+
+        $profile->rp = $this->resolveRpFromJumlahMuridWithKtr(
+            $totalMurid,
+            $finalKtr,
+            $profile->rb
+        );
     }
 
+    // ===============================
+    // SAVE
+    // ===============================
     $profile->saveQuietly();
 }
 
@@ -1424,5 +1468,12 @@ public function showHistori(Profile $profile)
         ]);
 
     return response()->json($histori);
+}
+
+private function getJumlahMuridAktif(string $namaGuru): int
+{
+    return BukuInduk::where('guru', $namaGuru)
+        ->where('status', 'Aktif')
+        ->count();
 }
 }
