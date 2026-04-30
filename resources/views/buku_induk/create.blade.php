@@ -394,6 +394,35 @@
 
                 </div>
 
+                <div id="paket72Section" style="display: none;">
+    <div class="col-12 mb-3">
+        <h4 class="fw-bold">⏱️ Masa Aktif Paket 72</h4>
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+            <label for="tgl_bayar" class="form-label">Tanggal Bayar</label>
+            <input type="date" name="tgl_bayar" id="tgl_bayar" class="form-control">
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label for="tgl_selesai" class="form-label fw-bold text-success">Tanggal Selesai</label>
+            <input type="date" name="tgl_selesai" id="tgl_selesai" class="form-control">
+        </div>
+
+        <div class="col-md-4 mb-3 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="alert2" id="alert2" value="aktif">
+                <label class="form-check-label fw-bold text-info">
+                    Paket 72 Aktif
+                </label>
+            </div>
+        </div>
+
+    </div>
+</div>
+
             <h4 class="col-12 mb-3">📚 Supply Modul</h4>
 
             <div class="col-md-6 mb-3 fw-bold">
@@ -825,5 +854,74 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
+const gol = document.getElementById('gol');
+const paket72Section = document.getElementById('paket72Section');
+
+const tglBayar = document.getElementById('tgl_bayar');
+const tglSelesai = document.getElementById('tgl_selesai');
+const alert2 = document.getElementById('alert2');
+
+function formatDate(date) {
+    return date.toISOString().split('T')[0];
+}
+
+function handlePaket72() {
+    if (!gol) return;
+
+    if (gol.value === 'P72') {
+        paket72Section.style.display = 'block';
+    } else {
+        paket72Section.style.display = 'none';
+
+        // reset kalau pindah pilihan
+        tglBayar.value = '';
+        tglSelesai.value = '';
+        alert2.checked = false;
+    }
+}
+
+// trigger saat change
+gol.addEventListener('change', handlePaket72);
+
+// trigger saat load (edit mode)
+handlePaket72();
+function addMonths(date, m) {
+    let d = new Date(date);
+    d.setMonth(d.getMonth() + m);
+    return d;
+}
+
+function handlePaket72() {
+    if (!gol) return;
+
+    if (gol.value === 'P72') {
+        paket72Section.style.display = 'block';
+
+        // =========================
+        // AUTO TANGGAL 6 BULAN
+        // =========================
+        let today = new Date();
+
+        if (tglBayar && !tglBayar.value) {
+            tglBayar.value = formatDate(today);
+        }
+
+        // 🔥 6 BULAN
+        let end6 = addMonths(today, 6);
+
+        if (tglSelesai && !tglSelesai.value) {
+            tglSelesai.value = formatDate(end6);
+        }
+
+        alert2.checked = true;
+
+    } else {
+        paket72Section.style.display = 'none';
+
+        tglBayar.value = '';
+        tglSelesai.value = '';
+        alert2.checked = false;
+    }
+}
 </script>
 @endsection

@@ -149,7 +149,8 @@ $golOptions = $HargaSaptataruna
             // ambil hanya S, P, K
             (str_starts_with($kode, 'S') ||
              str_starts_with($kode, 'P') ||
-             str_starts_with($kode, 'K'))
+             str_starts_with($kode, 'K') ||
+             str_starts_with($kode, 'D'))
 
             // kecuali yang di blacklist
             && !in_array($kode, $excluded)
