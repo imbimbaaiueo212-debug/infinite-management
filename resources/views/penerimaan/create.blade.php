@@ -363,28 +363,58 @@ $(document).ready(function() {
         $('#kwitansi-preview').text(teks);
     }
 
-    // ────────────────────────────────────────────────
-    // Event Handler
-    // ────────────────────────────────────────────────
-
-    // Toggle manual mode
-    $('#manual_kwitansi_toggle').on('change', function() {
-        isManualMode = this.checked;
-        $('#manual_kwitansi_input').toggle(this.checked);
-        updateKwitansiPreview();
+    // ================================================
+    // INISIALISASI SELECT2 untuk Voucher
+    // ================================================
+    $('#voucher').select2({
+        placeholder: "-- Tidak pakai voucher --",
+        allowClear: true,
+        width: '100%',
+        multiple: true
     });
 
-    // Update saat input manual diubah
-    $('#kwitansi_base_manual').on('input', updateKwitansiPreview);
+    // ================================================
+    // FUNGSI LOAD VOUCHER via AJAX
+    // ================================================
+    function loadVouchersByNim(nim) {
+        const voucherSelect = $('#voucher');
 
-    // Update saat tanggal berubah
-    $('input[name="tanggal"]').on('change', function() {
-        currentTanggal = this.value || '{{ date('Y-m-d') }}';
-        if (!isManualMode) updateKwitansiPreview();
-    });
+        voucherSelect.empty();
+        voucherSelect.append('<option value="">-- Tidak pakai voucher --</option>');
+
+        if (!nim) {
+            voucherSelect.trigger('change');
+            return;
+        }
+
+        $.ajax({
+            url: '{{ route("penerimaan.vouchers.by.nim") }}',
+            type: 'GET',
+            data: { nim: nim },
+            success: function(data) {
+                if (data.length === 0) {
+                    voucherSelect.append('<option value="" disabled>Tidak ada voucher tersedia untuk murid ini</option>');
+                } else {
+                    $.each(data, function(i, v) {
+                        voucherSelect.append(
+                            `<option value="${v.no_voucher}" data-nominal="50000">
+                                ${v.no_voucher} - Rp 50.000 (sisa: ${v.jumlah_voucher})
+                             </option>`
+                        );
+                    });
+                }
+                voucherSelect.trigger('change');   // Refresh Select2
+            },
+            error: function() {
+                console.error('Gagal memuat voucher');
+                voucherSelect.append('<option value="" disabled>Gagal memuat daftar voucher</option>');
+                voucherSelect.trigger('change');
+            }
+        });
+    }
 
     // ────────────────────────────────────────────────
-    // Saat NIM dipilih → isi semua field
+    // Event Handler NIM
     // ────────────────────────────────────────────────
     $('#nimSelect').select2({
         placeholder: "-- Pilih NIM --",
@@ -394,7 +424,7 @@ $(document).ready(function() {
         const opt = $(this).find(':selected');
         currentNimLast3 = String(opt.val()).slice(-3).padStart(3, '0');
 
-        // Isi field biasa
+        // Isi data murid
         $('#namaMuridInput').val(opt.data('nama'));
         $('#kelasInput').val(opt.data('kelas'));
         $('#golInput').val(opt.data('gol'));
@@ -403,18 +433,18 @@ $(document).ready(function() {
         $('#guruInput').val(opt.data('guru'));
         $('#nilai_spp').val(opt.data('spp') > 0 ? 'Rp ' + formatRupiah(opt.data('spp')) : '0');
 
-        // Isi bimba_unit & no_cabang (untuk semua user)
         const unit = opt.data('bimba_unit') || '';
         const cabang = opt.data('no_cabang') || '';
-
-        // Selalu isi hidden atau visible
         $('#bimbaUnitInput').val(unit);
         $('#noCabangInput').val(cabang);
 
         sppPerBulan = parseInt(opt.data('spp')) || 0;
         updateSppDropdown(sppPerBulan);
         resetBulanRows();
-        $('#voucher').val(null).trigger('change');
+
+        // Load voucher khusus murid ini
+        loadVouchersByNim(opt.val());
+
         updateKwitansiPreview();
     }).on('select2:clear', function() {
         currentNimLast3 = '';
@@ -422,12 +452,12 @@ $(document).ready(function() {
         sppPerBulan = 0;
         updateSppDropdown(0);
         resetBulanRows();
-        $('#voucher').val(null).trigger('change');
+        loadVouchersByNim(null);
         updateKwitansiPreview();
     });
 
     // ────────────────────────────────────────────────
-    // Fungsi lain (spp dropdown, bulan, total, dll)
+    // Fungsi lain (SPP, Bulan, Total, dll)
     // ────────────────────────────────────────────────
 
     function updateSppDropdown(harga) {
@@ -474,8 +504,11 @@ $(document).ready(function() {
         else html += '<span class="text-info fw-bold">Sesuai tagihan</span>';
 
         const voucherCount = $('#voucher').val()?.length || 0;
-        if (voucherCount > count) html += `<br><span class="text-danger">Voucher melebihi (${voucherCount}/${count})</span>`;
-        else if (voucherCount > 0) html += `<br><span class="text-success">${voucherCount} voucher dipilih</span>`;
+        if (voucherCount > count) {
+            html += `<br><span class="text-danger">Voucher melebihi (${voucherCount}/${count})</span>`;
+        } else if (voucherCount > 0) {
+            html += `<br><span class="text-success">${voucherCount} voucher dipilih</span>`;
+        }
 
         $('#info-bulan').html(html);
         hitungTotal();
@@ -484,10 +517,14 @@ $(document).ready(function() {
 
     function hitungTotal() {
         let sum = parseInt($('#spp_dropdown').val()) || 0;
-        $('.biaya-lain').each(function() { sum += unformatRupiah($(this).val()); });
+        $('.biaya-lain').each(function() { 
+            sum += unformatRupiah($(this).val()); 
+        });
 
         let potongan = 0;
-        $('#voucher :selected').each(function() { potongan += parseInt($(this).data('nominal') || 0); });
+        $('#voucher :selected').each(function() { 
+            potongan += parseInt($(this).data('nominal') || 0); 
+        });
         sum -= potongan;
 
         $('#total').val(formatRupiah(sum));
@@ -518,35 +555,33 @@ $(document).ready(function() {
         updateKwitansiPreview();
     });
 
-    $('#voucher').select2({ placeholder: "Pilih voucher (multi)", allowClear: true, width: '100%' })
-        .on('change', function() {
-            const max = $('.bulan-row').length;
-            const selected = $(this).val()?.length || 0;
-            if (selected > max) {
-                alert(`Maksimal ${max} voucher`);
-                $(this).val($(this).data('prev') || []).trigger('change');
-            } else {
-                $(this).data('prev', $(this).val());
-                hitungTotal();
-                updateInfoBulan();
-            }
-        }).data('prev', []);
+    // Event change voucher
+    $('#voucher').on('change', function() {
+        const max = $('.bulan-row').length;
+        const selected = $(this).val()?.length || 0;
 
-    // Inisialisasi
+        if (selected > max) {
+            alert(`Maksimal ${max} voucher untuk ${max} bulan SPP`);
+            $(this).val($(this).data('prev') || []).trigger('change');
+        } else {
+            $(this).data('prev', $(this).val());
+            hitungTotal();
+            updateInfoBulan();
+        }
+    }).data('prev', []);
+
+    // ────────────────────────────────────────────────
+    // Inisialisasi Awal
+    // ────────────────────────────────────────────────
     updateKwitansiPreview();
     updateInfoBulan();
     hitungTotal();
 
-    // Restore nilai lama jika validasi gagal
+    // Restore jika ada error validasi
     @if(old('nim'))
-        $('#nimSelect').val('{{ old('nim') }}').trigger('change');
-    @endif
-    @if(old('tanggal'))
-        $('input[name="tanggal"]').val('{{ old('tanggal') }}').trigger('change');
-    @endif
-    @if(old('manual_kwitansi'))
-        $('#manual_kwitansi_toggle').prop('checked', true).trigger('change');
-        $('#kwitansi_base_manual').val('{{ old('kwitansi_base_manual') }}');
+        setTimeout(() => {
+            $('#nimSelect').val('{{ old('nim') }}').trigger('change');
+        }, 300);
     @endif
 });
 </script>

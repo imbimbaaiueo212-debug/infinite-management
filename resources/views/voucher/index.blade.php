@@ -209,25 +209,25 @@
     </div>
   @endif
 
-  {{-- FORM FILTER: Nama Murid + Range Tanggal + BIMBA UNIT (KHUSUS ADMIN) --}}
-  <div class="card mb-4 border-primary shadow-sm">
-      <div class="card-header bg-primary text-white">
-          <h5 class="mb-0"><i class="bi bi-funnel"></i> Filter Voucher</h5>
-      </div>
-      <div class="card-body">
-          <form method="GET" action="{{ route('voucher.index') }}" class="row g-3 align-items-end">
-              <!-- Nama Murid (Dropdown) -->
-              <div class="col-md-4">
-    <label class="form-label fw-semibold">NIM | Nama Murid / Murid Baru</label>
-    <select name="nama_murid" class="form-select">
-        <option value="">-- Semua --</option>
-        @foreach($namaMurid as $display)
-            <option value="{{ $display }}" {{ request('nama_murid') == $display ? 'selected' : '' }}>
-                {{ $display }}
-            </option>
-        @endforeach
-    </select>
-</div>
+              {{-- FORM FILTER: Nama Murid + Range Tanggal + BIMBA UNIT (KHUSUS ADMIN) --}}
+              <div class="card mb-4 border-primary shadow-sm">
+                  <div class="card-header bg-primary text-white">
+                      <h5 class="mb-0"><i class="bi bi-funnel"></i> Filter Voucher</h5>
+                  </div>
+                  <div class="card-body">
+                      <form method="GET" action="{{ route('voucher.index') }}" class="row g-3 align-items-end">
+                          <!-- Nama Murid (Dropdown) -->
+                          <div class="col-md-4">
+                <label class="form-label fw-semibold">NIM | Nama Murid / Murid Baru</label>
+                <select name="nama_murid" class="form-select">
+                    <option value="">-- Semua --</option>
+                    @foreach($namaMurid as $display)
+                        <option value="{{ $display }}" {{ request('nama_murid') == $display ? 'selected' : '' }}>
+                            {{ $display }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
               <!-- Tanggal Dari -->
               <div class="col-md-3">
@@ -286,6 +286,7 @@
           <thead class="table-light">
             <tr>
               <th>NO</th>
+              <th>TIPE</th>
               <th>HISTORY SPIN</th>
               <th>NO. VOUCHER</th>
               <th>JUMLAH VOUCHER</th>
@@ -310,8 +311,35 @@
           </thead>
           <tbody>
             @foreach($vouchers as $index => $v)
-              <tr>
+                  @php
+                      $tipe = $v->tipe_voucher ?? 'regular';
+
+                      $rowClass = match($tipe) {
+                          'event' => 'table-info',
+                          'lainnya' => 'table-warning',
+                          default => ''
+                      };
+
+                      $badgeClass = match($tipe) {
+                          'event' => 'bg-info',
+                          'lainnya' => 'bg-warning text-dark',
+                          default => 'bg-primary'
+                      };
+
+                      $badgeText = match($tipe) {
+                          'event' => 'EVENT',
+                          'lainnya' => 'LAINNYA',
+                          default => 'REGULAR'
+                      };
+                  @endphp
+
+                  <tr class="{{ $rowClass }}">
                 <td>{{ $index + 1 }}</td>
+                <td>
+                    <span class="badge {{ $badgeClass }}">
+                        {{ $badgeText }}
+                    </span>
+                </td>
                 <td>{{ $v->voucher ?? '-' }}</td>
                 <td>
                   <div class="position-relative">

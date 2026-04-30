@@ -32,6 +32,8 @@ class VoucherLama extends Model
         'bukti_penyerahan_path',
         'bimba_unit',
         'no_cabang',
+        'tipe_voucher',
+        'is_independent',
     ];
 
     protected $casts = [

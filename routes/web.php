@@ -380,8 +380,13 @@ Route::post('/penerimaan/update-kaos-multi', [PenerimaanController::class, 'upda
 
 Route::get('/penerimaan/murid-by-unit', [PenerimaanController::class, 'getMuridByUnit'])
     ->name('penerimaan.murid-by-unit');
+
 Route::get('/penerimaan/export', [PenerimaanController::class, 'export'])
     ->name('penerimaan.export');
+
+// Di dalam group route yang ada auth
+Route::get('/penerimaan/vouchers-by-nim', [PenerimaanController::class, 'getVouchersByNim'])
+     ->name('penerimaan.vouchers.by.nim');
 
 
 

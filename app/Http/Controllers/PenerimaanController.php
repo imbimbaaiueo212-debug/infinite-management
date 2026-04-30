@@ -212,40 +212,44 @@ public function updateUkuranKaos(Request $request)
 
     public function create(Request $request)
 {
+    $selectedNim = $request->nim;
+
+    // Semua murid aktif/baru
     $murids = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru'])
+        ->orderBy('nama')
         ->get()
         ->map(function ($murid) {
             $nominal = $this->cleanMoneyInput($murid->spp);
-
             if ($nominal > 0 && $nominal < 1000) {
-                $nominal = $nominal * 1000;
+                $nominal *= 1000;
             }
-
             $murid->spp = $nominal;
             return $murid;
         });
 
-    $nim = $request->nim ?? null;
+    // === VOUCHER ===
+    $vouchers = collect();
 
-    $vouchers = VoucherLama::query()
-        ->whereNotNull('no_voucher')
-        ->where('no_voucher', '<>', '')
-        ->where('jumlah_voucher', '>', 0)
-        ->when($nim, function ($q) use ($nim) {
-            $q->where(function ($sub) use ($nim) {
-                $sub->whereNull('nim')->orWhere('nim', $nim);
-            });
-        })
-        ->orderBy('no_voucher')
-        ->get();
+    if ($selectedNim) {
+        // Jika ada NIM di URL (?nim=...), hanya tampilkan voucher milik murid tersebut
+        $vouchers = VoucherLama::where('nim', $selectedNim)
+            ->where('jumlah_voucher', '>', 0)
+            ->where('status', 'penyerahan')
+            ->orderBy('no_voucher')
+            ->get();
+    } else {
+        // Jika belum pilih NIM, tampilkan SEMUA voucher (akan difilter JS nanti)
+        $vouchers = VoucherLama::where('jumlah_voucher', '>', 0)
+            ->where('status', 'penyerahan')
+            ->orderBy('no_voucher')
+            ->get();
+    }
 
-    $sppLunas = Penerimaan::whereIn('nim', $murids->pluck('nim'))
-        ->where('spp', '>', 0)
+    // SPP Lunas (untuk validasi)
+    $sppLunas = Penerimaan::where('spp', '>', 0)
         ->select('nim', 'bulan', 'tahun')
         ->get()
-        ->map(function ($item) {
-            return strtolower("{$item->nim}-{$item->bulan}-{$item->tahun}");
-        })
+        ->map(fn($item) => strtolower("{$item->nim}-{$item->bulan}-{$item->tahun}"))
         ->unique()
         ->toArray();
 
@@ -383,29 +387,38 @@ public function store(Request $request)
     $adaBiayaLain   = $totalBiayaLain > 0;
     $kelebihanSpp   = $spp > 0 ? ($spp - count($periodeTerpilih) * $sppPerBulan) : 0;
 
-    // === VOUCHER ===
+    // === VOUCHER - HANYA UNTUK MURID PEMILIK ===
     $voucherTerpakai = [];
     $diskonPerVoucher = 50000;
 
     if ($request->has('voucher') && is_array($request->voucher)) {
         $voucherDipilih = array_filter($request->voucher);
+
         if (count($voucherDipilih) > count($periodeTerpilih)) {
             return back()->withErrors(['voucher' => 'Jumlah voucher melebihi jumlah bulan SPP'])->withInput();
         }
 
         foreach ($voucherDipilih as $noVoucher) {
+            // VALIDASI KETAT: Voucher harus milik murid ini
             $v = VoucherLama::where('no_voucher', $noVoucher)
-                ->where(function($q) use ($request) {
-                    $q->whereNull('nim')->orWhere('nim', $request->nim);
-                })
+                ->where('status', 'penyerahan')
+                ->where('jumlah_voucher', '>', 0)
+                ->where('nim', $request->nim)           // ← Paling Penting
                 ->first();
 
-            if (!$v || $v->jumlah_voucher <= 0) {
-                return back()->withErrors(['voucher' => "Voucher {$noVoucher} tidak valid / habis"])->withInput();
+            if (!$v) {
+                return back()->withErrors(['voucher' => "Voucher {$noVoucher} tidak ditemukan atau bukan milik murid ini."])
+                             ->withInput();
             }
 
+            if ($v->jumlah_voucher <= 0) {
+                return back()->withErrors(['voucher' => "Voucher {$noVoucher} sudah habis digunakan."])->withInput();
+            }
+
+            // Gunakan voucher
             $v->decrement('jumlah_voucher', 1);
 
+            // Catat histori penggunaan
             VoucherHistori::create([
                 'voucher_lama_id'   => $v->id,
                 'nim'               => $request->nim,
@@ -431,21 +444,13 @@ public function store(Request $request)
     // === GENERATE FORMAT KWITANSI BARU ===
     // ==================================================================
 
-    // 3 digit terakhir NIM (contoh: 051410001 → 001)
     $nimLast3 = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
-
-    // Tahun 2 digit (2026 → 26)
-    $tahun2 = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
-
-    // Bulan & tanggal 2 digit
+    $tahun2   = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
     $bulan2   = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
     $tanggal2 = str_pad($tanggal->day, 2, '0', STR_PAD_LEFT);
 
-    // Base kwitansi tanpa nomor urut
     $kwitansiBase = "KW{$nimLast3}{$tahun2}{$bulan2}{$tanggal2}";
-    // Contoh: KW001260114
 
-    // Nomor urut mulai dari 01 untuk murid ini
     $index = 1;
 
     DB::beginTransaction();
@@ -458,7 +463,6 @@ public function store(Request $request)
             $diskon = isset($voucherTerpakai[$index - 1]) ? $diskonPerVoucher : 0;
 
             $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
-            // Contoh: KW00126011401, KW00126011402, ...
 
             $p = Penerimaan::create([
                 'kwitansi'   => $kwitansi,
@@ -489,7 +493,7 @@ public function store(Request $request)
             $index++;
         }
 
-        // === DEPOSIT (pakai kwitansi pertama) ===
+        // === DEPOSIT (kelebihan SPP) ===
         if ($kelebihanSpp > 0) {
             $last = collect($periodeTerpilih)->last();
             $bulanDeposit = Carbon::create($last['tahun'], $this->bulanKeAngka($last['bulan']))->addMonth();
@@ -511,43 +515,39 @@ public function store(Request $request)
 
         // === KHUSUS DHUAFA (SPP 0 & TANPA BIAYA LAIN) ===
         if ($spp == 0 && !$adaBiayaLain) {
-    $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
 
-    $bulanInput = $request->bulan_bayar[0] ?? null;
-    $tahunInput = $request->tahun_bayar[0] ?? null;
+            $bulanInput = $request->bulan_bayar[0] ?? null;
+            $tahunInput = $request->tahun_bayar[0] ?? null;
 
-    $p = Penerimaan::create([
-        'kwitansi'   => $kwitansi,
-        'via'        => $request->via,
-        'tanggal'    => $request->tanggal,
-        'nim'        => $request->nim,
-        'nama_murid' => $request->nama_murid,
-        'kelas'      => $dataMurid['kelas'],
-        'status'     => $dataMurid['status'],
-        'guru'       => $dataMurid['guru'],
-        'gol'        => $dataMurid['gol'] ?? null,
-        'kd'         => $dataMurid['kd'] ?? null,
+            $p = Penerimaan::create([
+                'kwitansi'   => $kwitansi,
+                'via'        => $request->via,
+                'tanggal'    => $request->tanggal,
+                'nim'        => $request->nim,
+                'nama_murid' => $request->nama_murid,
+                'kelas'      => $dataMurid['kelas'],
+                'status'     => $dataMurid['status'],
+                'guru'       => $dataMurid['guru'],
+                'gol'        => $dataMurid['gol'] ?? null,
+                'kd'         => $dataMurid['kd'] ?? null,
+                'bulan'      => $bulanInput,
+                'tahun'      => $tahunInput,
+                'spp'        => 0,
+                'voucher'    => 0,
+                'total'      => 0,
+                'keterangan' => 'Dhuafa / Gratis',
+                'bimba_unit' => $dataMurid['bimba_unit'],
+                'no_cabang'  => $dataMurid['no_cabang'],
+                'RBAS'       => $rbas,
+                'BCABS01'    => $bcabs01,
+                'BCABS02'    => $bcabs02,
+                'bukti_transfer_path' => $buktiPath,
+            ]);
 
-        // 🔥 ini yang penting
-        'bulan'      => $bulanInput,
-        'tahun'      => $tahunInput,
-
-        'spp'        => 0,
-        'voucher'    => 0,
-        'total'      => 0,
-        'keterangan' => 'Dhuafa / Gratis',
-
-        'bimba_unit' => $dataMurid['bimba_unit'],
-        'no_cabang'  => $dataMurid['no_cabang'],
-        'RBAS'       => $rbas,
-        'BCABS01'    => $bcabs01,
-        'BCABS02'    => $bcabs02,
-        'bukti_transfer_path' => $buktiPath,
-    ]);
-
-    $kwitansiList[] = $kwitansi;
-    $index++;
-}
+            $kwitansiList[] = $kwitansi;
+            $index++;
+        }
 
         // === BIAYA LAIN ===
         if ($adaBiayaLain) {
@@ -571,10 +571,15 @@ public function store(Request $request)
                 'ukuran_kaos_panjang' => $ukuranKaosPanjangString,
                 'kaos_pendek_details' => $kaosPendekDetails,
                 'kaos_panjang_details'=> $kaosPanjangDetails,
-                'kpk' => $kpk, 'sertifikat'=>$sertifikat, 'stpb'=>$stpb, 'tas'=>$tas,
-                'event'=>$event, 'lain_lain'=>$lainLain, 'total'=>$totalBiayaLain,
-                'bimba_unit'=>$dataMurid['bimba_unit'],
-                'no_cabang'=>$dataMurid['no_cabang'],
+                'kpk'      => $kpk,
+                'sertifikat'=> $sertifikat,
+                'stpb'     => $stpb,
+                'tas'      => $tas,
+                'event'    => $event,
+                'lain_lain'=> $lainLain,
+                'total'    => $totalBiayaLain,
+                'bimba_unit'=> $dataMurid['bimba_unit'],
+                'no_cabang'=> $dataMurid['no_cabang'],
                 'bukti_transfer_path'=> $buktiPath,
             ]);
 
@@ -588,7 +593,9 @@ public function store(Request $request)
 
     } catch (\Exception $e) {
         DB::rollBack();
-        if ($buktiPath) Storage::disk('public')->delete($buktiPath);
+        if ($buktiPath) {
+            Storage::disk('public')->delete($buktiPath);
+        }
         return back()->withErrors(['error' => 'Gagal simpan: ' . $e->getMessage()])->withInput();
     }
 }
@@ -1527,5 +1534,26 @@ public function export(Request $request)
         new PenerimaanExport($penerimaan),
         'Penerimaan_SPP_' . now()->format('Y-m-d_His') . '.xlsx'
     );
+}
+
+/**
+ * AJAX: Ambil voucher berdasarkan NIM (untuk select2)
+ */
+public function getVouchersByNim(Request $request)
+{
+    $nim = $request->query('nim');
+
+    if (!$nim) {
+        return response()->json([]);
+    }
+
+    $vouchers = VoucherLama::where('nim', $nim)
+        ->where('jumlah_voucher', '>', 0)
+        ->where('status', 'penyerahan')
+        ->select('no_voucher', 'jumlah_voucher')
+        ->orderBy('no_voucher')
+        ->get();
+
+    return response()->json($vouchers);
 }
 }
