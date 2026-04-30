@@ -300,10 +300,10 @@
               <th>No Cabang</th>
               <th>ORANGTUA</th>
               <th>TELP/HP</th>
-              <th>NIM'</th>
-              <th>NAMA MURID'</th>
-              <th>ORANGTUA'</th>
-              <th>TELP/HP'</th>
+              <th>NIM MURID BARU</th>
+              <th>NAMA MURID BARU</th>
+              <th>ORANGTUA MURID BARU</th>
+              <th>TELP/HP ORANG TUA MURID BARU</th>
               <th>TANGGAL PEMAKAIAN</th>
               <th>BUKTI</th>
               <th>ACTION</th>
@@ -329,7 +329,7 @@
                       $badgeText = match($tipe) {
                           'event' => 'EVENT',
                           'lainnya' => 'LAINNYA',
-                          default => 'REGULAR'
+                          default => 'HUMAS'
                       };
                   @endphp
 

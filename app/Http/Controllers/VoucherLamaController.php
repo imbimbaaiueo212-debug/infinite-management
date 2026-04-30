@@ -179,14 +179,17 @@ public function create()
 
     // ----------------------------------------------------------------------------- 
     // Simpan data manual (multiple no_voucher)
-    public function store(Request $request)
+    // ----------------------------------------------------------------------------- 
+// Simpan data manual (multiple no_voucher)
+public function store(Request $request)
 {
-    
     $user = auth()->user();
 
-    // 🔥 SYNC OTOMATIS
+    // Tentukan apakah voucher ini independent (event/lainnya) atau terikat ke murid (regular)
+    $isIndependent = $request->tipe_voucher !== 'regular';
+
     $request->merge([
-        'is_independent' => $request->tipe_voucher !== 'regular'
+        'is_independent' => $isIndependent
     ]);
 
     $request->validate([
@@ -195,19 +198,22 @@ public function create()
 
         'tanggal_penyerahan' => 'nullable|date',
 
-        // 🔥 hanya wajib kalau REGULAR
-        'nim' => Rule::requiredIf(!$request->boolean('is_independent')),
-        'nama_murid' => Rule::requiredIf(!$request->boolean('is_independent')),
+        // Hanya wajib untuk REGULAR (Humas)
+        'nim' => Rule::requiredIf(!$isIndependent),
+        'nama_murid' => Rule::requiredIf(!$isIndependent),
 
         'orangtua' => 'nullable|string',
         'telp_hp' => 'nullable|string',
 
+        // Untuk murid baru (regular)
         'nim_murid_baru' => 'nullable|string|unique:voucher_lama,nim_murid_baru',
         'nama_murid_baru' => 'nullable|string',
 
         'bukti_penyerahan' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
 
-        'bimba_unit' => [Rule::requiredIf($user->isAdminUser()), 'string', 'exists:units,bimba_unit'],
+        'bimba_unit' => $user->isAdminUser() 
+            ? ['required', 'string', 'exists:units,bimba_unit'] 
+            : 'nullable',
 
         'tipe_voucher' => 'required|in:regular,event,lainnya',
     ]);
@@ -222,66 +228,59 @@ public function create()
 
     $statusAuto = $this->statusFromTanggalPenyerahan($tanggalPenyerahan);
 
-    // ================= UNIT =================
+    // ================= UNIT & CABANG =================
     if ($user->isAdminUser()) {
         $bimbaUnit = $request->bimba_unit;
-
-        // 🔥 AUTO AMBIL CABANG (JANGAN DARI INPUT)
         $noCabang = \App\Models\Unit::where('biMBA_unit', $bimbaUnit)
                         ->value('no_cabang');
-
     } else {
         $bimbaUnit = $user->bimba_unit;
-        $noCabang = $user->no_cabang ?? \App\Models\Unit::where('bimba_unit', $user->bimba_unit)->value('no_cabang');
+        $noCabang = $user->no_cabang ?? \App\Models\Unit::where('biMBA_unit', $user->bimba_unit)
+                        ->value('no_cabang');
 
         if (!$bimbaUnit) {
             return back()->withErrors(['bimba_unit' => 'Unit Anda belum diatur.'])->withInput();
         }
     }
 
-    // 🔥 BERSIHKAN DATA MURID BARU JIKA BUKAN REGULAR
-    if ($request->boolean('is_independent')) {
-    $request->merge([
-        // HAPUS nim dari sini
-        'nim_murid_baru' => null,
-        'nama_murid_baru' => null,
-    ]);
-}
-
-    // ================= LOOP =================
+        // ================= LOOP CREATE VOUCHER =================
     foreach ($voucherNumbers as $noVoucher) {
 
         VoucherLama::create([
-            'voucher' => $noVoucher,
-            'no_voucher' => $noVoucher,
-            'tanggal' => now()->toDateString(),
-            'tanggal_penyerahan' => $tanggalPenyerahan,
-            'status' => $statusAuto,
-            'jumlah_voucher' => 1,
+            'voucher'           => $noVoucher,
+            'no_voucher'        => $noVoucher,
+            'tanggal'           => now()->toDateString(),
+            'tanggal_penyerahan'=> $tanggalPenyerahan,
+            'status'            => $statusAuto,
+            'jumlah_voucher'    => 1,
 
-            // 🔥 CORE FIX
-            'tipe_voucher' => $request->tipe_voucher,
-            'is_independent' => $request->boolean('is_independent'),
+            // Tipe & Status
+            'tipe_voucher'      => $request->tipe_voucher,
+            'is_independent'    => $isIndependent,
 
-            'nim' => $request->nim,
-            'nama_murid' => $request->nama_murid,
+            // Data Murid Existing (Humas)
+            'nim'               => $request->nim,
+            'nama_murid'        => $request->nama_murid,
+            'orangtua'          => $request->orangtua,
+            'telp_hp'           => $request->telp_hp,
 
-            'orangtua' => $request->orangtua,
-            'telp_hp' => $request->telp_hp,
+            // Data Murid Baru
+            'nim_murid_baru'     => $request->nim_murid_baru,
+            'nama_murid_baru'    => $request->nama_murid_baru,
+            'orangtua_murid_baru'=> $request->orangtua_murid_baru,     // ← Ditambahkan
+            'telp_hp_murid_baru' => $request->telp_hp_murid_baru,      // ← Ditambahkan
 
-            'nim_murid_baru' => $request->nim_murid_baru,
-            'nama_murid_baru' => $request->nama_murid_baru,
+            // Unit
+            'bimba_unit'        => $bimbaUnit,
+            'no_cabang'         => $noCabang,
 
-            'bimba_unit' => $bimbaUnit,
-            'no_cabang' => $noCabang,
-
-            'source' => 'manual',
+            'source'            => 'manual',
             'bukti_penyerahan_path' => $buktiPath,
         ]);
     }
 
     return redirect()->route('voucher.index')
-        ->with('success', 'Voucher berhasil ditambahkan.');
+        ->with('success', count($voucherNumbers) . ' voucher berhasil ditambahkan.');
 }
 
     // ----------------------------------------------------------------------------- 

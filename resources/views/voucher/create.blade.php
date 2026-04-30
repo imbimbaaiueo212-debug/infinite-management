@@ -23,7 +23,7 @@
         <div class="mb-3">
             <label>Tipe Voucher <span class="text-danger">*</span></label>
             <select name="tipe_voucher" id="tipe_voucher" class="form-control" required>
-                <option value="regular">Regular</option>
+                <option value="regular">Humas</option>
                 <option value="event">Event</option>
                 <option value="lainnya">Lainnya</option>
             </select>
@@ -122,20 +122,35 @@
 <script>
 $(function() {
 
+    // ========================
+    // TOGGLE SECTION MURID BARU
+    // ========================
     function toggleMuridBaru() {
         let tipe = $('#tipe_voucher').val();
 
-        if (tipe === 'event' || tipe === 'lainnya') {
-            $('#murid-baru-section').slideUp();
-        } else {
-            $('#murid-baru-section').slideDown();
+        if (tipe === 'regular') {
+            // Humas / Regular → tampilkan Detail Murid Baru
+            $('#murid-baru-section').slideDown(300);
+            // Buat Nama Murid Baru wajib
+            $('#nama_murid_baru').prop('required', true);
+        } 
+        else {
+            // Event atau Lainnya → sembunyikan
+            $('#murid-baru-section').slideUp(300);
+            $('#nama_murid_baru').prop('required', false);
+            
+            // Clear field murid baru
+            $('#nim_murid_baru, #nama_murid_baru, #orangtua_murid_baru, #telp_hp_murid_baru').val('');
         }
     }
 
+    // Inisialisasi awal
     toggleMuridBaru();
 
+    // Event change tipe voucher
     $('#tipe_voucher').on('change', toggleMuridBaru);
 
+    // Tambah input nomor voucher
     $('#add-voucher').click(function() {
         $('#voucher-container').append(
             '<input type="text" name="no_voucher[]" class="form-control mb-2" required>'
@@ -147,10 +162,9 @@ $(function() {
 $(function() {
 
     // ========================
-    // LOAD MURID BERDASARKAN UNIT
+    // LOAD MURID BERDASARKAN UNIT (Hanya untuk admin)
     // ========================
     function loadMurid(unit) {
-
         $('#nim').empty().append('<option value="">-- Pilih NIM --</option>');
 
         if (!unit) return;
@@ -160,33 +174,27 @@ $(function() {
             type: 'GET',
             data: { bimba_unit: unit },
             success: function(data) {
-
                 $.each(data, function(i, murid) {
                     $('#nim').append(
                         `<option value="${murid.id}"
-                            data-nama="${murid.nama}"
-                            data-orangtua="${murid.orangtua}"
-                            data-telp="${murid.telp_hp}">
-                            ${murid.text}
+                            data-nama="${murid.nama || ''}"
+                            data-orangtua="${murid.orangtua || ''}"
+                            data-telp="${murid.telp_hp || ''}">
+                            ${murid.text || murid.nama}
                         </option>`
                     );
                 });
-
             }
         });
     }
 
-    // ========================
     // ADMIN PILIH UNIT
-    // ========================
     $('#bimba_unit').on('change', function() {
         let unit = $(this).val();
         loadMurid(unit);
     });
 
-    // ========================
-    // AUTO FILL
-    // ========================
+    // AUTO FILL saat pilih NIM existing
     $('#nim').on('change', function() {
         let selected = $(this).find(':selected');
 
