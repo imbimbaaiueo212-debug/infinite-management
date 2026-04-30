@@ -104,7 +104,7 @@
         name="tgl_lahir" 
         id="tgl_lahir" 
         class="form-control" 
-        placeholder="dd/mm/yyyy atau yyyy-mm-dd"
+        placeholder="Masukan Tanggal Lahir"
         value="{{ old('tgl_lahir') }}">
 </div>
 
@@ -120,9 +120,8 @@
                     name="tgl_daftar" 
                     id="tgl_daftar" 
                     class="form-control" 
-                    placeholder="dd/mm/yyyy atau yyyy-mm-dd"
-                    value="{{ old('tgl_daftar') }}">
-                <small class="text-muted">Bisa paste dari Excel</small>
+                    placeholder="Masukan Tanggal Daftar"
+                    value="{{ old('tgl_daftar') }}"
             </div>
 
             {{-- Tgl Masuk --}}
@@ -802,7 +801,32 @@ $(document).ready(function () {
         placeholder: '-- Pilih Gol --',
         allowClear: true,
         minimumResultsForSearch: 0
-    })
+    });
+    $('#kd').select2({
+        width: '100%',
+        placeholder: '-- Pilih KD --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    });
+    $('#petugas_trial').select2({
+        width: '100%',
+        placeholder: '-- Pilih Guru Trial --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    });
+    $('#guru').select2({
+        width: '100%',
+        placeholder: '-- Pilih Guru --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    });
+        $('#note').select2({
+        width: '100%',
+        placeholder: '-- Pilih Note --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    });
+
 
     // =========================
     // TOGGLE KETERANGAN
