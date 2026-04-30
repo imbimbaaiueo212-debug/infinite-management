@@ -121,7 +121,8 @@
                     id="tgl_daftar" 
                     class="form-control" 
                     placeholder="Masukan Tanggal Daftar"
-                    value="{{ old('tgl_daftar') }}"
+                    value="{{ old('tgl_daftar') }}">
+                <small class="text-muted">Bisa paste dari Excel</small>
             </div>
 
             {{-- Tgl Masuk --}}
