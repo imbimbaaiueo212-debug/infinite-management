@@ -5,7 +5,7 @@
 @section('content')
 <div class="container">
     <h1>Pemesanan STPB</h1>
-    <a href="{{ route('pemesanan_stpb.create') }}" class="btn btn-primary mb-3">Tambah Pemesanan</a>
+    <a href="{{ route('pemesanan_stpb.create') }}" class="btn btn-primary mb-3">Tambah Data</a>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>

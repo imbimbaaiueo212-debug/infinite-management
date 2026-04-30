@@ -10,7 +10,7 @@
 
             <!-- Tombol Tambah -->
             <a href="{{ route('mbc-murid.create') }}" class="btn btn-primary mb-3">
-                Tambah MBC Murid
+                Tambah Data
             </a>
 
             <!-- Notifikasi Sukses -->

@@ -15,7 +15,7 @@
                         </h3>
                         <a href="{{ route('pemesanan_perlengkapan_unit.create') }}" 
                            class="btn btn-primary btn-lg shadow-sm">
-                            <i class="fas fa-plus me-2"></i> Tambah Pemesanan
+                            <i class="fas fa-plus me-2"></i> Tambah Data
                         </a>
                     </div>
                 </div>

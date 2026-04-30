@@ -130,137 +130,155 @@ $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
     }
 
     public function create()
-    {
-        $HargaSaptataruna = HargaSaptataruna::all();
-        $profil = Profile::where('jabatan', '!=', 'Kepala Unit')->get();
+{
+    $HargaSaptataruna = HargaSaptataruna::all();
+    $profil = Profile::where('jabatan', '!=', 'Kepala Unit')->get();
 
-        // KD options & SPP mapping
-        $firstRow = $HargaSaptataruna->first();
-        $kdOptions = [];
-        if ($firstRow) {
-            foreach ($firstRow->getAttributes() as $key => $value) {
-                if (in_array($key, ['a', 'b', 'c', 'd', 'e', 'f'])) {
-                    $kdOptions[] = strtoupper($key);
-                }
+    // ==================== FILTER GOL (INI YANG KAMU BUTUHKAN) ====================
+    $excluded = [
+    'S1_MB', 'S1_MU', 'S3_MB', 'S3_MU',
+    'KA01', 'RBAS', 'TAS', 'STPB', 'STF', 'KPK', 'KA'
+];
+
+$golOptions = $HargaSaptataruna
+    ->filter(function ($item) use ($excluded) {
+
+        $kode = strtoupper(trim($item->kode));
+
+        return (
+            // ambil hanya S, P, K
+            (str_starts_with($kode, 'S') ||
+             str_starts_with($kode, 'P') ||
+             str_starts_with($kode, 'K'))
+
+            // kecuali yang di blacklist
+            && !in_array($kode, $excluded)
+        );
+    })
+    ->unique('kode')
+    ->values();
+    // ============================================================================
+
+    // KD options
+    $firstRow = $HargaSaptataruna->first();
+    $kdOptions = [];
+
+    if ($firstRow) {
+        foreach ($firstRow->getAttributes() as $key => $value) {
+            if (in_array($key, ['a', 'b', 'c', 'd', 'e', 'f'])) {
+                $kdOptions[] = strtoupper($key);
             }
         }
-
-        $sppMapping = [];
-        foreach ($HargaSaptataruna as $item) {
-            foreach ($kdOptions as $kd) {
-                $columnName = strtolower($kd);
-                $sppMapping[$item->kode][$kd] = $item->$columnName ?? 0;
-            }
-        }
-
-        // Semua unit (untuk admin)
-        $units = Unit::orderBy('bimba_unit')
-            ->pluck('no_cabang', 'bimba_unit')
-            ->toArray();
-
-        $unitsJson = json_encode($units);
-
-        // Tentukan status admin & data user
-        $isAdmin = Auth::user()->is_admin ?? false;
-        $userUnit = null;
-        $userNoCabang = null;
-
-        if (!$isAdmin) {
-            $userUnit = Auth::user()->bimba_unit;
-            if ($userUnit) {
-                $userNoCabang = Unit::where('bimba_unit', $userUnit)->value('no_cabang');
-            }
-        }
-
-        // Dropdown options lainnya (tetap sama)
-        $tahapanOptions = ['Persiapan', 'Lanjutan'];
-        $kategoriKeluarOptions = ['Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK', 'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah', 'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain', 'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'];
-        $kelasOptions = ['biMBA-AIUEO', 'English biMBA'];
-        $noteOptions = ['Aktif Kembali', 'Cuti', 'Ganti Gol', 'Pindahan', 'Belum Bayar SPP', 'Murid Mutasi Masuk', 'Murid Mutasi Keluar', 'Garansi'];
-        $noteGaransiOptions = ['Berkebutuhan Khusus', 'Tidak Memenuhi Syarat'];
-        $periodeOptions = ['Ke1', 'Ke2', 'Ke3', 'Ke4', 'Ke5', 'Ke6', 'Ke7', 'Ke8', 'Ke9', 'Ke10', 'Ke11', 'Ke12'];
-        $asalModulOptions = ['biMBA IM', 'biMBA Unit'];
-        $levelOptions = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
-        $jenisKbmOptions = ['Full TM', 'Full DLC', 'Kombinasi TM & DLC'];
-        $kodeJadwalOptions = ['108', '109', '110', '111', '112', '113', '114', '115', '116', '208', '209', '210', '211', '308', '309', '310', '311'];
-        $statusPindahOptions = ['1'];
-        $keBimbaIntervioOptions = ['biMba Intervio'];
-        $statusOptions = ['Aktif', 'Keluar', 'Baru'];
-        $infoOptions = ['Brosur', 'Event', 'Humas', 'Internet', 'Spanduk', 'Lainnya'];
-
-        // Hitung NIM otomatis (untuk non-admin atau default)
-$autoNim = null;
-$autoNimSuffix = null;
-
-if (!$isAdmin && $userUnit) {
-    // Non-admin → gunakan unit user
-    $lastNim = BukuInduk::where('bimba_unit', $userUnit)
-        ->orderBy('nim', 'desc')
-        ->value('nim');
-
-    $nextSuffix = 1;
-    if ($lastNim) {
-        $lastSuffix = (int) substr($lastNim, -4); // ambil 4 digit terakhir
-        $nextSuffix = $lastSuffix + 1;
     }
 
-    $paddedSuffix = str_pad($nextSuffix, 4, '0', STR_PAD_LEFT);
-    $autoNimSuffix = $paddedSuffix;
-    $autoNim = $userNoCabang . $paddedSuffix;
-} elseif ($isAdmin) {
-    // Admin → NIM akan dihitung via JS/AJAX setelah pilih unit
-    // Kosongkan dulu, JS akan handle
+    // SPP Mapping
+    $sppMapping = [];
+    foreach ($HargaSaptataruna as $item) {
+        foreach ($kdOptions as $kd) {
+            $columnName = strtolower($kd);
+            $sppMapping[$item->kode][$kd] = $item->$columnName ?? 0;
+        }
+    }
+
+    // Unit
+    $units = Unit::orderBy('bimba_unit')
+        ->pluck('no_cabang', 'bimba_unit')
+        ->toArray();
+
+    $unitsJson = json_encode($units);
+
+    // User
+    $user = Auth::user();
+    $isAdmin = $user->is_admin ?? false;
+
+    $userUnit = null;
+    $userNoCabang = null;
+
+    if (!$isAdmin) {
+        $userUnit = $user->bimba_unit;
+        if ($userUnit) {
+            $userNoCabang = Unit::where('bimba_unit', $userUnit)->value('no_cabang');
+        }
+    }
+
+    // Options
+    $tahapanOptions = ['Persiapan', 'Lanjutan'];
+    $kategoriKeluarOptions = ['Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK', 'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah', 'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain', 'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'];
+    $kelasOptions = ['biMBA-AIUEO', 'English biMBA'];
+    $noteOptions = ['Aktif Kembali', 'Cuti', 'Ganti Gol', 'Pindahan', 'Belum Bayar SPP', 'Murid Mutasi Masuk', 'Murid Mutasi Keluar', 'Garansi'];
+    $noteGaransiOptions = ['Berkebutuhan Khusus', 'Tidak Memenuhi Syarat'];
+    $periodeOptions = ['Ke1','Ke2','Ke3','Ke4','Ke5','Ke6','Ke7','Ke8','Ke9','Ke10','Ke11','Ke12'];
+    $asalModulOptions = ['biMBA IM', 'biMBA Unit'];
+    $levelOptions = ['Level 1', 'Level 2', 'Level 3', 'Level 4'];
+    $jenisKbmOptions = ['Full TM', 'Full DLC', 'Kombinasi TM & DLC'];
+    $kodeJadwalOptions = ['108','109','110','111','112','113','114','115','116','208','209','210','211','308','309','310','311'];
+    $statusPindahOptions = ['1'];
+    $keBimbaIntervioOptions = ['biMba Intervio'];
+    $statusOptions = ['Aktif', 'Keluar', 'Baru'];
+    $infoOptions = ['Brosur', 'Event', 'Humas', 'Internet', 'Spanduk', 'Lainnya'];
+
+    // ==================== AUTO NIM ====================
     $autoNim = null;
     $autoNimSuffix = null;
-}
 
-// ==================== TAMBAHAN BARU: GURU BY UNIT ====================
+    if (!$isAdmin && $userUnit) {
+        $lastNim = BukuInduk::where('bimba_unit', $userUnit)
+            ->orderBy('nim', 'desc')
+            ->value('nim');
+
+        $nextSuffix = $lastNim ? ((int) substr($lastNim, -4) + 1) : 1;
+
+        $autoNimSuffix = str_pad($nextSuffix, 4, '0', STR_PAD_LEFT);
+        $autoNim = $userNoCabang . $autoNimSuffix;
+    }
+    // =================================================
+
+    // ==================== GURU BY UNIT ====================
     $guruByUnit = [];
     foreach ($profil as $guru) {
-        // Cek field unit di tabel Profile (sesuaikan nama field)
         $unit = $guru->bimba_unit ?? $guru->unit ?? null;
-        
+
         if ($unit && isset($units[$unit])) {
             $guruByUnit[$unit][] = $guru->nama;
         }
     }
 
-    // Clean up: unique & sort
     foreach ($guruByUnit as $unit => &$gurus) {
         $gurus = array_unique($gurus);
         sort($gurus);
     }
+    // =====================================================
 
-        return view('buku_induk.create', compact(
-            'HargaSaptataruna',
-            'profil',
-            'kdOptions',
-            'tahapanOptions',
-            'kategoriKeluarOptions',
-            'kelasOptions',
-            'noteOptions',
-            'noteGaransiOptions',
-            'periodeOptions',
-            'asalModulOptions',
-            'levelOptions',
-            'jenisKbmOptions',
-            'kodeJadwalOptions',
-            'statusPindahOptions',
-            'keBimbaIntervioOptions',
-            'sppMapping',
-            'statusOptions',
-            'units',
-            'unitsJson',
-            'infoOptions',
-            'isAdmin',
-            'userUnit',
-            'userNoCabang',
-            'autoNim',          // ← baru
-            'autoNimSuffix',     // ← baru
-            'guruByUnit',  // ← TAMBAHAN INI
-            'unitsJson'    // ← PASTIKAN INI JUGA ADA
-        ));
-    }
+    return view('buku_induk.create', compact(
+        'HargaSaptataruna',
+        'golOptions', // 🔥 INI PENTING
+        'profil',
+        'kdOptions',
+        'tahapanOptions',
+        'kategoriKeluarOptions',
+        'kelasOptions',
+        'noteOptions',
+        'noteGaransiOptions',
+        'periodeOptions',
+        'asalModulOptions',
+        'levelOptions',
+        'jenisKbmOptions',
+        'kodeJadwalOptions',
+        'statusPindahOptions',
+        'keBimbaIntervioOptions',
+        'sppMapping',
+        'statusOptions',
+        'units',
+        'unitsJson',
+        'infoOptions',
+        'isAdmin',
+        'userUnit',
+        'userNoCabang',
+        'autoNim',
+        'autoNimSuffix',
+        'guruByUnit'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -308,11 +326,11 @@ if (!$isAdmin && $userUnit) {
             'nim' => 'required|string|max:20|unique:buku_induk,nim',
             'nama' => 'required|string|max:100',
             'tmpt_lahir' => 'nullable|string|max:50',
-            'tgl_lahir' => 'nullable|date',
+            'tgl_lahir' => 'required|date',
             'tgl_masuk' => 'required|date',
             'usia' => 'nullable|integer',
             'lama_bljr' => 'nullable|string|max:50',
-            'tahap' => 'nullable|string|in:Persiapan,Lanjutan',
+            'tahap' => 'required|string|in:Persiapan,Lanjutan',
             'tgl_keluar' => 'nullable|date',
             'kategori_keluar' => 'nullable|string',
             'alasan' => 'nullable|string',
@@ -323,7 +341,7 @@ if (!$isAdmin && $userUnit) {
             'petugas_trial' => 'nullable|string',
             'guru' => 'required|string',
             'orangtua' => 'nullable|string',
-            'no_telp_hp' => 'nullable|string|max:20',
+            'no_telp_hp' => 'required|string|max:20',
             'note' => 'nullable|string',
             'no_cab_merge' => 'nullable|string',
             'no_pembayaran_murid' => 'nullable|string',
@@ -335,13 +353,13 @@ if (!$isAdmin && $userUnit) {
             'tgl_bayar' => 'nullable|date',
             'tgl_selesai' => 'nullable|date',
             'alert2' => 'nullable|string',
-            'asal_modul' => 'nullable|string',
+            'asal_modul' => 'required|string',
             'keterangan_optional' => 'nullable|string',
-            'level' => 'nullable|string|in:Level 1,Level 2,Level 3,Level 4',
-            'jenis_kbm' => 'nullable|string',
+            'level' => 'required|string|in:Level 1,Level 2,Level 3,Level 4',
+            'jenis_kbm' => 'required|string',
             'kode_jadwal' => 'required|string',
             'hari_jam' => 'nullable|string',
-            'alamat_murid' => 'nullable|string',
+            'alamat_murid' => 'required|string',
             'status_pindah' => 'nullable|string',
             'tanggal_pindah' => 'nullable|date',
             'ke_bimba_intervio' => 'nullable|string',
@@ -352,6 +370,7 @@ if (!$isAdmin && $userUnit) {
             'keterangan_info' => 'nullable|string',
             'tgl_surat_garansi' => 'nullable|date',
             'tgl_tahapan'   => 'nullable|date',
+            'tgl_daftar'    => 'required|date',
         ]);
 
         // ← TAMBAHKAN INI setelah $data = $request->validate([...])

@@ -118,7 +118,7 @@
             <input type="hidden" name="sheet" value="Registrasi">
             <button type="submit" class="btn btn-success"
                 onclick="return confirm('Tarik data dari Sheet Registrasi sekarang?')">
-                Update Registrasi
+                Perbarui Data
             </button>
         </form>
 

@@ -12,7 +12,7 @@
                 <h1 class="fw-bold mb-3 mb-md-0">Daftar Produk</h1>
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="{{ route('produk.create') }}" class="btn btn-primary shadow-sm">
-                        <i class="fas fa-plus me-1"></i> Tambah Produk Baru
+                        <i class="fas fa-plus me-1"></i> Tambah Data
                     </a>
                     <a href="{{ route('produk.export') }}" class="btn btn-outline-success shadow-sm">
                         <i class="fas fa-file-export me-1"></i> Export ke Excel

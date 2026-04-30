@@ -97,10 +97,7 @@
             <span>🔄</span> Update SPKB
         </button>
         
-        <a href="{{ route('spp.create') }}" 
-           class="btn btn-primary btn-sm px-3 py-2 d-flex align-items-center gap-1">
-            <span>+</span> Tambah Pembayaran
-        </a>
+        
     </div>
 </div>                
                 {{-- Belum Bayar --}}

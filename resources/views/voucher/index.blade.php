@@ -12,7 +12,7 @@
         <i class="bi bi-plus-circle"></i> Spin Voucher
       </a>
       <a href="{{ route('voucher.create') }}" class="btn btn-primary me-2 shadow-sm">
-        <i class="bi bi-plus-circle"></i> Tambah Voucher
+        <i class="bi bi-plus-circle"></i> Tambah Data
       </a>
       <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
         <i class="bi bi-cloud-arrow-up"></i> Import Excel

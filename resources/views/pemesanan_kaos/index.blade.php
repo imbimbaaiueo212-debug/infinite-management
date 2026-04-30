@@ -9,7 +9,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">Pemesanan Atribut</h1>
                 <a href="{{ route('pemesanan_kaos.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Tambah Pemesanan Baru
+                    <i class="fas fa-plus me-2"></i>Tambah Data
                 </a>
             </div>
 

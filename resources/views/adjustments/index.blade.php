@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center px-3 py-3">
             <h5 class="mb-0 fw-bold text-primary">Daftar Potongan & Tambahan</h5>
             <a href="{{ route('adjustments.create') }}" class="btn btn-primary btn-sm rounded-pill px-4">
-                + Tambah
+                + Tambah Data
             </a>
         </div>
     </div>

@@ -12,7 +12,7 @@
         {{-- Tombol Tambah hanya Admin --}}
         @if($isAdmin ?? false)
             <a href="{{ route('rekap-progresif.create') }}" class="btn btn-primary mb-3">
-                Tambah Data Progresif
+                Tambah Data
             </a>
         @endif
 

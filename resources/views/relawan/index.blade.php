@@ -15,7 +15,7 @@
                         <h5 class="mb-0 fw-semibold">Daftar Absensi Relawan</h5>
                         <button type="button" class="btn btn-primary" 
                                 data-bs-toggle="modal" data-bs-target="#absenMasukModal">
-                            <i class="fa-solid fa-plus me-2"></i> Absen Masuk
+                            <i class="fa-solid fa-plus me-2"></i> Tambah Data
                         </button>
                     </div>
 

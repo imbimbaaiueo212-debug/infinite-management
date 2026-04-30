@@ -8,9 +8,11 @@
     <h1 class="mb-4">Daftar Garansi BCA 372</h1>
 
     {{-- TOMBOL --}}
+    <div class="px-3 px-md-0">
     <a href="{{ route('garansi-bca.create') }}" class="btn btn-primary mb-3">
-        Tambah Garansi BCA
+        Tambah Data
     </a>
+    </div>
 
     {{-- NOTIF --}}
     @if(session('success'))
@@ -120,7 +122,7 @@
     <div class="card shadow-sm border-warning">
         <div class="card-body">
 
-            <h4 class="mb-3 text-warning">
+            <h4 class="mb-3 text-success">
                 📝 Pengajuan Garansi Murid
             </h4>
 

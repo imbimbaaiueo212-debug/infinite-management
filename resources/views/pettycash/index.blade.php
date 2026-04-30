@@ -7,7 +7,7 @@
     <h4 class="mb-4 fw-bold text-primary">Petty Cash Transaksi</h4>
 
     <a href="{{ route('pettycash.create') }}" class="btn btn-primary mb-3 shadow-sm">
-        <i class="fas fa-plus me-2"></i> Tambah Transaksi
+        <i class="fas fa-plus me-2"></i> Tambah Data
     </a>
 
     @if (session('success'))

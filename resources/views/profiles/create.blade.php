@@ -23,22 +23,61 @@
 
         <!-- NIK & Nama -->
         <div class="row">
-            <div class="col-md-4 mb-3">
-    <label class="form-label">NIK <span class="text-danger">*</span></label>
-    <input type="text" name="nik" id="nik" class="form-control @error('nik') is-invalid @enderror"
-           value="{{ old('nik') }}" required readonly placeholder="Otomatis setelah pilih Unit biMBA">
-    @error('nik') <div class="invalid-feedback">{{ $message }}</div> @enderror
-</div>
+            <div class="row" id="unit-cabang-row" 
+                style="{{ auth()->user()->is_admin ? '' : 'display: none;' }}">
+
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Unit biMBA <span class="text-danger">*</span></label>
+
+                    @if (auth()->user()->is_admin ?? false)
+                        <select name="biMBA_unit" id="bimba_unit" class="form-control @error('biMBA_unit') is-invalid @enderror" required>
+                            <option value="">-- Pilih Unit biMBA --</option>
+                            @foreach($units as $namaUnit => $label)
+                                <option value="{{ $namaUnit }}" 
+                                        data-nocabang="{{ substr($label, strrpos($label, '(') + 1, -1) }}"
+                                        {{ old('bimba_unit') == $namaUnit ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @else
+                        @php $userUnit = auth()->user()->bimba_unit ?? null; @endphp
+                        @if($userUnit)
+                            <input type="text" class="form-control" value="{{ $userUnit }}" readonly>
+                            <input type="hidden" name="biMBA_unit" value="{{ trim($userUnit) }}">
+                        @else
+                            <input type="text" class="form-control is-invalid" value="Unit Anda belum diatur" readonly>
+                            <div class="invalid-feedback">Hubungi admin untuk mengatur unit Anda</div>
+                            <input type="hidden" name="biMBA_unit" value="">
+                        @endif
+                    @endif
+                    @error('bimba_unit') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">No Cabang</label>
+                    <input type="text" id="no_cabang" name="no_cabang" class="form-control" readonly>
+                </div>
+    
+            <div class="col-md-2 mb-3">
+                <label class="form-label">NIK <span class="text-danger">*</span></label>
+                <input type="text" name="nik" id="nik" class="form-control @error('nik') is-invalid @enderror"
+                    value="{{ old('nik') }}" required readonly placeholder="Otomatis setelah pilih Unit biMBA">
+                @error('nik') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
+
+            <div class="col-md-2 mb-3">
+                <label class="form-label">No Urut</label>
+                <input type="number" name="no_urut" class="form-control" value="{{ old('no_urut') }}" readonly>
+            </div>
+
             <div class="col-md-5 mb-3">
                 <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                 <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror"
                        value="{{ old('nama') }}" required>
                 @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label">No Urut</label>
-                <input type="number" name="no_urut" class="form-control" value="{{ old('no_urut') }}" readonly>
-            </div>
+            
         </div>
 
         <!-- Jabatan, Status, Departemen -->
@@ -53,16 +92,17 @@
                 </select>
             </div>
             <!-- Status Relawan -->
-<div class="col-md-4 mb-3">
-    <label class="form-label">Status Relawan <span class="text-danger">*</span></label>
-    <select name="status_karyawan" id="status_karyawan" class="form-control @error('status_karyawan') is-invalid @enderror" required>
-        <option value="">-- Pilih Status --</option>
-        @foreach($statusOptions as $status)
-            <option value="{{ $status }}" {{ old('status_karyawan') == $status ? 'selected' : '' }}>{{ $status }}</option>
-        @endforeach
-    </select>
-    @error('status_karyawan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-</div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Status Relawan <span class="text-danger">*</span></label>
+                <select name="status_karyawan" id="status_karyawan" class="form-control @error('status_karyawan') is-invalid @enderror" required>
+                    <option value="">-- Pilih Status --</option>
+                    @foreach($statusOptions as $status)
+                        <option value="{{ $status }}" {{ old('status_karyawan') == $status ? 'selected' : '' }}>{{ $status }}</option>
+                    @endforeach
+                </select>
+                @error('status_karyawan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
+
             <div class="col-md-4 mb-3">
                 <label class="form-label">Departemen</label>
                 <select name="departemen" class="form-control">
@@ -76,41 +116,9 @@
 
         {{-- UNIT biMBA & NO CABANG – SELALU MUNCUL UNTUK SEMUA JABATAN --}}
         {{-- UNIT biMBA & NO CABANG – SELALU MUNCUL UNTUK SEMUA JABATAN --}}
-<div class="row" id="unit-cabang-row" 
-     style="{{ auth()->user()->is_admin ? '' : 'display: none;' }}">
 
-    <div class="col-md-8 mb-3">
-        <label class="form-label">Unit biMBA <span class="text-danger">*</span></label>
 
-        @if (auth()->user()->is_admin ?? false)
-            <select name="biMBA_unit" id="bimba_unit" class="form-control @error('biMBA_unit') is-invalid @enderror" required>
-                <option value="">-- Pilih Unit biMBA --</option>
-                @foreach($units as $namaUnit => $label)
-                    <option value="{{ $namaUnit }}" 
-                            data-nocabang="{{ substr($label, strrpos($label, '(') + 1, -1) }}"
-                            {{ old('bimba_unit') == $namaUnit ? 'selected' : '' }}>
-                        {{ $label }}
-                    </option>
-                @endforeach
-            </select>
-        @else
-            @php $userUnit = auth()->user()->bimba_unit ?? null; @endphp
-            @if($userUnit)
-                <input type="text" class="form-control" value="{{ $userUnit }}" readonly>
-                <input type="hidden" name="biMBA_unit" value="{{ trim($userUnit) }}">
-            @else
-                <input type="text" class="form-control is-invalid" value="Unit Anda belum diatur" readonly>
-                <div class="invalid-feedback">Hubungi admin untuk mengatur unit Anda</div>
-                <input type="hidden" name="biMBA_unit" value="">
-            @endif
-        @endif
-        @error('bimba_unit') <div class="invalid-feedback">{{ $message }}</div> @enderror
-    </div>
-
-    <div class="col-md-4 mb-3">
-        <label class="form-label">No Cabang</label>
-        <input type="text" id="no_cabang" name="no_cabang" class="form-control" readonly>
-    </div>
+    
 </div>
 
         <!-- Contoh yang benar sekarang (pakai name netral) -->

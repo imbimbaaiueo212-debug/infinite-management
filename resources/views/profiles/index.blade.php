@@ -59,7 +59,7 @@
         <a href="{{ route('profiles.create') }}"
            class="btn btn-primary btn-native w-full shadow-2xl hover:shadow-3xl transition-all block text-center mb-5">
             <i class="fas fa-user-plus text-3xl me-4"></i>
-            <span class="font-bold text-xl">Tambah Relawan Baru</span>
+            <span class="font-bold text-xl">Tambah Data</span>
         </a>
 
         @if(session('success'))
@@ -78,7 +78,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="mb-0 fw-semibold">Filter & Pencarian</h5>
                 <a href="{{ route('profiles.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i> Tambah Relawan Baru
+                    <i class="fas fa-plus me-2"></i> Tambah Data
                 </a>
             </div>
 

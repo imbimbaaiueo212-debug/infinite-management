@@ -6,7 +6,7 @@
 <div class="container py-4">
     <h4 class="mb-4">FORM PENGAJUAN KAS/BARANG</h4>
 
-    <a href="{{ route('pengajuan.create') }}" class="btn btn-primary mb-3 shadow-sm">+ Tambah Pengajuan</a>
+    <a href="{{ route('pengajuan.create') }}" class="btn btn-primary mb-3 shadow-sm">+ Tambah Data</a>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">

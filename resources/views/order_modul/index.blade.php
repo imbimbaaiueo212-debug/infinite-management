@@ -8,7 +8,7 @@
         <h3 class="mb-0">Order Modul</h3>
 
         <a href="{{ route('order_modul.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Tambah Order
+            <i class="fas fa-plus"></i> Tambah Data
         </a>
     </div>
 

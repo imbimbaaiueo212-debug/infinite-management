@@ -9,11 +9,11 @@
                 <div class="d-flex flex-wrap gap-2 mb-4">
                     <a href="{{ route('buku_induk.create') }}" class="btn btn-primary">+ Tambah Data</a>
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal">
-                        Import Data Excel
+                        Unggah Data Excel
                     </button>
                     <a href="{{ route('buku_induk.export') . '?' . http_build_query(request()->query()) }}"
                         class="btn btn-info">
-                        <i class="fas fa-file-excel"></i> Export ke Excel
+                        <i class="fas fa-file-excel"></i> Unduh Data Excel
                     </a>
                 </div>
 

@@ -7,12 +7,12 @@
     <div class="card shadow-sm border-0">
         <div class="card-body px-0 px-md-3">
 
-            <h1 class="mb-4 px-3 px-md-0">Daftar Sertifikat Beasiswa</h1>
+            <h1 class="mb-4 px-3 px-md-0">Masa Aktif (Dhuafa & BNF)</h1>
 
             <div class="px-3 px-md-0">
                 <a href="{{ route('sertifikat-beasiswa.create') }}"
                    class="btn btn-primary mb-3">
-                    Tambah Sertifikat Beasiswa
+                    Tambah Data
                 </a>
 
                 @if(session('success'))

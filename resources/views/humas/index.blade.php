@@ -29,20 +29,20 @@
                     </div>
 
                     @if (auth()->check() && (auth()->user()->is_admin ?? false))
-    <div class="col-md-4">
-        <label class="form-label fw-bold">Unit biMBA</label>
-        <select name="unit" class="form-select">
-            <option value="">-- Semua Unit --</option>
-            @foreach($humas->pluck('bimba_unit')->unique()->sort() as $unit)
-                @if($unit)
-                    <option value="{{ $unit }}" {{ request('unit') == $unit ? 'selected' : '' }}>
-                        {{ $unit }}
-                    </option>
-                @endif
-            @endforeach
-        </select>
-    </div>
-@endif
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Unit biMBA</label>
+                            <select name="unit" class="form-select">
+                                <option value="">-- Semua Unit --</option>
+                                @foreach($humas->pluck('bimba_unit')->unique()->sort() as $unit)
+                                    @if($unit)
+                                        <option value="{{ $unit }}" {{ request('unit') == $unit ? 'selected' : '' }}>
+                                            {{ $unit }}
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
 
                     <div class="col-md-4 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
@@ -66,7 +66,7 @@
         <i class="bi bi-download"></i> Export ke Excel
     </a>
     <a href="{{ route('humas.create') }}" class="btn btn-success btn-sm">
-        + Tambah Manual
+        + Tambah Data
     </a>
 </div>
 

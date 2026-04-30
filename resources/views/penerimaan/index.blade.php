@@ -10,7 +10,7 @@
                     <h4 class="mb-0">Data Penerimaan</h4>
                     <div>
                         <a href="{{ route('penerimaan.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-lg me-2"></i>Tambah Penerimaan
+                            <i class="bi bi-plus-lg me-2"></i>Tambah Data
                         </a>
                     </div>
                 </div>

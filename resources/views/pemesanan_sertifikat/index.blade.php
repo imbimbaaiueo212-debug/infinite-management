@@ -5,7 +5,9 @@
 @section('content')
 <div class="card card-body">
     <h1>Pemesanan Sertifikat</h1>
-    <a href="{{ route('pemesanan_sertifikat.create') }}" class="btn btn-primary mb-3">Tambah Pemesanan</a>
+    <div class="px-3 px-md-0">
+    <a href="{{ route('pemesanan_sertifikat.create') }}" class="btn btn-primary mb-3">Tambah Data</a>
+    </div>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
