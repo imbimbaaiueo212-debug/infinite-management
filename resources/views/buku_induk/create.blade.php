@@ -140,48 +140,69 @@
             </div>
 
             {{-- Tahapan --}}
-            <div class="col-md-6 mb-3 fw-bold">
+           <div class="col-md-6 mb-3 fw-bold">
                 <label for="tahap">Tahapan <span class="text-danger">*</span></label>
-                <select name="tahap" id="tahap" class="form-control">
+                <select name="tahap" id="tahap" class="form-control w-100">
                     <option value="">-- Pilih --</option>
                     @foreach($tahapanOptions as $t)
-                        <option value="{{ $t }}" {{ old('tahap') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                        <option value="{{ $t }}">{{ $t }}</option>
                     @endforeach
                 </select>
             </div>
 
-            <div class="col-md-6 mb-3">
-                <label for="tgl_tahapan" class="text-success fw-bold">Tanggal Tahapan</label>
-                <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control" value="{{ old('tgl_tahapan') }}">
-            </div>
+                <div class="col-md-6 mb-3">
+                    <label for="tgl_tahapan" class="text-success fw-bold">Tanggal Tahapan</label>
+                    <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control">
+                </div>
 
             {{-- Sumber Informasi --}}
             <div class="col-md-6 mb-3 fw-bold">
-                <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
-                <select name="info" id="info" class="form-control @error('info') is-invalid @enderror" required>
-                    <option value="">-- Pilih --</option>
-                    @foreach($infoOptions as $opt)
-                        <option value="{{ $opt }}" {{ old('info') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                    @endforeach
-                </select>
-                @error('info') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
+    <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
+    <select name="info" id="info"
+        class="form-control @error('info') is-invalid @enderror" required>
+        <option value="">-- Pilih --</option>
+        @foreach($infoOptions as $opt)
+            <option value="{{ $opt }}"
+                {{ old('info') == $opt ? 'selected' : '' }}>
+                {{ $opt }}
+            </option>
+        @endforeach
+    </select>
+    @error('info')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
 
-            <div class="col-md-6 mb-3 fw-bold" id="keterangan_info_wrapper" style="display: none;">
-                <label for="keterangan_info">Keterangan Info</label>
-                <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
-            </div>
+<div class="col-md-6 mb-3 fw-bold"
+     id="keterangan_info_wrapper"
+     style="display: none;">
+    <label for="keterangan_info">Keterangan Info</label>
+    <textarea name="keterangan_info"
+        id="keterangan_info"
+        class="form-control"
+        rows="2">{{ old('keterangan_info') }}</textarea>
+</div>
             <!-- Kelas -->
             <div class="col-md-6 mb-3 fw-bold">
-                <label for="kelas">Kelas <span class="text-danger">*</span></label>
-                <select name="kelas" id="kelas" class="form-control" required>
-                    <option value="">-- Pilih Kelas --</option>
-                    @foreach($kelasOptions as $k)
-                        <option value="{{ $k }}" {{ old('kelas') == $k ? 'selected' : '' }}>{{ $k }}</option>
-                    @endforeach
-                </select>
-                @error('kelas') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
+    <label for="kelas">Kelas <span class="text-danger">*</span></label>
+
+    <select name="kelas" id="kelas"
+        class="form-control @error('kelas') is-invalid @enderror"
+        required>
+        <option value="">-- Pilih Kelas --</option>
+
+        @foreach($kelasOptions as $k)
+            <option value="{{ $k }}"
+                {{ old('kelas') == $k ? 'selected' : '' }}>
+                {{ $k }}
+            </option>
+        @endforeach
+    </select>
+
+    @error('kelas')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
 
             <!-- Gol -->
             <div class="col-md-6 mb-3 fw-bold">
@@ -506,6 +527,13 @@
     </form>
 </div>
 
+<style>
+        .select2-container .select2-selection--single {
+            height: calc(1.5em + .75rem + 2px);
+            padding-top: .375rem;
+        }
+</style>
+
 <!-- JavaScript -->
 <script>
     window.unitsData = {!! $unitsJson !!};
@@ -702,53 +730,136 @@ function hitungLama() {
         golSelect?.addEventListener('change', updateSPP);
         kdSelect?.addEventListener('change', updateSPP);
         updateSPP();
+        //===========TAHAPAN==================
 
-        // ==================== TAHAP ====================
-        const tahapSelect = document.getElementById('tahap');
-        const tglTahapan = document.getElementById('tgl_tahapan');
+            $('#tahap').select2({
+        width: 'resolve',
+        placeholder: '-- Pilih --',
+        allowClear: true
+    });
 
-        function handleTahapChange() {
-            if (!tahapSelect || !tglTahapan) return;
+    // ==================== PASTE SUPPORT SELECT2 ====================
+    $(document).on('paste', '.select2-search__field', function (e) {
+        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
+            .getData('text')
+            .trim()
+            .toLowerCase();
 
-            const tahap = tahapSelect.value;
+        let select = $('#tahap');
 
-            if (tahap === 'Persiapan' || tahap === 'Lanjutan') {
-                tglTahapan.parentElement.style.display = 'block';
+        let found = false;
 
-                if (!tglTahapan.value) {
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    const dd = String(today.getDate()).padStart(2, '0');
-                    tglTahapan.value = `${yyyy}-${mm}-${dd}`;
-                }
-            } else {
-                tglTahapan.value = '';
-                tglTahapan.parentElement.style.display = 'none';
+        select.find('option').each(function () {
+            if ($(this).text().toLowerCase() === pasted) {
+                select.val($(this).val()).trigger('change');
+                found = true;
             }
-        }
+        });
 
-        tahapSelect?.addEventListener('change', handleTahapChange);
-        handleTahapChange();
+        if (!found) {
+            select.val(null).trigger('change'); // kosong kalau tidak cocok
+        }
+    });
+    const tahapSelect = $('#tahap');
+    const tglWrapper = $('#tgl_tahapan').closest('.col-md-6');
+
+    // ==================== INITIAL HIDE ====================
+    if (!tahapSelect.val()) {
+        tglWrapper.hide();
+    }
+
+    // ==================== ON CHANGE ====================
+    tahapSelect.on('change', function () {
+        let val = $(this).val();
+
+        if (val === 'Persiapan' || val === 'Lanjutan') {
+            tglWrapper.show();
+        } else {
+            $('#tgl_tahapan').val('');
+            tglWrapper.hide();
+        }
+    });
 
         // ==================== INFO LAINNYA ====================
-        const infoSelect = document.getElementById('info');
-        const wrapper = document.getElementById('keterangan_info_wrapper');
+$(document).ready(function () {
 
-        function toggleKeterangan() {
-            if (!infoSelect || !wrapper) return;
+    // =========================
+    // INIT SELECT2
+    // =========================
+    $('#info').select2({
+        width: '100%',
+        placeholder: '-- Pilih --',
+        allowClear: true
+    });
+    $('#kelas').select2({
+        width: '100%',
+        placeholder: '-- Pilih Kelas --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    });
+    $('#gol').select2({
+        width: '100%',
+        placeholder: '-- Pilih Gol --',
+        allowClear: true,
+        minimumResultsForSearch: 0
+    })
 
-            if (infoSelect.value === 'Lainnya') {
-                wrapper.style.display = 'block';
-            } else {
-                wrapper.style.display = 'none';
-                const input = wrapper.querySelector('textarea');
-                if (input) input.value = '';
-            }
+    // =========================
+    // TOGGLE KETERANGAN
+    // =========================
+    function toggleKeterangan() {
+        let val = $('#info').val();
+
+        if (val && val.toLowerCase() === 'lainnya') {
+            $('#keterangan_info_wrapper').slideDown(150);
+        } else {
+            $('#keterangan_info_wrapper').slideUp(150);
+            $('#keterangan_info').val('');
         }
+    }
 
-        infoSelect?.addEventListener('change', toggleKeterangan);
-        toggleKeterangan();
+    // WAJIB pakai ini (Select2 event)
+    $('#info').on('change.select2', toggleKeterangan);
+
+    // Jalankan saat load (edit mode / old value)
+    toggleKeterangan();
+
+    // =========================
+    // SUPPORT PASTE DARI EXCEL
+    // =========================
+    $(document).on('paste', '.select2-search__field', function (e) {
+
+        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
+            .getData('text')
+            .trim()
+            .toLowerCase();
+
+        // Ambil select yang aktif
+        let selectId = $(this)
+            .closest('.select2-container')
+            .prev('select')
+            .attr('id');
+
+        // hanya untuk #info
+        if (selectId !== 'info') return;
+
+        let select = $('#info');
+        let found = false;
+
+        select.find('option').each(function () {
+            if ($(this).text().toLowerCase() === pasted) {
+                select.val($(this).val()).trigger('change.select2');
+                found = true;
+            }
+        });
+
+        // kalau tidak cocok → kosong
+        if (!found) {
+            select.val(null).trigger('change.select2');
+        }
+    });
+
+});
 
         // ==================== LEVEL ====================
         const level = document.getElementById('level');
