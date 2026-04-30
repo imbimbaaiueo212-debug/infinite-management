@@ -6,12 +6,11 @@ use App\Models\BukuInduk;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
 use Illuminate\Contracts\Database\Query\Builder;
 
-class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvents
 {
     protected $filters;
 
@@ -22,15 +21,16 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, ShouldAut
 
     public function query(): Builder
     {
-        $query = BukuInduk::query()->with('jadwal');
+        $query = BukuInduk::query();
 
-        // Filter sesuai halaman index
         if (!empty($this->filters['murid'])) {
             $query->where('nim', $this->filters['murid']);
         }
+
         if (!empty($this->filters['unit'])) {
             $query->where('bimba_unit', $this->filters['unit']);
         }
+
         if (!empty($this->filters['status'])) {
             $query->where('status', $this->filters['status']);
         }
@@ -39,181 +39,153 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, ShouldAut
     }
 
     /**
-     * Header ← TAMBAH 'tgl_daftar' setelah 'nim'
+     * 🔥 HEADER 2 BARIS (SUDAH FIX & SEIMBANG)
      */
     public function headings(): array
     {
         return [
-            'nim',
-            'tgl_daftar',          // ← NEW: POSISI 2
-            'nama',
-            'unit',
-            'no cabang',
-            'kelas',
-            'gol',
-            'kd',
-            'spp',
-            'tgl_masuk',
-            'status',
-            'tmpt_lahir',
-            'tgl_lahir',
-            'usia',
-            'lama_bljr',
-            'tahap',
-            'tgl_keluar',
-            'kategori_keluar',
-            'alasan',
-            'guru',
-            'orangtua',
-            'no_telp_hp',
-            'alamat_murid',
-            'petugas_trial',
-            'note',
-            'periode',
-            'tgl_mulai',
-            'tgl_akhir',
-            'tgl_bayar',
-            'tgl_selesai',
-            'level',
-            'jenis_kbm',
-            'kode_jadwal',
-            'hari_jam',
-            'no_cab_merge',
-            'no_pembayaran_murid',
-            'note_garansi',
-            'alert',
-            'alert2',
-            'asal_modul',
-            'keterangan_optional',
-            'status_pindah',
-            'tanggal_pindah',
-            'ke_bimba_intervio',
-            'keterangan',
+            // ===== GROUP =====
+            [
+                'BUKU INDUK MURID biMBA AIUEO','','','','','','','','','','',
+
+                'MASA AKTIF (DHUAFA & BNF)','','',
+
+                'PAKET 72','','','',
+
+                'SUPPLY MODUL','',
+
+                'JADWAL','',
+
+                'PINDAH','','',
+
+                'LAINNYA','','','','','','','','','','','','',''
+            ],
+
+            // ===== DETAIL =====
+            [
+                'NIM','TGL DAFTAR','NAMA','UNIT','NO CABANG','KELAS','GOL','KD','SPP','TGL MASUK','STATUS',
+
+                'PERIODE','TGL MULAI','TGL AKHIR',
+
+                'TGL BAYAR','TGL SELESAI','ALERT','ALERT 2',
+
+                'ASAL MODUL','KETERANGAN',
+
+                'KODE JADWAL','HARI/JAM',
+
+                'STATUS PINDAH','TGL PINDAH','KE INTERVIO',
+
+                'GURU','ORANGTUA','NO HP','ALAMAT','LEVEL','JENIS KBM',
+                'NOTE','NOTE GARANSI','NO VA','NO CAB MERGE'
+            ]
         ];
     }
 
     /**
-     * Mapping data ← TAMBAH tgl_daftar
+     * 🔥 DATA
      */
     public function map($item): array
     {
-        // Bersihkan SPP jadi angka murni
         $sppClean = $item->spp ? (int) str_replace(['.', 'Rp', ' '], '', $item->spp) : null;
 
         return [
-            $item->nim ?? '',
-            $item->tgl_daftar ?? '',           // ← NEW: POSISI 2
-            $item->nama ?? '',
-            $item->bimba_unit ?? '',
-            $item->no_cabang ?? '',
-            $item->kelas ?? '',
-            $item->gol ?? '',
-            $item->kd ?? '',
+            $item->nim,
+            $item->tgl_daftar,
+            $item->nama,
+            $item->bimba_unit,
+            $item->no_cabang,
+            $item->kelas,
+            $item->gol,
+            $item->kd,
             $sppClean,
-            $item->tgl_masuk ?? '',
-            $item->status ?? '',
-            $item->tmpt_lahir ?? '',
-            $item->tgl_lahir ?? '',
-            $item->usia ?? '',
-            $item->lama_bljr ?? '',
-            $item->tahap ?? '',
-            $item->tgl_keluar ?? '',
-            $item->kategori_keluar ?? '',
-            $item->alasan ?? '',
-            $item->guru ?? '',
-            $item->orangtua ?? '',
-            $item->no_telp_hp ?? '',
-            $item->alamat_murid ?? '',
-            $item->petugas_trial ?? '',
-            $item->note ?? '',
-            $item->periode ?? '',
-            $item->tgl_mulai ?? '',
-            $item->tgl_akhir ?? '',
-            $item->tgl_bayar ?? '',
-            $item->tgl_selesai ?? '',
-            $item->level ?? '',
-            $item->jenis_kbm ?? '',
-            $item->kode_jadwal ?? '',
-            $item->hari_jam ?? '',
-            $item->no_cab_merge ?? '',
-            $item->no_pembayaran_murid ?? '',
-            $item->note_garansi ?? '',
-            $item->alert ?? '',
-            $item->alert2 ?? '',
-            $item->asal_modul ?? '',
-            $item->keterangan_optional ?? '',
-            $item->status_pindah ?? '',
-            $item->tanggal_pindah ?? '',
-            $item->ke_bimba_intervio ?? '',
-            $item->keterangan ?? '',
+            $item->tgl_masuk,
+            $item->status,
+
+            $item->periode,
+            $item->tgl_mulai,
+            $item->tgl_akhir,
+
+            $item->tgl_bayar,
+            $item->tgl_selesai,
+            $item->alert,
+            $item->alert2,
+
+            $item->asal_modul,
+            $item->keterangan_optional,
+
+            $item->kode_jadwal,
+            $item->hari_jam,
+
+            $item->status_pindah,
+            $item->tanggal_pindah,
+            $item->ke_bimba_intervio,
+
+            $item->guru,
+            $item->orangtua,
+            $item->no_telp_hp,
+            $item->alamat_murid,
+            $item->level,
+            $item->jenis_kbm,
+            $item->note,
+            $item->note_garansi,
+            $item->no_pembayaran_murid,
+            $item->no_cab_merge,
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    /**
+     * 🔥 STYLE + MERGE + RAPIIIN
+     */
+    public function registerEvents(): array
     {
         return [
-            // Header style
-            1 => [
-                'font' => [
-                    'bold' => true,
-                    'size' => 12,
-                    'color' => ['argb' => 'FF000000'],
-                ],
-                'fill' => [
-                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FFD9EAD3'],
-                ],
-                'alignment' => [
-                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                ],
-            ],
+            AfterSheet::class => function (AfterSheet $event) {
 
-            // Format tanggal ← TAMBAH kolom B (tgl_daftar)
-            'B' => [  // ← NEW: tgl_daftar
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'J' => [  // tgl_masuk
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'L' => [  // tgl_lahir
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'P' => [  // tgl_keluar
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'U' => [  // tgl_mulai
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'V' => [  // tgl_akhir
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'W' => [  // tgl_bayar
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'X' => [  // tgl_selesai
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
-            'AG' => [ // tanggal_pindah
-                'numberFormat' => [
-                    'formatCode' => 'dd-mm-yyyy',
-                ],
-            ],
+                $sheet = $event->sheet->getDelegate();
+
+                // ===== MERGE HEADER =====
+                $sheet->mergeCells('A1:K1');   // Buku Induk
+
+                $sheet->mergeCells('L1:N1');   // Masa Aktif ✅ FIX
+
+                $sheet->mergeCells('O1:R1');   // Paket 72
+
+                $sheet->mergeCells('S1:T1');   // Supply
+
+                $sheet->mergeCells('U1:V1');   // Jadwal
+
+                $sheet->mergeCells('W1:Y1');   // Pindah
+
+                $sheet->mergeCells('Z1:AJ1');  // Lainnya
+
+                // ===== STYLE HEADER =====
+                $sheet->getStyle('A1:AJ2')->getFont()->setBold(true)->setSize(11);
+
+                $sheet->getStyle('A1:AJ2')->getAlignment()
+                    ->setHorizontal('center')
+                    ->setVertical('center');
+
+                // Background header
+                $sheet->getStyle('A1:AJ1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFD9EAD3');
+
+                // Border header
+                $sheet->getStyle('A1:AJ2')->getBorders()->getAllBorders()
+                    ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                // Freeze
+                $sheet->freezePane('A3');
+
+                // Auto width
+                foreach (range('A', 'AJ') as $col) {
+                    $sheet->getColumnDimension($col)->setAutoSize(true);
+                }
+
+                // Tinggi row
+                $sheet->getRowDimension(1)->setRowHeight(30);
+                $sheet->getRowDimension(2)->setRowHeight(22);
+            }
         ];
     }
 }

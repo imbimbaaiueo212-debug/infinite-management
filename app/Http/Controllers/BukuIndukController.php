@@ -34,7 +34,7 @@ class BukuIndukController extends Controller
         ->whereNotNull('tgl_masuk')
         ->whereDate('tgl_masuk', '<=', now()->subDays(30))
         ->update([
-            'status' => 'aktif'
+            'status' => 'Aktif'
         ]);
 
         // ========================================================
@@ -105,9 +105,9 @@ $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
         // HITUNG TOTAL
         // ========================================================
         $filteredQuery = clone $query;
-        $totalBaru = (clone $filteredQuery)->where('status', 'baru')->count();
-        $totalAktif = (clone $filteredQuery)->where('status', 'aktif')->count();
-        $totalKeluar = (clone $filteredQuery)->where('status', 'keluar')->count();
+        $totalBaru = (clone $filteredQuery)->where('status', 'Baru')->count();
+        $totalAktif = (clone $filteredQuery)->where('status', 'Aktif')->count();
+        $totalKeluar = (clone $filteredQuery)->where('status', 'Keluar')->count();
 
         // ========================================================
         // PAGINATE & RETURN
@@ -416,6 +416,7 @@ $golOptions = $HargaSaptataruna
 
             // 🔥 sync juga
             $this->syncGaransiBCA($newRecord);
+            $this->syncBukuIndukToBeasiswa($newRecord);
 
             BukuIndukHistory::create([
                 'buku_induk_id' => $newRecord->id,

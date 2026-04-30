@@ -99,9 +99,14 @@
 
             {{-- Tgl Lahir --}}
             <div class="col-md-6 mb-3 fw-bold">
-                <label for="tgl_lahir">Tanggal Lahir <span class="text-danger">*</span></label>
-                <input type="date" name="tgl_lahir" id="tgl_lahir" class="form-control" value="{{ old('tgl_lahir') }}">
-            </div>
+    <label for="tgl_lahir">Tanggal Lahir <span class="text-danger">*</span></label>
+    <input type="text" 
+        name="tgl_lahir" 
+        id="tgl_lahir" 
+        class="form-control" 
+        placeholder="dd/mm/yyyy atau yyyy-mm-dd"
+        value="{{ old('tgl_lahir') }}">
+</div>
 
              {{-- Usia --}}
             <div class="col-md-6 mb-3">
@@ -111,15 +116,21 @@
 
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="tgl_daftar">Tanggal Daftar <span class="text-danger">*</span></label>
-                <input type="date" name="tgl_daftar" id="tgl_daftar" class="form-control" value="{{ old('tgl_daftar') }}">
-                <small class="text-muted">Jika kosong, akan otomatis diisi tanggal hari ini.</small>
+                <input type="text" 
+                    name="tgl_daftar" 
+                    id="tgl_daftar" 
+                    class="form-control" 
+                    placeholder="dd/mm/yyyy atau yyyy-mm-dd"
+                    value="{{ old('tgl_daftar') }}">
+                <small class="text-muted">Bisa paste dari Excel</small>
             </div>
 
             {{-- Tgl Masuk --}}
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="tgl_masuk">Tanggal Aktif <span class="text-danger">*</span></label>
-                <input type="date" name="tgl_masuk" id="tgl_masuk" class="form-control" value="{{ old('tgl_masuk') }}" required>
-                @error('tgl_masuk') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                <input type="text" name="tgl_masuk" id="tgl_masuk" class="form-control" placeholder="dd/mm/yyyy atau yyy-mm-dd" 
+                value="{{ old('tgl_masuk') }}" required>
+                <small class="text-muted">Contoh</small>
             </div>
 
             {{-- Lama Belajar --}}
@@ -304,7 +315,7 @@
                 <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
             </div>
 
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-3 fw-bold">
                 <label for="keterangan_level">Keterangan Level</label>
                 <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="1">{{ old('keterangan_level') }}</textarea>
             </div>
@@ -402,7 +413,7 @@
     <div class="row">
 
         <div class="col-md-4 mb-3">
-            <label for="tgl_bayar" class="form-label">Tanggal Bayar</label>
+            <label for="tgl_bayar" class="form-label fw-bold">Tanggal Bayar</label>
             <input type="date" name="tgl_bayar" id="tgl_bayar" class="form-control">
         </div>
 
@@ -435,7 +446,7 @@
                 </select>
             </div>
 
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-3 fw-bold">
                 <label for="keterangan_optional">Keterangan Optional</label>
                 <input type="text" name="keterangan_optional" id="keterangan_optional" class="form-control" value="{{ old('keterangan_optional') }}">
             </div>
@@ -471,13 +482,13 @@
 
             <h4 class="col-12 mb-3">📝 SURAT GARANSI BCA 372 BEBAS</h4>
 
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-3 fw-bold">
                 <label for="tgl_surat_garansi">Tanggal Diberikan Surat</label>
                 <input type="date" name="tgl_surat_garansi" id="tgl_surat_garansi" class="form-control" value="{{ old('tgl_surat_garansi')}}">
             </div>
 
             <!-- Note Garansi -->
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-3 fw-bold">
                 <label for="note_garansi">Note Garansi</label>
                 <select name="note_garansi" id="note_garansi" class="form-control">
                     <option value="">-- Pilih --</option>
@@ -497,301 +508,393 @@
 
 <!-- JavaScript -->
 <script>
-window.unitsData = {!! $unitsJson !!};
-window.guruByUnit = {!! json_encode($guruByUnit ?? []) !!};
+    window.unitsData = {!! $unitsJson !!};
+    window.guruByUnit = {!! json_encode($guruByUnit ?? []) !!};
 
-document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
 
-    const isAdmin = {{ $isAdmin ? 'true' : 'false' }};
-    let currentUnit = '{{ $userUnit ?? '' }}';
+        const isAdmin = {{ $isAdmin ? 'true' : 'false' }};
+        let currentUnit = '{{ $userUnit ?? '' }}';
 
-    const unitSelect = document.getElementById('bimba_unit');
-    const guruSelect = document.getElementById('guru');
+        // Elements
+        const unitSelect = document.getElementById('bimba_unit');
+        const guruSelect = document.getElementById('guru');
 
-    const nimPreview = document.getElementById('nim-preview');
-    const nimInput = document.getElementById('nim');
-    const nimSuffix = document.getElementById('nim_suffix');
-    const noCabangInput = document.getElementById('no_cabang');
+        const nimPreview = document.getElementById('nim-preview');
+        const nimInput = document.getElementById('nim');
+        const nimSuffix = document.getElementById('nim_suffix');
+        const noCabangInput = document.getElementById('no_cabang');
 
-    // ==================== UPDATE NIM ====================
-    function updateNim(unitValue) {
-        if (!unitValue) {
-            if (nimPreview) nimPreview.textContent = '-----';
-            if (nimInput) nimInput.value = '';
-            return;
+        // ==================== UPDATE NIM ====================
+        function updateNim(unitValue) {
+            if (!unitValue) {
+                if (nimPreview) nimPreview.textContent = '-----';
+                if (nimInput) nimInput.value = '';
+                return;
+            }
+
+            fetch(`/buku-induk/next-suffix?bimba_unit=${encodeURIComponent(unitValue)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const nextSuffix = data.next_suffix || '0001';
+                    const padded = String(nextSuffix).padStart(4, '0');
+                    const prefix = window.unitsData?.[unitValue] || '-----';
+                    const fullNim = prefix + padded;
+
+                    if (nimPreview) nimPreview.textContent = fullNim;
+                    if (nimInput) nimInput.value = fullNim;
+                    if (nimSuffix) nimSuffix.value = padded;
+                })
+                .catch(() => {
+                    if (nimPreview) nimPreview.textContent = 'Error load NIM';
+                });
         }
 
-        fetch(`/buku-induk/next-suffix?bimba_unit=${encodeURIComponent(unitValue)}`)
-            .then(res => res.json())
-            .then(data => {
-                const nextSuffix = data.next_suffix || '0001';
-                const padded = String(nextSuffix).padStart(4, '0');
-                const prefix = window.unitsData?.[unitValue] || '-----';
-                const fullNim = prefix + padded;
+        // ==================== UPDATE NO CABANG ====================
+        function updateNoCabang(unitValue) {
+            if (!noCabangInput) return;
+            noCabangInput.value = window.unitsData?.[unitValue] || '';
+        }
 
-                if (nimPreview) nimPreview.textContent = fullNim;
-                if (nimInput) nimInput.value = fullNim;
-                if (nimSuffix) nimSuffix.value = padded;
-            })
-            .catch(() => {
-                if (nimPreview) nimPreview.textContent = 'Error load NIM';
+        // ==================== FILTER GURU BY UNIT ====================
+        function filterGuruByUnit(unitValue) {
+            if (!guruSelect) return;
+
+            const allowedGuru = window.guruByUnit?.[unitValue] || [];
+
+            // Hapus semua option kecuali placeholder
+            while (guruSelect.options.length > 1) {
+                guruSelect.remove(1);
+            }
+
+            if (allowedGuru.length > 0) {
+                allowedGuru.forEach(guruNama => {
+                    const option = new Option(guruNama, guruNama);
+                    guruSelect.appendChild(option);
+                });
+            } else {
+                // Fallback: tampilkan semua guru
+                @foreach($profil as $g)
+                    const option{{ $loop->index }} = new Option('{{ addslashes($g->nama) }}', '{{ addslashes($g->nama) }}');
+                    guruSelect.appendChild(option{{ $loop->index }});
+                @endforeach
+            }
+
+            guruSelect.value = '';
+        }
+
+        // ==================== HANDLE UNIT CHANGE ====================
+        function handleUnitChange(unitValue) {
+            currentUnit = unitValue;
+
+            updateNim(unitValue);
+            updateNoCabang(unitValue);
+            filterGuruByUnit(unitValue);
+        }
+
+        // ==================== EVENT LISTENER UNIT (ADMIN ONLY) ====================
+        if (isAdmin && unitSelect) {
+            unitSelect.addEventListener('change', function () {
+                handleUnitChange(this.value);
             });
-    }
 
-    // ==================== UPDATE NO CABANG ====================
-    function updateNoCabang(unitValue) {
-        if (!noCabangInput) return;
-        noCabangInput.value = window.unitsData?.[unitValue] || '';
-    }
-
-    // ==================== FILTER GURU BY UNIT (FIX 100%) ====================
-    function filterGuruByUnit(unitValue) {
-        if (!guruSelect) return;
-
-        const allowedGuru = window.guruByUnit?.[unitValue] || [];
-
-        // HAPUS SEMUA OPTION (kecuali placeholder)
-        while (guruSelect.options.length > 1) {
-            guruSelect.remove(1);
+            // Initial load
+            if (unitSelect.value) {
+                handleUnitChange(unitSelect.value);
+            }
         }
 
-        if (allowedGuru.length > 0) {
-            // TAMPILKAN GURU SESUAI UNIT
-            allowedGuru.forEach(guruNama => {
-                const option = new Option(guruNama, guruNama);
-                guruSelect.appendChild(option);
-            });
-        } else {
-            // FALLBACK: SEMUA GURU (jika tidak ada mapping unit)
-            @foreach($profil as $g)
-                const option{{ $loop->index }} = new Option('{{ addslashes($g->nama) }}', '{{ addslashes($g->nama) }}');
-                guruSelect.appendChild(option{{ $loop->index }});
-            @endforeach
-        }
+        // ==================== USIA ====================
+        document.getElementById('tgl_lahir')?.addEventListener('change', function () {
+            if (!this.value) return;
 
-        // RESET PILIHAN
-        guruSelect.value = '';
-    }
+            const tgl = new Date(this.value);
+            const today = new Date();
 
-    // ==================== HANDLE UNIT CHANGE ====================
-    function handleUnitChange(unitValue) {
-        currentUnit = unitValue;
+            let age = today.getFullYear() - tgl.getFullYear();
+            const m = today.getMonth() - tgl.getMonth();
 
-        updateNim(unitValue);
-        updateNoCabang(unitValue);
-        filterGuruByUnit(unitValue);
-    }
+            if (m < 0 || (m === 0 && today.getDate() < tgl.getDate())) age--;
 
-    // ==================== EVENT UNIT (ADMIN ONLY) ====================
-    if (isAdmin && unitSelect) {
-
-        unitSelect.addEventListener('change', function () {
-            handleUnitChange(this.value);
+            document.getElementById('usia').value = age > 0 ? age : '';
         });
 
-        // initial load
-        if (unitSelect.value) {
-            handleUnitChange(unitSelect.value);
-        }
+        // ==================== LAMA BELAJAR ====================
+const tglInput = document.getElementById('tgl_masuk');
+const lamaInput = document.getElementById('lama_bljr');
+
+// ==================== HANDLE PASTE DARI EXCEL ====================
+tglInput.addEventListener('paste', function (e) {
+    e.preventDefault();
+
+    let pasted = (e.clipboardData || window.clipboardData).getData('text').trim();
+
+    // Format Excel umum: 01/12/2024 atau 01-12-2024
+    let match = pasted.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+
+    if (match) {
+        let day = match[1].padStart(2, '0');
+        let month = match[2].padStart(2, '0');
+        let year = match[3];
+
+        let formatted = `${year}-${month}-${day}`;
+
+        this.value = formatted;
+        hitungLama();
     }
-
-    // ==================== USIA ====================
-    document.getElementById('tgl_lahir')?.addEventListener('change', function () {
-        if (!this.value) return;
-
-        const tgl = new Date(this.value);
-        const today = new Date();
-
-        let age = today.getFullYear() - tgl.getFullYear();
-        const m = today.getMonth() - tgl.getMonth();
-
-        if (m < 0 || (m === 0 && today.getDate() < tgl.getDate())) age--;
-
-        document.getElementById('usia').value = age > 0 ? age : '';
-    });
-
-    // ==================== LAMA BELAJAR ====================
-    document.getElementById('tgl_masuk')?.addEventListener('change', function () {
-        if (!this.value) return;
-
-        const tgl = new Date(this.value);
-        const today = new Date();
-
-        let bulan = (today.getFullYear() - tgl.getFullYear()) * 12 + (today.getMonth() - tgl.getMonth());
-        if (today.getDate() < tgl.getDate()) bulan--;
-
-        document.getElementById('lama_bljr').value = bulan >= 0 ? bulan + ' bulan' : '';
-    });
-
-    // ==================== SPP ====================
-    const sppMapping = @json($sppMapping);
-    const golSelect = document.getElementById('gol');
-    const kdSelect = document.getElementById('kd');
-    const sppInput = document.getElementById('spp');
-
-    function updateSPP() {
-    const gol = golSelect?.value;
-    const kd = kdSelect?.value;
-
-    if (gol && kd && sppMapping[gol]?.[kd] !== undefined) {  // ← FIXED
-        sppInput.value = 'Rp. ' + new Intl.NumberFormat('id-ID').format(sppMapping[gol][kd]);
-    } else {
-        sppInput.value = '';
-    }
-}
-
-    golSelect?.addEventListener('change', updateSPP);
-    kdSelect?.addEventListener('change', updateSPP);
-    updateSPP();
-
-    // ==================== TAHAP ====================
-const tahapSelect = document.getElementById('tahap');
-const tglTahapan = document.getElementById('tgl_tahapan');
-
-function handleTahapChange() {
-    if (!tahapSelect || !tglTahapan) return;
-
-    const tahap = tahapSelect.value;
-
-    // ✅ tampil kalau Persiapan ATAU Lanjutan
-    if (tahap === 'Persiapan' || tahap === 'Lanjutan') {
-
-        tglTahapan.parentElement.style.display = 'block';
-
-        // isi otomatis kalau kosong
-        if (!tglTahapan.value) {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-
-            tglTahapan.value = `${yyyy}-${mm}-${dd}`;
-        }
-
-    } else {
-        // selain itu hide
-        tglTahapan.value = '';
-        tglTahapan.parentElement.style.display = 'none';
-    }
-}
-
-tahapSelect?.addEventListener('change', handleTahapChange);
-handleTahapChange();
-
-    // ==================== INFO LAINNYA ====================
-    const infoSelect = document.getElementById('info');
-    const wrapper = document.getElementById('keterangan_info_wrapper');
-
-    function toggleKeterangan() {
-        if (!infoSelect || !wrapper) return;
-
-        if (infoSelect.value === 'Lainnya') {
-            wrapper.style.display = 'block';
-        } else {
-            wrapper.style.display = 'none';
-
-            const input = wrapper.querySelector('textarea');
-            if (input) input.value = '';
-        }
-    }
-
-    infoSelect?.addEventListener('change', toggleKeterangan);
-    toggleKeterangan();
-
-    // ==================== LEVEL ====================
-    const level = document.getElementById('level');
-    const tglLevel = document.getElementById('tgl_level');
-
-    level?.addEventListener('change', function () {
-        if (this.value && !tglLevel.value) {
-            tglLevel.value = new Date().toISOString().split('T')[0];
-        }
-    });
-
-    // ==================== JADWAL ====================
-    const kodeJadwal = document.getElementById('kode_jadwal');
-    const preview = document.getElementById('jadwal_preview');
-
-    const jadwalMap = {
-        108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
-        109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
-        110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
-        111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
-        112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
-        113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
-        114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
-        115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
-        116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
-
-        208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
-        209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
-        210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
-        211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
-
-        308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
-        309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
-        310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
-        311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
-    };
-
-    function updateJadwal() {
-        const val = kodeJadwal?.value;
-
-        if (jadwalMap[val]) {
-            const j = jadwalMap[val];
-
-            preview.innerHTML = `
-                <strong>${j.shift}</strong><br>
-                <span>${j.hari}</span> - 
-                <span class="text-primary fw-bold">${j.jam}</span>
-            `;
-        } else {
-            preview.innerHTML = 'Belum ada jadwal';
-        }
-    }
-
-    kodeJadwal?.addEventListener('change', updateJadwal);
-    updateJadwal();
-
 });
 
-function toggleDuafaBNF() {
-    const gol = (document.getElementById('gol')?.value || '').toUpperCase().trim();
+// ==================== HITUNG LAMA BELAJAR ====================
+function hitungLama() {
+    if (!tglInput.value) return;
 
-    const triggerGol = ['D', 'S3B1', 'S3B2', 'S3B3'];
-    const section = document.getElementById('duafa-bnf-section');
+    const tgl = new Date(tglInput.value);
+    const today = new Date();
 
-    if (!section) return;
+    let totalBulan =
+        (today.getFullYear() - tgl.getFullYear()) * 12 +
+        (today.getMonth() - tgl.getMonth());
 
-    if (triggerGol.includes(gol)) {
-        section.style.display = 'block';
-    } else {
-        section.style.display = 'none';
+    if (today.getDate() < tgl.getDate()) totalBulan--;
 
-        // reset field
-        document.getElementById('periode').value = '';
-        document.getElementById('tgl_mulai').value = '';
-        document.getElementById('tgl_akhir').value = '';
-        document.getElementById('jumlah_beasiswa').value = '';
-        document.getElementById('alert').checked = false;
+    if (totalBulan < 0) {
+        lamaInput.value = '';
+        return;
     }
+
+    let tahun = Math.floor(totalBulan / 12);
+    let bulan = totalBulan % 12;
+
+    let hasil = '';
+
+    if (tahun > 0) {
+        hasil += tahun + ' tahun ';
+    }
+
+    if (bulan > 0) {
+        hasil += bulan + ' bulan';
+    }
+
+    if (hasil === '') {
+        hasil = '0 bulan';
+    }
+
+    lamaInput.value = hasil.trim();
 }
 
-// event
-document.getElementById('gol')?.addEventListener('change', toggleDuafaBNF);
+        // ==================== SPP ====================
+        const sppMapping = @json($sppMapping);
+        const golSelect = document.getElementById('gol');
+        const kdSelect = document.getElementById('kd');
+        const sppInput = document.getElementById('spp');
 
-// load awal
-document.addEventListener('DOMContentLoaded', toggleDuafaBNF);
+        function updateSPP() {
+            const gol = golSelect?.value;
+            const kd = kdSelect?.value;
 
-document.addEventListener('DOMContentLoaded', function () {
+            if (gol && kd && sppMapping[gol]?.[kd] !== undefined) {
+                sppInput.value = 'Rp. ' + new Intl.NumberFormat('id-ID').format(sppMapping[gol][kd]);
+            } else {
+                sppInput.value = '';
+            }
+        }
 
-    const gol = document.getElementById('gol'); // pastikan ada ini
-    const periode = document.getElementById('periode');
-    const tglMulai = document.getElementById('tgl_mulai');
-    const tglAkhir = document.getElementById('tgl_akhir');
-    const jumlahBeasiswa = document.getElementById('jumlah_beasiswa');
+        golSelect?.addEventListener('change', updateSPP);
+        kdSelect?.addEventListener('change', updateSPP);
+        updateSPP();
 
-    const allowedGol = ['S3B1', 'S3B2', 'S3B3', 'D'];
+        // ==================== TAHAP ====================
+        const tahapSelect = document.getElementById('tahap');
+        const tglTahapan = document.getElementById('tgl_tahapan');
+
+        function handleTahapChange() {
+            if (!tahapSelect || !tglTahapan) return;
+
+            const tahap = tahapSelect.value;
+
+            if (tahap === 'Persiapan' || tahap === 'Lanjutan') {
+                tglTahapan.parentElement.style.display = 'block';
+
+                if (!tglTahapan.value) {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    tglTahapan.value = `${yyyy}-${mm}-${dd}`;
+                }
+            } else {
+                tglTahapan.value = '';
+                tglTahapan.parentElement.style.display = 'none';
+            }
+        }
+
+        tahapSelect?.addEventListener('change', handleTahapChange);
+        handleTahapChange();
+
+        // ==================== INFO LAINNYA ====================
+        const infoSelect = document.getElementById('info');
+        const wrapper = document.getElementById('keterangan_info_wrapper');
+
+        function toggleKeterangan() {
+            if (!infoSelect || !wrapper) return;
+
+            if (infoSelect.value === 'Lainnya') {
+                wrapper.style.display = 'block';
+            } else {
+                wrapper.style.display = 'none';
+                const input = wrapper.querySelector('textarea');
+                if (input) input.value = '';
+            }
+        }
+
+        infoSelect?.addEventListener('change', toggleKeterangan);
+        toggleKeterangan();
+
+        // ==================== LEVEL ====================
+        const level = document.getElementById('level');
+        const tglLevel = document.getElementById('tgl_level');
+
+        level?.addEventListener('change', function () {
+            if (this.value && !tglLevel.value) {
+                tglLevel.value = new Date().toISOString().split('T')[0];
+            }
+        });
+
+        // ==================== JADWAL ====================
+        const kodeJadwal = document.getElementById('kode_jadwal');
+        const preview = document.getElementById('jadwal_preview');
+
+        const jadwalMap = {
+            108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
+            109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
+            110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
+            111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
+            112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
+            113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
+            114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
+            115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
+            116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
+
+            208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
+            209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
+            210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
+            211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
+
+            308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
+            309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
+            310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
+            311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
+        };
+
+        function updateJadwal() {
+            const val = kodeJadwal?.value;
+
+            if (jadwalMap[val]) {
+                const j = jadwalMap[val];
+                preview.innerHTML = `
+                    <strong>${j.shift}</strong><br>
+                    <span>${j.hari}</span> - 
+                    <span class="text-primary fw-bold">${j.jam}</span>
+                `;
+            } else {
+                preview.innerHTML = 'Belum ada jadwal';
+            }
+        }
+
+        kodeJadwal?.addEventListener('change', updateJadwal);
+        updateJadwal();
+
+    });
+
+    // ==================== FUNGSI DI LUAR DOMContentLoaded ====================
+
+    // Toggle Duafa BNF
+    function toggleDuafaBNF() {
+        const gol = (document.getElementById('gol')?.value || '').toUpperCase().trim();
+        const triggerGol = ['D', 'S3B1', 'S3B2', 'S3B3'];
+        const section = document.getElementById('duafa-bnf-section');
+
+        if (!section) return;
+
+        if (triggerGol.includes(gol)) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+            document.getElementById('periode').value = '';
+            document.getElementById('tgl_mulai').value = '';
+            document.getElementById('tgl_akhir').value = '';
+            document.getElementById('jumlah_beasiswa').value = '';
+            document.getElementById('alert').checked = false;
+        }
+    }
+
+    document.getElementById('gol')?.addEventListener('change', toggleDuafaBNF);
+    document.addEventListener('DOMContentLoaded', toggleDuafaBNF);
+
+    // ==================== AUTO FILL BEASISWA (S3B1, S3B2, dll) ====================
+    document.addEventListener('DOMContentLoaded', function () {
+        const gol = document.getElementById('gol');
+        const periode = document.getElementById('periode');
+        const tglMulai = document.getElementById('tgl_mulai');
+        const tglAkhir = document.getElementById('tgl_akhir');
+        const jumlahBeasiswa = document.getElementById('jumlah_beasiswa');
+
+        const allowedGol = ['S3B1', 'S3B2', 'S3B3', 'D'];
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function addMonths(date, m) {
+            let d = new Date(date);
+            d.setMonth(d.getMonth() + m);
+            return d;
+        }
+
+        gol?.addEventListener('change', function () {
+            if (!allowedGol.includes(this.value)) return;
+
+            // Periode auto
+            let current = periode.value;
+            if (!current) {
+                periode.value = 'Ke-1';
+            } else {
+                let match = current.match(/\d+/);
+                let number = match ? parseInt(match[0]) : 0;
+                if (number < 10) {
+                    periode.value = `Ke-${number + 1}`;
+                }
+            }
+
+            // Tanggal mulai = hari ini
+            let today = new Date();
+            tglMulai.value = formatDate(today);
+
+            // Tanggal akhir = +6 bulan
+            let end = addMonths(today, 6);
+            tglAkhir.value = formatDate(end);
+
+            // Jumlah beasiswa
+            const beasiswaMapping = {
+                'S3B1': 100000,
+                'S3B2': 200000,
+                'S3B3': 50000,
+                'D': 300000
+            };
+
+            let nominal = beasiswaMapping[this.value] || 0;
+            if (nominal > 0) {
+                jumlahBeasiswa.value = nominal * 6;
+            }
+        });
+    });
+
+    // ==================== PAKET 72 ====================
+    const gol = document.getElementById('gol');
+    const paket72Section = document.getElementById('paket72Section');
+    const tglBayar = document.getElementById('tgl_bayar');
+    const tglSelesai = document.getElementById('tgl_selesai');
+    const alert2 = document.getElementById('alert2');
 
     function formatDate(date) {
         return date.toISOString().split('T')[0];
@@ -803,125 +906,107 @@ document.addEventListener('DOMContentLoaded', function () {
         return d;
     }
 
-    gol?.addEventListener('change', function () {
+    function handlePaket72() {
+        if (!gol) return;
 
-        if (!allowedGol.includes(this.value)) return;
+        if (gol.value === 'P72') {
+            paket72Section.style.display = 'block';
 
-        // =========================
-        // PERIODE AUTO
-        // =========================
-        let current = periode.value;
+            let today = new Date();
 
-        if (!current) {
-            periode.value = 'Ke-1';
+            if (tglBayar && !tglBayar.value) {
+                tglBayar.value = formatDate(today);
+            }
+
+            let end6 = addMonths(today, 6);
+            if (tglSelesai && !tglSelesai.value) {
+                tglSelesai.value = formatDate(end6);
+            }
+
+            alert2.checked = true;
         } else {
-            let match = current.match(/\d+/);
-            let number = match ? parseInt(match[0]) : 0;
+            paket72Section.style.display = 'none';
+            tglBayar.value = '';
+            tglSelesai.value = '';
+            alert2.checked = false;
+        }
+    }
 
-            if (number < 10) {
-                periode.value = `Ke-${number + 1}`;
+    gol?.addEventListener('change', handlePaket72);
+    handlePaket72(); // untuk edit mode
+
+    // ==================== FORMAT TANGGAL (tgl_lahir) ====================
+    document.getElementById('tgl_lahir')?.addEventListener('blur', function () {
+        let val = this.value.trim();
+        let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+
+        if (match) {
+            let dd = match[1];
+            let mm = match[2];
+            let yyyy = match[3];
+            this.value = `${yyyy}-${mm}-${dd}`;
+        }
+    });
+
+    // ==================== HITUNG USIA LENGKAP (tgl_lahir) ====================
+    document.addEventListener('DOMContentLoaded', function () {
+        const tglLahir = document.getElementById('tgl_lahir');
+        const usia = document.getElementById('usia');
+
+        function hitungUsia(tanggal) {
+            let today = new Date();
+            let birth = new Date(tanggal);
+            let umur = today.getFullYear() - birth.getFullYear();
+            let m = today.getMonth() - birth.getMonth();
+
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                umur--;
+            }
+            return umur;
+        }
+
+        function convertDanHitung() {
+            let val = tglLahir.value.trim();
+            let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+
+            if (match) {
+                val = `${match[3]}-${match[2]}-${match[1]}`;
+                tglLahir.value = val;
+            }
+
+            if (val) {
+                let umur = hitungUsia(val);
+                usia.value = isNaN(umur) ? '' : umur;
+            } else {
+                usia.value = '';
             }
         }
 
-        // =========================
-        // TGL MULAI = HARI INI
-        // =========================
-        let today = new Date();
-        tglMulai.value = formatDate(today);
-
-        // =========================
-        // TGL AKHIR = +6 BULAN
-        // =========================
-        let end = addMonths(today, 6);
-        tglAkhir.value = formatDate(end);
-
-        // =========================
-        // JUMLAH BEASISWA
-        // =========================
-        const beasiswaMapping = {
-            'S3B1': 100000,
-            'S3B2': 200000,
-            'S3B3': 50000,
-            'D'   : 300000
-        };
-
-        let nominal = beasiswaMapping[this.value] || 0;
-
-        if (nominal > 0) {
-            jumlahBeasiswa.value = nominal * 6;
-        }
-
+        tglLahir?.addEventListener('change', convertDanHitung);
+        tglLahir?.addEventListener('blur', convertDanHitung);
     });
 
-});
-const gol = document.getElementById('gol');
-const paket72Section = document.getElementById('paket72Section');
+    // ==================== FORMAT TANGGAL DAFTAR ====================
+    document.addEventListener('DOMContentLoaded', function () {
+        const tglDaftar = document.getElementById('tgl_daftar');
 
-const tglBayar = document.getElementById('tgl_bayar');
-const tglSelesai = document.getElementById('tgl_selesai');
-const alert2 = document.getElementById('alert2');
+        function convertTanggal(input) {
+            let val = input.value.trim();
+            let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
 
-function formatDate(date) {
-    return date.toISOString().split('T')[0];
-}
-
-function handlePaket72() {
-    if (!gol) return;
-
-    if (gol.value === 'P72') {
-        paket72Section.style.display = 'block';
-    } else {
-        paket72Section.style.display = 'none';
-
-        // reset kalau pindah pilihan
-        tglBayar.value = '';
-        tglSelesai.value = '';
-        alert2.checked = false;
-    }
-}
-
-// trigger saat change
-gol.addEventListener('change', handlePaket72);
-
-// trigger saat load (edit mode)
-handlePaket72();
-function addMonths(date, m) {
-    let d = new Date(date);
-    d.setMonth(d.getMonth() + m);
-    return d;
-}
-
-function handlePaket72() {
-    if (!gol) return;
-
-    if (gol.value === 'P72') {
-        paket72Section.style.display = 'block';
-
-        // =========================
-        // AUTO TANGGAL 6 BULAN
-        // =========================
-        let today = new Date();
-
-        if (tglBayar && !tglBayar.value) {
-            tglBayar.value = formatDate(today);
+            if (match) {
+                input.value = `${match[3]}-${match[2]}-${match[1]}`;
+            }
         }
 
-        // 🔥 6 BULAN
-        let end6 = addMonths(today, 6);
+        tglDaftar?.addEventListener('blur', function () {
+            convertTanggal(this);
+        });
 
-        if (tglSelesai && !tglSelesai.value) {
-            tglSelesai.value = formatDate(end6);
-        }
+        tglDaftar?.addEventListener('change', function () {
+            convertTanggal(this);
+        });
+    });
 
-        alert2.checked = true;
-
-    } else {
-        paket72Section.style.display = 'none';
-
-        tglBayar.value = '';
-        tglSelesai.value = '';
-        alert2.checked = false;
-    }
-}
 </script>
 @endsection
