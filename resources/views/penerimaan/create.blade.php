@@ -298,7 +298,6 @@ $(document).ready(function() {
     // ────────────────────────────────────────────────
     // Fungsi bantu
     // ────────────────────────────────────────────────
-
     function formatRupiah(angka) {
         if (!angka) return '0';
         return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -320,7 +319,7 @@ $(document).ready(function() {
         return `KW${currentNimLast3}${yy}${mm}${dd}`;
     }
 
-    function updateKwitansiPreview() {
+        function updateKwitansiPreview() {
         const jumlahBulan = $('.bulan-row').length;
         const adaBiayaLain = $('.biaya-lain').toArray().some(el => unformatRupiah($(el).val()) > 0);
         const totalItem = jumlahBulan + (adaBiayaLain ? 1 : 0);
@@ -329,21 +328,28 @@ $(document).ready(function() {
 
         if (isManualMode) {
             const manualBase = $('#kwitansi_base_manual').val().trim();
+            
             if (!manualBase) {
                 teks = 'Masukkan base kwitansi manual';
                 $('#kwitansi-preview').removeClass('text-primary').addClass('text-muted');
             } else {
-                const prefix = manualBase.endsWith('-') ? '' : '-';
                 if (totalItem === 0) {
                     teks = manualBase + ' (belum ada item)';
-                } else if (totalItem === 1) {
-                    teks = manualBase + prefix + '01';
-                } else {
+                } 
+                else if (totalItem === 1) {
+                    // Hanya 1 item → tidak pakai -01
+                    teks = manualBase;
+                } 
+                else {
+                    // Lebih dari 1 item → pakai -01 s/d -XX
+                    const prefix = manualBase.endsWith('-') ? '' : '-';
                     teks = manualBase + prefix + '01 s/d ' + manualBase + prefix + String(totalItem).padStart(2, '0');
                 }
                 $('#kwitansi-preview').removeClass('text-muted').addClass('text-primary');
             }
-        } else {
+        } 
+        else {
+            // Mode Otomatis (tetap seperti sebelumnya)
             const base = generateKwitansiBase();
             if (!base) {
                 teks = 'Pilih NIM terlebih dahulu';
@@ -363,6 +369,28 @@ $(document).ready(function() {
         $('#kwitansi-preview').text(teks);
     }
 
+    // ================================================
+    // KWITANSI MANUAL - EVENT LISTENER
+    // ================================================
+    $('#manual_kwitansi_toggle').on('change', function() {
+        isManualMode = this.checked;
+        
+        if (isManualMode) {
+            $('#manual_kwitansi_input').slideDown(200);
+            $('#kwitansi_base_manual').focus();
+        } else {
+            $('#manual_kwitansi_input').slideUp(200);
+            $('#kwitansi_base_manual').val('');
+        }
+        
+        updateKwitansiPreview();
+    });
+
+    // Saat input manual diubah
+    $('#kwitansi_base_manual').on('input', function() {
+        updateKwitansiPreview();
+    });
+    
     // ================================================
     // INISIALISASI SELECT2 untuk Voucher
     // ================================================

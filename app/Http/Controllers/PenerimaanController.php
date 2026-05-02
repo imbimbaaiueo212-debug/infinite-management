@@ -440,16 +440,31 @@ public function store(Request $request)
 
     $tanggal = Carbon::parse($request->tanggal);
 
-    // ==================================================================
-    // === GENERATE FORMAT KWITANSI BARU ===
+            // ==================================================================
+    // === GENERATE KWITANSI (DENGAN SUPPORT MANUAL) ===
     // ==================================================================
 
-    $nimLast3 = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
-    $tahun2   = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
-    $bulan2   = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
-    $tanggal2 = str_pad($tanggal->day, 2, '0', STR_PAD_LEFT);
+    $isManual = $request->boolean('manual_kwitansi') && $request->filled('kwitansi_base_manual');
 
-    $kwitansiBase = "KW{$nimLast3}{$tahun2}{$bulan2}{$tanggal2}";
+    if ($isManual) {
+        $kwitansiBase = trim($request->kwitansi_base_manual);
+        // Bersihkan suffix angka di belakang jika ada
+        $kwitansiBase = preg_replace('/-\d+$/', '', $kwitansiBase);
+        
+        if (empty($kwitansiBase)) {
+            $isManual = false;
+        }
+    }
+
+    if (!$isManual) {
+        // Generate otomatis
+        $nimLast3  = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
+        $tahun2    = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
+        $bulan2    = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
+        $tanggal2  = str_pad($tanggal->day, 2, '0', STR_PAD_LEFT);
+
+        $kwitansiBase = "KW{$nimLast3}{$tahun2}{$bulan2}{$tanggal2}";
+    }
 
     $index = 1;
 
@@ -458,34 +473,43 @@ public function store(Request $request)
         $kwitansiList = [];
         $firstSppId = null;
 
+        // Hitung total item yang akan dibuat
+        $totalItem = count($periodeTerpilih) + ($adaBiayaLain ? 1 : 0);
+
         // === SIMPAN SPP PER BULAN ===
         foreach ($periodeTerpilih as $bt) {
             $diskon = isset($voucherTerpakai[$index - 1]) ? $diskonPerVoucher : 0;
 
-            $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            // Logika penting: Jika manual DAN total hanya 1 item → jangan tambah -01
+            if ($isManual && $totalItem === 1) {
+                $kwitansi = $kwitansiBase;
+            } else {
+                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            }
 
             $p = Penerimaan::create([
-                'kwitansi'   => $kwitansi,
-                'via'        => $request->via,
-                'tanggal'    => $request->tanggal,
-                'nim'        => $request->nim,
-                'nama_murid' => $request->nama_murid,
-                'kelas'      => $dataMurid['kelas'],
-                'status'     => $dataMurid['status'],
-                'guru'       => $dataMurid['guru'],
-                'gol'        => $dataMurid['gol'] ?? null,
-                'kd'         => $dataMurid['kd'] ?? null,
-                'bulan'      => $bt['bulan'],
-                'tahun'      => $bt['tahun'],
-                'spp'        => $sppPerBulan,
-                'voucher'    => $diskon,
-                'total'      => $sppPerBulan - $diskon,
-                'bimba_unit' => $dataMurid['bimba_unit'],
-                'no_cabang'  => $dataMurid['no_cabang'],
-                'RBAS'       => $rbas,
-                'BCABS01'    => $bcabs01,
-                'BCABS02'    => $bcabs02,
-                'bukti_transfer_path' => $buktiPath,
+                'kwitansi'               => $kwitansi,
+                'via'                    => $request->via,
+                'tanggal'                => $request->tanggal,
+                'nim'                    => $request->nim,
+                'nama_murid'             => $request->nama_murid,
+                'kelas'                  => $dataMurid['kelas'],
+                'status'                 => $dataMurid['status'],
+                'guru'                   => $dataMurid['guru'],
+                'gol'                    => $dataMurid['gol'] ?? null,
+                'kd'                     => $dataMurid['kd'] ?? null,
+                'bulan'                  => $bt['bulan'],
+                'tahun'                  => $bt['tahun'],
+                'spp'                    => $sppPerBulan,
+                'voucher'                => $diskon,
+                'total'                  => $sppPerBulan - $diskon,
+                'bimba_unit'             => $dataMurid['bimba_unit'],
+                'no_cabang'              => $dataMurid['no_cabang'],
+                'RBAS'                   => $rbas,
+                'BCABS01'                => $bcabs01,
+                'BCABS02'                => $bcabs02,
+                'bukti_transfer_path'    => $buktiPath,
+                'is_manual_kwitansi'     => $isManual,
             ]);
 
             if (!$firstSppId) $firstSppId = $p->id;
@@ -513,36 +537,41 @@ public function store(Request $request)
             ]);
         }
 
-        // === KHUSUS DHUAFA (SPP 0 & TANPA BIAYA LAIN) ===
+        // === KHUSUS DHUAFA ===
         if ($spp == 0 && !$adaBiayaLain) {
-            $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            if ($isManual && $totalItem === 1) {
+                $kwitansi = $kwitansiBase;
+            } else {
+                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            }
 
             $bulanInput = $request->bulan_bayar[0] ?? null;
             $tahunInput = $request->tahun_bayar[0] ?? null;
 
             $p = Penerimaan::create([
-                'kwitansi'   => $kwitansi,
-                'via'        => $request->via,
-                'tanggal'    => $request->tanggal,
-                'nim'        => $request->nim,
-                'nama_murid' => $request->nama_murid,
-                'kelas'      => $dataMurid['kelas'],
-                'status'     => $dataMurid['status'],
-                'guru'       => $dataMurid['guru'],
-                'gol'        => $dataMurid['gol'] ?? null,
-                'kd'         => $dataMurid['kd'] ?? null,
-                'bulan'      => $bulanInput,
-                'tahun'      => $tahunInput,
-                'spp'        => 0,
-                'voucher'    => 0,
-                'total'      => 0,
-                'keterangan' => 'Dhuafa / Gratis',
-                'bimba_unit' => $dataMurid['bimba_unit'],
-                'no_cabang'  => $dataMurid['no_cabang'],
-                'RBAS'       => $rbas,
-                'BCABS01'    => $bcabs01,
-                'BCABS02'    => $bcabs02,
-                'bukti_transfer_path' => $buktiPath,
+                'kwitansi'               => $kwitansi,
+                'via'                    => $request->via,
+                'tanggal'                => $request->tanggal,
+                'nim'                    => $request->nim,
+                'nama_murid'             => $request->nama_murid,
+                'kelas'                  => $dataMurid['kelas'],
+                'status'                 => $dataMurid['status'],
+                'guru'                   => $dataMurid['guru'],
+                'gol'                    => $dataMurid['gol'] ?? null,
+                'kd'                     => $dataMurid['kd'] ?? null,
+                'bulan'                  => $bulanInput,
+                'tahun'                  => $tahunInput,
+                'spp'                    => 0,
+                'voucher'                => 0,
+                'total'                  => 0,
+                'keterangan'             => 'Dhuafa / Gratis',
+                'bimba_unit'             => $dataMurid['bimba_unit'],
+                'no_cabang'              => $dataMurid['no_cabang'],
+                'RBAS'                   => $rbas,
+                'BCABS01'                => $bcabs01,
+                'BCABS02'                => $bcabs02,
+                'bukti_transfer_path'    => $buktiPath,
+                'is_manual_kwitansi'     => $isManual,
             ]);
 
             $kwitansiList[] = $kwitansi;
@@ -551,36 +580,41 @@ public function store(Request $request)
 
         // === BIAYA LAIN ===
         if ($adaBiayaLain) {
-            $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            if ($isManual && $totalItem === 1) {
+                $kwitansi = $kwitansiBase;
+            } else {
+                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
+            }
 
             $p = Penerimaan::create([
-                'kwitansi' => $kwitansi,
-                'via'      => $request->via,
-                'tanggal'  => $request->tanggal,
-                'nim'      => $request->nim,
-                'nama_murid' => $request->nama_murid,
-                'kelas'      => $dataMurid['kelas'],
-                'status'     => $dataMurid['status'],
-                'guru'       => $dataMurid['guru'],
-                'gol'        => $dataMurid['gol'] ?? null,
-                'kd'         => $dataMurid['kd'] ?? null,
-                'daftar'   => $daftar,
-                'kaos'     => $kaosPendek,
-                'kaos_lengan_panjang' => $kaosPanjang,
-                'ukuran_kaos_pendek'  => $ukuranKaosPendekString,
-                'ukuran_kaos_panjang' => $ukuranKaosPanjangString,
-                'kaos_pendek_details' => $kaosPendekDetails,
-                'kaos_panjang_details'=> $kaosPanjangDetails,
-                'kpk'      => $kpk,
-                'sertifikat'=> $sertifikat,
-                'stpb'     => $stpb,
-                'tas'      => $tas,
-                'event'    => $event,
-                'lain_lain'=> $lainLain,
-                'total'    => $totalBiayaLain,
-                'bimba_unit'=> $dataMurid['bimba_unit'],
-                'no_cabang'=> $dataMurid['no_cabang'],
-                'bukti_transfer_path'=> $buktiPath,
+                'kwitansi'                => $kwitansi,
+                'via'                     => $request->via,
+                'tanggal'                 => $request->tanggal,
+                'nim'                     => $request->nim,
+                'nama_murid'              => $request->nama_murid,
+                'kelas'                   => $dataMurid['kelas'],
+                'status'                  => $dataMurid['status'],
+                'guru'                    => $dataMurid['guru'],
+                'gol'                     => $dataMurid['gol'] ?? null,
+                'kd'                      => $dataMurid['kd'] ?? null,
+                'daftar'                  => $daftar,
+                'kaos'                    => $kaosPendek,
+                'kaos_lengan_panjang'     => $kaosPanjang,
+                'ukuran_kaos_pendek'      => $ukuranKaosPendekString,
+                'ukuran_kaos_panjang'     => $ukuranKaosPanjangString,
+                'kaos_pendek_details'     => $kaosPendekDetails,
+                'kaos_panjang_details'    => $kaosPanjangDetails,
+                'kpk'                     => $kpk,
+                'sertifikat'              => $sertifikat,
+                'stpb'                    => $stpb,
+                'tas'                     => $tas,
+                'event'                   => $event,
+                'lain_lain'               => $lainLain,
+                'total'                   => $totalBiayaLain,
+                'bimba_unit'              => $dataMurid['bimba_unit'],
+                'no_cabang'               => $dataMurid['no_cabang'],
+                'bukti_transfer_path'     => $buktiPath,
+                'is_manual_kwitansi'      => $isManual,
             ]);
 
             $kwitansiList[] = $kwitansi;
@@ -596,9 +630,9 @@ public function store(Request $request)
         if ($buktiPath) {
             Storage::disk('public')->delete($buktiPath);
         }
+    }
         return back()->withErrors(['error' => 'Gagal simpan: ' . $e->getMessage()])->withInput();
     }
-}
 
     private function bulanKeAngka($bulanNama)
 {
