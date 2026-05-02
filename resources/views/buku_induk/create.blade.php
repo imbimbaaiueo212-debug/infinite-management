@@ -765,6 +765,12 @@
             allowClear: true
         });
 
+        $('#note_garansi').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
+
         // ==================== JADWAL ====================
         const kodeJadwal = document.getElementById('kode_jadwal');
         const preview = document.getElementById('jadwal_preview');
