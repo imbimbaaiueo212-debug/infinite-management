@@ -370,7 +370,7 @@ $golOptions = $HargaSaptataruna
             'no_cabang' => 'required|string|max:20',
             'keterangan_info' => 'nullable|string',
             'tgl_surat_garansi' => 'nullable|date',
-            'tgl_tahapan'   => 'nullable|date',
+            'tgl_tahapan'   => 'required|date',
             'tgl_daftar'    => 'required|date',
         ]);
 

@@ -99,19 +99,19 @@
 
             {{-- Tgl Lahir --}}
             <div class="col-md-6 mb-3 fw-bold">
-    <label for="tgl_lahir">Tanggal Lahir <span class="text-danger">*</span></label>
-    <input type="text" 
-        name="tgl_lahir" 
-        id="tgl_lahir" 
-        class="form-control" 
-        placeholder="Masukan Tanggal Lahir"
-        value="{{ old('tgl_lahir') }}">
-</div>
+                <label for="tgl_lahir">Tanggal Lahir <span class="text-danger">*</span></label>
+                <input type="text" 
+                    name="tgl_lahir" 
+                    id="tgl_lahir" 
+                    class="form-control" 
+                    placeholder="Masukan Tanggal Lahir"
+                    value="{{ old('tgl_lahir') }}">
+            </div>
 
              {{-- Usia --}}
             <div class="col-md-6 mb-3">
                 <label for="usia" class="text-primary fw-bold">Usia</label>
-                <input type="number" name="usia" id="usia" class="form-control" readonly>
+                <input type="text" name="usia" id="usia" class="form-control" readonly>
             </div>
 
             <div class="col-md-6 mb-3 fw-bold">
@@ -122,15 +122,15 @@
                     class="form-control" 
                     placeholder="Masukan Tanggal Daftar"
                     value="{{ old('tgl_daftar') }}">
-                <small class="text-muted">Bisa paste dari Excel</small>
+                <small class="text-muted"></small>
             </div>
 
             {{-- Tgl Masuk --}}
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="tgl_masuk">Tanggal Aktif <span class="text-danger">*</span></label>
-                <input type="text" name="tgl_masuk" id="tgl_masuk" class="form-control" placeholder="dd/mm/yyyy atau yyy-mm-dd" 
+                <input type="text" name="tgl_masuk" id="tgl_masuk" class="form-control" placeholder="Masukan Tanggal Aktif" 
                 value="{{ old('tgl_masuk') }}" required>
-                <small class="text-muted">Contoh</small>
+                <small class="text-muted"></small>
             </div>
 
             {{-- Lama Belajar --}}
@@ -151,58 +151,38 @@
             </div>
 
                 <div class="col-md-6 mb-3">
-                    <label for="tgl_tahapan" class="text-success fw-bold">Tanggal Tahapan</label>
-                    <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control">
+                    <label for="tgl_tahapan" class="text-success fw-bold">Tanggal Tahapan<span class="text-danger">*</span></label>
+                    <input type="text" name="tgl_tahapan" id="tgl_tahapan" class="form-control" placeholder="Masukan Tanggal Tahapan/Lanjutan"
+                    value="{{ old('tgl_tahapan') }}" required>
                 </div>
 
             {{-- Sumber Informasi --}}
             <div class="col-md-6 mb-3 fw-bold">
-    <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
-    <select name="info" id="info"
-        class="form-control @error('info') is-invalid @enderror" required>
-        <option value="">-- Pilih --</option>
-        @foreach($infoOptions as $opt)
-            <option value="{{ $opt }}"
-                {{ old('info') == $opt ? 'selected' : '' }}>
-                {{ $opt }}
-            </option>
-        @endforeach
-    </select>
-    @error('info')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+                <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
+                <select name="info" id="info" class="form-control @error('info') is-invalid @enderror" required>
+                    <option value="">-- Pilih --</option>
+                    @foreach($infoOptions as $opt)
+                        <option value="{{ $opt }}" {{ old('info') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                    @endforeach
+                </select>
+                @error('info') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
 
-<div class="col-md-6 mb-3 fw-bold"
-     id="keterangan_info_wrapper"
-     style="display: none;">
-    <label for="keterangan_info">Keterangan Info</label>
-    <textarea name="keterangan_info"
-        id="keterangan_info"
-        class="form-control"
-        rows="2">{{ old('keterangan_info') }}</textarea>
-</div>
+            <div class="col-md-6 mb-3 fw-bold" id="keterangan_info_wrapper" style="display: none;">
+                <label for="keterangan_info">Keterangan Info</label>
+                <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
+            </div>
             <!-- Kelas -->
             <div class="col-md-6 mb-3 fw-bold">
-    <label for="kelas">Kelas <span class="text-danger">*</span></label>
-
-    <select name="kelas" id="kelas"
-        class="form-control @error('kelas') is-invalid @enderror"
-        required>
-        <option value="">-- Pilih Kelas --</option>
-
-        @foreach($kelasOptions as $k)
-            <option value="{{ $k }}"
-                {{ old('kelas') == $k ? 'selected' : '' }}>
-                {{ $k }}
-            </option>
-        @endforeach
-    </select>
-
-    @error('kelas')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+                <label for="kelas">Kelas <span class="text-danger">*</span></label>
+                <select name="kelas" id="kelas" class="form-control" required>
+                    <option value="">-- Pilih Kelas --</option>
+                    @foreach($kelasOptions as $k)
+                        <option value="{{ $k }}" {{ old('kelas') == $k ? 'selected' : '' }}>{{ $k }}</option>
+                    @endforeach
+                </select>
+                @error('kelas') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            </div>
 
             <!-- Gol -->
             <div class="col-md-6 mb-3 fw-bold">
@@ -333,7 +313,12 @@
 
             <div class="col-md-6 mb-3">
                 <label for="tgl_level" class="text-success fw-bold">Tanggal Level</label>
-                <input type="date" name="tgl_level" id="tgl_level" class="form-control" value="{{ old('tgl_level') }}">
+                <input type="text" 
+                    name="tgl_level" 
+                    id="tgl_level" 
+                    class="form-control" 
+                    placeholder="Masukan Tanggal Level"
+                    value="{{ old('tgl_level') }}">
             </div>
 
             <div class="col-md-6 mb-3 fw-bold">
@@ -373,7 +358,7 @@
                         {{-- TGL MULAI --}}
                         <div class="col-md-3">
                             <label class="form-label fw-bold text-success">Tanggal Mulai</label>
-                            <input type="date"
+                            <input type="text"
                                 name="tgl_mulai"
                                 id="tgl_mulai"
                                 class="form-control"
@@ -383,7 +368,7 @@
                         {{-- TGL AKHIR --}}
                         <div class="col-md-3">
                             <label class="form-label fw-bold text-success">Tanggal Akhir</label>
-                            <input type="date"
+                            <input type="text"
                                 name="tgl_akhir"
                                 id="tgl_akhir"
                                 class="form-control"
@@ -505,7 +490,7 @@
 
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="tgl_surat_garansi">Tanggal Diberikan Surat</label>
-                <input type="date" name="tgl_surat_garansi" id="tgl_surat_garansi" class="form-control" value="{{ old('tgl_surat_garansi')}}">
+                <input type="text" name="tgl_surat_garansi" id="tgl_surat_garansi" class="form-control" placeholder="Masukan Tanggal Diberikan" value="{{ old('tgl_surat_garansi')}}">
             </div>
 
             <!-- Note Garansi -->
@@ -632,83 +617,82 @@
             }
         }
 
-        // ==================== USIA ====================
-        document.getElementById('tgl_lahir')?.addEventListener('change', function () {
-            if (!this.value) return;
 
-            const tgl = new Date(this.value);
-            const today = new Date();
-
-            let age = today.getFullYear() - tgl.getFullYear();
-            const m = today.getMonth() - tgl.getMonth();
-
-            if (m < 0 || (m === 0 && today.getDate() < tgl.getDate())) age--;
-
-            document.getElementById('usia').value = age > 0 ? age : '';
-        });
 
         // ==================== LAMA BELAJAR ====================
-const tglInput = document.getElementById('tgl_masuk');
-const lamaInput = document.getElementById('lama_bljr');
+        const tglInput = document.getElementById('tgl_masuk');
+        const lamaInput = document.getElementById('lama_bljr');
 
-// ==================== HANDLE PASTE DARI EXCEL ====================
-tglInput.addEventListener('paste', function (e) {
-    e.preventDefault();
+        // ==================== PARSE DD-MM-YYYY ====================
+        function parseTanggal(val) {
+            let parts = val.split('-'); // dd-mm-yyyy
+            if (parts.length !== 3) return null;
 
-    let pasted = (e.clipboardData || window.clipboardData).getData('text').trim();
+            let day = parseInt(parts[0]);
+            let month = parseInt(parts[1]) - 1; // bulan mulai dari 0
+            let year = parseInt(parts[2]);
 
-    // Format Excel umum: 01/12/2024 atau 01-12-2024
-    let match = pasted.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            return new Date(year, month, day);
+        }
 
-    if (match) {
-        let day = match[1].padStart(2, '0');
-        let month = match[2].padStart(2, '0');
-        let year = match[3];
+        // ==================== HANDLE PASTE ====================
+        tglInput.addEventListener('paste', function (e) {
+            e.preventDefault();
 
-        let formatted = `${year}-${month}-${day}`;
+            let pasted = (e.clipboardData || window.clipboardData)
+                .getData('text')
+                .trim();
 
-        this.value = formatted;
-        hitungLama();
-    }
-});
+            // support 01/12/2024 atau 01-12-2024
+            let match = pasted.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
 
-// ==================== HITUNG LAMA BELAJAR ====================
-function hitungLama() {
-    if (!tglInput.value) return;
+            if (match) {
+                let day = match[1].padStart(2, '0');
+                let month = match[2].padStart(2, '0');
+                let year = match[3];
 
-    const tgl = new Date(tglInput.value);
-    const today = new Date();
+                // simpan dd-mm-yyyy
+                this.value = `${day}-${month}-${year}`;
+                hitungLama();
+            }
+        });
 
-    let totalBulan =
-        (today.getFullYear() - tgl.getFullYear()) * 12 +
-        (today.getMonth() - tgl.getMonth());
+        // ==================== HITUNG ====================
+        function hitungLama() {
+            if (!tglInput.value) return;
 
-    if (today.getDate() < tgl.getDate()) totalBulan--;
+            const tgl = parseTanggal(tglInput.value);
+            if (!tgl) return;
 
-    if (totalBulan < 0) {
-        lamaInput.value = '';
-        return;
-    }
+            const today = new Date();
 
-    let tahun = Math.floor(totalBulan / 12);
-    let bulan = totalBulan % 12;
+            let totalBulan =
+                (today.getFullYear() - tgl.getFullYear()) * 12 +
+                (today.getMonth() - tgl.getMonth());
 
-    let hasil = '';
+            if (today.getDate() < tgl.getDate()) totalBulan--;
 
-    if (tahun > 0) {
-        hasil += tahun + ' tahun ';
-    }
+            if (totalBulan < 0) {
+                lamaInput.value = '';
+                return;
+            }
 
-    if (bulan > 0) {
-        hasil += bulan + ' bulan';
-    }
+            let tahun = Math.floor(totalBulan / 12);
+            let bulan = totalBulan % 12;
 
-    if (hasil === '') {
-        hasil = '0 bulan';
-    }
+            let hasil = '';
 
-    lamaInput.value = hasil.trim();
-}
+            if (tahun > 0) hasil += tahun + ' tahun ';
+            if (bulan > 0) hasil += bulan + ' bulan';
+
+            if (hasil === '') hasil = '0 bulan';
+
+            lamaInput.value = hasil.trim();
+        }
+
+        // trigger saat user selesai input
+        tglInput.addEventListener('change', hitungLama);
+        tglInput.addEventListener('blur', hitungLama);
 
         // ==================== SPP ====================
         const sppMapping = @json($sppMapping);
@@ -730,170 +714,55 @@ function hitungLama() {
         golSelect?.addEventListener('change', updateSPP);
         kdSelect?.addEventListener('change', updateSPP);
         updateSPP();
-        //===========TAHAPAN==================
-
-            $('#tahap').select2({
-        width: 'resolve',
-        placeholder: '-- Pilih --',
-        allowClear: true
-    });
-
-    // ==================== PASTE SUPPORT SELECT2 ====================
-    $(document).on('paste', '.select2-search__field', function (e) {
-        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
-            .getData('text')
-            .trim()
-            .toLowerCase();
-
-        let select = $('#tahap');
-
-        let found = false;
-
-        select.find('option').each(function () {
-            if ($(this).text().toLowerCase() === pasted) {
-                select.val($(this).val()).trigger('change');
-                found = true;
-            }
-        });
-
-        if (!found) {
-            select.val(null).trigger('change'); // kosong kalau tidak cocok
-        }
-    });
-    const tahapSelect = $('#tahap');
-    const tglWrapper = $('#tgl_tahapan').closest('.col-md-6');
-
-    // ==================== INITIAL HIDE ====================
-    if (!tahapSelect.val()) {
-        tglWrapper.hide();
-    }
-
-    // ==================== ON CHANGE ====================
-    tahapSelect.on('change', function () {
-        let val = $(this).val();
-
-        if (val === 'Persiapan' || val === 'Lanjutan') {
-            tglWrapper.show();
-        } else {
-            $('#tgl_tahapan').val('');
-            tglWrapper.hide();
-        }
-    });
+        
 
         // ==================== INFO LAINNYA ====================
-$(document).ready(function () {
-
-    // =========================
-    // INIT SELECT2
-    // =========================
-    $('#info').select2({
-        width: '100%',
-        placeholder: '-- Pilih --',
-        allowClear: true
-    });
-    $('#kelas').select2({
-        width: '100%',
-        placeholder: '-- Pilih Kelas --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-    $('#gol').select2({
-        width: '100%',
-        placeholder: '-- Pilih Gol --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-    $('#kd').select2({
-        width: '100%',
-        placeholder: '-- Pilih KD --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-    $('#petugas_trial').select2({
-        width: '100%',
-        placeholder: '-- Pilih Guru Trial --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-    $('#guru').select2({
-        width: '100%',
-        placeholder: '-- Pilih Guru --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-        $('#note').select2({
-        width: '100%',
-        placeholder: '-- Pilih Note --',
-        allowClear: true,
-        minimumResultsForSearch: 0
-    });
-
-
-    // =========================
-    // TOGGLE KETERANGAN
-    // =========================
-    function toggleKeterangan() {
-        let val = $('#info').val();
-
-        if (val && val.toLowerCase() === 'lainnya') {
-            $('#keterangan_info_wrapper').slideDown(150);
-        } else {
-            $('#keterangan_info_wrapper').slideUp(150);
-            $('#keterangan_info').val('');
-        }
-    }
-
-    // WAJIB pakai ini (Select2 event)
-    $('#info').on('change.select2', toggleKeterangan);
-
-    // Jalankan saat load (edit mode / old value)
-    toggleKeterangan();
-
-    // =========================
-    // SUPPORT PASTE DARI EXCEL
-    // =========================
-    $(document).on('paste', '.select2-search__field', function (e) {
-
-        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
-            .getData('text')
-            .trim()
-            .toLowerCase();
-
-        // Ambil select yang aktif
-        let selectId = $(this)
-            .closest('.select2-container')
-            .prev('select')
-            .attr('id');
-
-        // hanya untuk #info
-        if (selectId !== 'info') return;
-
-        let select = $('#info');
-        let found = false;
-
-        select.find('option').each(function () {
-            if ($(this).text().toLowerCase() === pasted) {
-                select.val($(this).val()).trigger('change.select2');
-                found = true;
-            }
+        $('#info').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
         });
 
-        // kalau tidak cocok → kosong
-        if (!found) {
-            select.val(null).trigger('change.select2');
-        }
-    });
+        $('#kelas').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
 
-});
+        $('#petugas_trial').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
 
-        // ==================== LEVEL ====================
-        const level = document.getElementById('level');
-        const tglLevel = document.getElementById('tgl_level');
+        $('#guru').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
 
-        level?.addEventListener('change', function () {
-            if (this.value && !tglLevel.value) {
-                tglLevel.value = new Date().toISOString().split('T')[0];
-            }
+        $('#note').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
+
+        $('#jenis_kbm').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
+
+        $('#level').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
+
+        $('#asal_modul').select2({
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
         });
 
         // ==================== JADWAL ====================
@@ -946,26 +815,40 @@ $(document).ready(function () {
 
     // Toggle Duafa BNF
     function toggleDuafaBNF() {
-        const gol = (document.getElementById('gol')?.value || '').toUpperCase().trim();
-        const triggerGol = ['D', 'S3B1', 'S3B2', 'S3B3'];
-        const section = document.getElementById('duafa-bnf-section');
+    const gol = (document.getElementById('gol')?.value || '').toUpperCase().trim();
+    const triggerGol = ['D', 'S3B1', 'S3B2', 'S3B3'];
 
-        if (!section) return;
+    const section = document.getElementById('duafa-bnf-section');
+    const alertCheckbox = document.getElementById('alert');
 
-        if (triggerGol.includes(gol)) {
-            section.style.display = 'block';
-        } else {
-            section.style.display = 'none';
-            document.getElementById('periode').value = '';
-            document.getElementById('tgl_mulai').value = '';
-            document.getElementById('tgl_akhir').value = '';
-            document.getElementById('jumlah_beasiswa').value = '';
-            document.getElementById('alert').checked = false;
+    if (!section) return;
+
+    if (triggerGol.includes(gol)) {
+        section.style.display = 'block';
+
+        // ✅ auto checklist
+        if (alertCheckbox) {
+            alertCheckbox.checked = true;
+        }
+
+    } else {
+        section.style.display = 'none';
+
+        document.getElementById('periode').value = '';
+        document.getElementById('tgl_mulai').value = '';
+        document.getElementById('tgl_akhir').value = '';
+        document.getElementById('jumlah_beasiswa').value = '';
+
+        // ✅ auto uncheck
+        if (alertCheckbox) {
+            alertCheckbox.checked = false;
         }
     }
+}
 
-    document.getElementById('gol')?.addEventListener('change', toggleDuafaBNF);
-    document.addEventListener('DOMContentLoaded', toggleDuafaBNF);
+// EVENT
+document.getElementById('gol')?.addEventListener('change', toggleDuafaBNF);
+document.addEventListener('DOMContentLoaded', toggleDuafaBNF);
 
     // ==================== AUTO FILL BEASISWA (S3B1, S3B2, dll) ====================
     document.addEventListener('DOMContentLoaded', function () {
@@ -1025,124 +908,282 @@ $(document).ready(function () {
         });
     });
 
-    // ==================== PAKET 72 ====================
-    const gol = document.getElementById('gol');
-    const paket72Section = document.getElementById('paket72Section');
-    const tglBayar = document.getElementById('tgl_bayar');
-    const tglSelesai = document.getElementById('tgl_selesai');
-    const alert2 = document.getElementById('alert2');
+    // ==================== PAKET 72 FIX ====================
+const gol = document.getElementById('gol');
+const paket72Section = document.getElementById('paket72Section');
+const tglBayar = document.getElementById('tgl_bayar');
+const tglSelesai = document.getElementById('tgl_selesai');
+const alert2 = document.getElementById('alert2');
 
-    function formatDate(date) {
-        return date.toISOString().split('T')[0];
-    }
+function addMonths(dateStr, m) {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
 
-    function addMonths(date, m) {
-        let d = new Date(date);
-        d.setMonth(d.getMonth() + m);
-        return d;
-    }
+    d.setMonth(d.getMonth() + m);
+    return d.toISOString().split('T')[0];
+}
 
-    function handlePaket72() {
-        if (!gol) return;
+function syncPaket72() {
+    if (!gol) return;
 
-        if (gol.value === 'P72') {
-            paket72Section.style.display = 'block';
+    if (gol.value === 'P72') {
+        paket72Section.style.display = 'block';
 
-            let today = new Date();
-
-            if (tglBayar && !tglBayar.value) {
-                tglBayar.value = formatDate(today);
-            }
-
-            let end6 = addMonths(today, 6);
-            if (tglSelesai && !tglSelesai.value) {
-                tglSelesai.value = formatDate(end6);
-            }
-
-            alert2.checked = true;
-        } else {
-            paket72Section.style.display = 'none';
-            tglBayar.value = '';
-            tglSelesai.value = '';
-            alert2.checked = false;
+        // default tgl bayar
+        if (!tglBayar.value) {
+            const today = new Date().toISOString().split('T')[0];
+            tglBayar.value = today;
         }
+
+        // auto hitung selesai dari bayar
+        if (tglBayar.value) {
+            tglSelesai.value = addMonths(tglBayar.value, 6);
+        }
+
+        alert2.checked = true;
+    } else {
+        paket72Section.style.display = 'none';
+        tglBayar.value = '';
+        tglSelesai.value = '';
+        alert2.checked = false;
     }
+}
 
-    gol?.addEventListener('change', handlePaket72);
-    handlePaket72(); // untuk edit mode
+// kalau tgl bayar berubah → update selesai
+tglBayar?.addEventListener('change', function () {
+    if (this.value) {
+        tglSelesai.value = addMonths(this.value, 6);
+    }
+});
 
-    // ==================== FORMAT TANGGAL (tgl_lahir) ====================
-    document.getElementById('tgl_lahir')?.addEventListener('blur', function () {
-        let val = this.value.trim();
-        let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+// gol berubah
+gol?.addEventListener('change', syncPaket72);
+
+// init edit mode
+syncPaket72();
+
+    // ==================== GLOBAL FORMAT ====================
+function formatTanggalIndonesia(val) {
+    let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+    return val;
+}
+
+function formatHariIni() {
+    let d = new Date();
+    return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+}
+
+function toISO(val) {
+    let match = val.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+    return val;
+}
+
+function hitungUsiaLengkap(val) {
+    const iso = toISO(val);
+    const today = new Date();
+    const birth = new Date(iso);
+    if (isNaN(birth)) return '';
+
+    let totalBulan =
+        (today.getFullYear() - birth.getFullYear()) * 12 +
+        (today.getMonth() - birth.getMonth());
+
+    if (today.getDate() < birth.getDate()) totalBulan--;
+
+    if (totalBulan < 0) return '';
+
+    let tahun = Math.floor(totalBulan / 12);
+    let bulan = totalBulan % 12;
+
+    return `${tahun ? tahun + ' tahun ' : ''}${bulan ? bulan + ' bulan' : '0 bulan'}`.trim();
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ==================== ELEMENT ====================
+    const tglLahir = document.getElementById('tgl_lahir');
+    const tglDaftar = document.getElementById('tgl_daftar');
+    const tglLevel = document.getElementById('tgl_level');
+    const level = document.getElementById('level');
+    const usia = document.getElementById('usia');
+
+    const tahapSelect = $('#tahap');
+    const tglTahapan = $('#tgl_tahapan');
+    const tglSuratGaransi = document.getElementById('tgl_surat_garansi');
+
+    const tglMulai = document.getElementById('tgl_mulai');
+    const tglAkhir = document.getElementById('tgl_akhir');
+
+    const tglWrapper = tglTahapan.closest('.col-md-6');
+
+    // ==================== SELECT2 ====================
+    $('#tahap').select2({
+        width: 'resolve',
+        placeholder: '-- Pilih --',
+        allowClear: true
+    });
+
+    // ==================== PASTE SELECT2 ====================
+    $(document).on('paste', '.select2-search__field', function (e) {
+        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
+            .getData('text')
+            .trim()
+            .toLowerCase();
+
+        let found = false;
+
+        tahapSelect.find('option').each(function () {
+            if ($(this).text().toLowerCase() === pasted) {
+                tahapSelect.val($(this).val()).trigger('change');
+                found = true;
+            }
+        });
+
+        if (!found) tahapSelect.val(null).trigger('change');
+    });
+
+    // ==================== TAHAP SHOW/HIDE ====================
+    if (!tahapSelect.val()) tglWrapper.hide();
+
+    tahapSelect.on('change', function () {
+        let val = $(this).val();
+
+        if (val === 'Persiapan' || val === 'Lanjutan') {
+            tglWrapper.show();
+        } else {
+            tglTahapan.val('');
+            tglWrapper.hide();
+        }
+    });
+
+    // ==================== PASTE TGL TAHAPAN ====================
+    tglTahapan.on('paste', function (e) {
+        e.preventDefault();
+
+        let pasted = (e.originalEvent.clipboardData || window.clipboardData)
+            .getData('text')
+            .trim();
+
+        let match = pasted.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
 
         if (match) {
-            let dd = match[1];
-            let mm = match[2];
-            let yyyy = match[3];
-            this.value = `${yyyy}-${mm}-${dd}`;
+            let day = match[1].padStart(2, '0');
+            let month = match[2].padStart(2, '0');
+            let year = match[3];
+
+            $(this).val(`${day}-${month}-${year}`); // ✅ FIX
+        } else {
+            $(this).val(formatTanggalIndonesia(pasted));
         }
     });
 
-    // ==================== HITUNG USIA LENGKAP (tgl_lahir) ====================
-    document.addEventListener('DOMContentLoaded', function () {
-        const tglLahir = document.getElementById('tgl_lahir');
-        const usia = document.getElementById('usia');
+    // ==================== TANGGAL HANDLER ====================
+    function handleTglLahir() {
+        let val = tglLahir.value.trim();
+        if (!val) return usia.value = '';
 
-        function hitungUsia(tanggal) {
-            let today = new Date();
-            let birth = new Date(tanggal);
-            let umur = today.getFullYear() - birth.getFullYear();
-            let m = today.getMonth() - birth.getMonth();
+        val = formatTanggalIndonesia(val);
+        tglLahir.value = val;
+        usia.value = hitungUsiaLengkap(val);
+    }
 
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-                umur--;
-            }
-            return umur;
+    function handleTglDaftar() {
+        let val = tglDaftar.value.trim();
+        if (val) tglDaftar.value = formatTanggalIndonesia(val);
+    }
+
+    function handleTglLevel() {
+        let val = tglLevel.value.trim();
+        if (val) tglLevel.value = formatTanggalIndonesia(val);
+    }
+
+    function handleLevel() {
+        if (level.value && !tglLevel.value) {
+            tglLevel.value = formatHariIni();
         }
+    }
 
-        function convertDanHitung() {
-            let val = tglLahir.value.trim();
-            let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+    //============== TANGGAL GARANSI =================
+    function handleTglSuratGaransi() {
+    let val = tglSuratGaransi.value.trim();
+    if (val) tglSuratGaransi.value = formatTanggalIndonesia(val);
+    }
+    
+    //============== TANGGAL BNF =====================
+    function handleTglMulai() {
+    // tetap ISO, jangan diubah
+    }
 
-            if (match) {
-                val = `${match[3]}-${match[2]}-${match[1]}`;
-                tglLahir.value = val;
-            }
+    function handleTglAkhir() {
+        // tetap ISO, jangan diubah
+    }
 
-            if (val) {
-                let umur = hitungUsia(val);
-                usia.value = isNaN(umur) ? '' : umur;
-            } else {
-                usia.value = '';
-            }
+
+
+    // ==================== EVENT ====================
+    tglLahir?.addEventListener('blur', handleTglLahir);
+    tglLahir?.addEventListener('change', handleTglLahir);
+
+    tglDaftar?.addEventListener('blur', handleTglDaftar);
+    tglDaftar?.addEventListener('change', handleTglDaftar);
+
+    tglLevel?.addEventListener('blur', handleTglLevel);
+    tglLevel?.addEventListener('change', handleTglLevel);
+
+    level?.addEventListener('change', handleLevel);
+
+    tglSuratGaransi?.addEventListener('blur', handleTglSuratGaransi);
+    tglSuratGaransi?.addEventListener('change', handleTglSuratGaransi);
+});
+
+function normalizeToISO(val) {
+    if (!val) return '';
+
+    val = val.trim();
+
+    // DD/MM/YYYY atau DD-MM-YYYY
+    let m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+        return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    }
+
+    // YYYY-MM-DD
+    let m2 = val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m2) return val;
+
+    return '';
+}
+function bindDate(input) {
+    if (!input) return;
+
+    // PASTE SUPPORT
+    input.addEventListener('paste', function (e) {
+        e.preventDefault();
+
+        let text = (e.clipboardData || window.clipboardData)
+            .getData('text')
+            .trim();
+
+        let iso = normalizeToISO(text);
+        if (iso) {
+            input.value = iso;
+            input.dispatchEvent(new Event('change'));
         }
-
-        tglLahir?.addEventListener('change', convertDanHitung);
-        tglLahir?.addEventListener('blur', convertDanHitung);
     });
 
-    // ==================== FORMAT TANGGAL DAFTAR ====================
-    document.addEventListener('DOMContentLoaded', function () {
-        const tglDaftar = document.getElementById('tgl_daftar');
-
-        function convertTanggal(input) {
-            let val = input.value.trim();
-            let match = val.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
-
-            if (match) {
-                input.value = `${match[3]}-${match[2]}-${match[1]}`;
-            }
-        }
-
-        tglDaftar?.addEventListener('blur', function () {
-            convertTanggal(this);
-        });
-
-        tglDaftar?.addEventListener('change', function () {
-            convertTanggal(this);
-        });
+    // NORMAL INPUT
+    input.addEventListener('change', function () {
+        let iso = normalizeToISO(this.value);
+        if (iso) this.value = iso;
     });
 
+    input.addEventListener('blur', function () {
+        let iso = normalizeToISO(this.value);
+        if (iso) this.value = iso;
+    });
+}
 </script>
 @endsection
