@@ -441,10 +441,34 @@ $golOptions = $HargaSaptataruna
                  ->orderBy('nama')
                  ->get();
 
+    // ==================== FILTER GOL (SAMA SEPERTI CREATE) ====================
+    $excluded = [
+        'S1_MB', 'S1_MU', 'S3_MB', 'S3_MU',
+        'KA01', 'RBAS', 'TAS', 'STPB', 'STF', 'KPK', 'KA'
+    ];
+
+    $golOptions = $HargaSaptataruna
+        ->filter(function ($item) use ($excluded) {
+            $kode = strtoupper(trim($item->kode));
+
+            return (
+                // Hanya ambil yang mulai dengan S, P, K, D
+                (str_starts_with($kode, 'S') ||
+                 str_starts_with($kode, 'P') ||
+                 str_starts_with($kode, 'K') ||
+                 str_starts_with($kode, 'D'))
+                // Kecualikan yang di-blacklist
+                && !in_array($kode, $excluded)
+            );
+        })
+        ->unique('kode')
+        ->values();
+    // =========================================================================
+
     // KD Options
     $kdOptions = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-    // Mapping SPP
+    // SPP Mapping
     $sppMapping = [];
     foreach ($HargaSaptataruna as $item) {
         foreach ($kdOptions as $kd) {
@@ -473,6 +497,7 @@ $golOptions = $HargaSaptataruna
         'Aktif Kembali','Cuti','Ganti Gol','Pindahan',
         'Belum Bayar SPP','Murid Mutasi Masuk','Murid Mutasi Keluar','Garansi'
     ];
+    $asalModulOptions = ['biMBA IM', 'biMBA Unit'];
 
     $periodeOptions = ['Ke-1','Ke-2','Ke-3','Ke-4','Ke-5','Ke-6','Ke-7','Ke-8','Ke-9','Ke-10','Ke-11','Ke-12'];
     $levelOptions = ['Level 1','Level 2','Level 3','Level 4'];
@@ -484,21 +509,22 @@ $golOptions = $HargaSaptataruna
     ];
 
     $noteGaransiOptions = [
-    'Tidak Memenuhi Syarat',
-    'Berkebutuhan Khusus',
-];
+        'Tidak Memenuhi Syarat',
+        'Berkebutuhan Khusus',
+    ];
 
     $infoOptions = ['Brosur','Event','Humas','Internet','Spanduk','Lainnya'];
 
     return view('buku_induk.edit', compact(
         'bukuInduk',
         'HargaSaptataruna',
+        'golOptions',           // ← TAMBAHKAN INI
         'profil',
         'kdOptions',
         'sppMapping',
         'tahapanOptions',
         'kategoriKeluarOptions',
-        'noteGaransiOptions', // ← TAMBAHKAN INI
+        'noteGaransiOptions',
         'kelasOptions',
         'noteOptions',
         'periodeOptions',
@@ -506,7 +532,8 @@ $golOptions = $HargaSaptataruna
         'jenisKbmOptions',
         'kodeJadwalOptions',
         'units',
-        'infoOptions'
+        'infoOptions',
+        'asalModulOptions'
     ));
 }
 

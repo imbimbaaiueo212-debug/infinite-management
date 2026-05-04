@@ -412,33 +412,33 @@
                 </div>
 
                 <div id="paket72Section" style="display: none;">
-    <div class="col-12 mb-3">
-        <h4 class="fw-bold">⏱️ Masa Aktif Paket 72</h4>
-    </div>
+                    <div class="col-12 mb-3">
+                        <h4 class="fw-bold">⏱️ Masa Aktif Paket 72</h4>
+                    </div>
 
-    <div class="row">
+                    <div class="row">
 
-        <div class="col-md-4 mb-3">
-            <label for="tgl_bayar" class="form-label fw-bold">Tanggal Bayar</label>
-            <input type="date" name="tgl_bayar" id="tgl_bayar" class="form-control">
-        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tgl_bayar" class="form-label fw-bold">Tanggal Bayar</label>
+                            <input type="date" name="tgl_bayar" id="tgl_bayar" class="form-control">
+                        </div>
 
-        <div class="col-md-4 mb-3">
-            <label for="tgl_selesai" class="form-label fw-bold text-success">Tanggal Selesai</label>
-            <input type="date" name="tgl_selesai" id="tgl_selesai" class="form-control">
-        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tgl_selesai" class="form-label fw-bold text-success">Tanggal Selesai</label>
+                            <input type="date" name="tgl_selesai" id="tgl_selesai" class="form-control">
+                        </div>
 
-        <div class="col-md-4 mb-3 d-flex align-items-end">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="alert2" id="alert2" value="aktif">
-                <label class="form-check-label fw-bold text-info">
-                    Paket 72 Aktif
-                </label>
-            </div>
-        </div>
+                        <div class="col-md-4 mb-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="alert2" id="alert2" value="aktif">
+                                <label class="form-check-label fw-bold text-info">
+                                    Paket 72 Aktif
+                                </label>
+                            </div>
+                        </div>
 
-    </div>
-</div>
+                    </div>
+                </div>
 
             <h4 class="col-12 mb-3">📚 Supply Modul</h4>
 

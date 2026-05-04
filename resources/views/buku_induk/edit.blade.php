@@ -85,34 +85,35 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">Tanggal Lahir</label>
-                                <input type="date" name="tgl_lahir" class="form-control"
-                                       value="{{ old('tgl_lahir', $bukuInduk->tgl_lahir?->format('Y-m-d')) }}">
+                                <input type="text" name="tgl_lahir" id="tgl_lahir" class="form-control"
+                                    value="{{ old('tgl_lahir', $bukuInduk->tgl_lahir?->format('d-m-Y')) }}">
                             </div>
 
                             <div class="col-md-3">
                                 <label class="form-label text-primary fw-bold">Usia</label>
-                                <input type="text" class="form-control bg-light text-center" readonly
-                                       value="{{ $bukuInduk->usia ?? '-' }} tahun">
+                                <input type="text" id="usia_display" class="form-control bg-light text-center" readonly
+                                    value="{{ $bukuInduk->usia ?? '-' }} tahun">
                             </div>
 
                             <div class="col-md-3">
                                 <label class="form-label">Tanggal Daftar</label>
-                                <input type="date" name="tgl_daftar" class="form-control"
-                                       value="{{ old('tgl_daftar', $bukuInduk->tgl_daftar?->format('Y-m-d')) }}">
+                                <input type="text" name="tgl_daftar" id="tgl_daftar" class="form-control"
+                                       value="{{ old('tgl_daftar', $bukuInduk->tgl_daftar?->format('d-m-Y')) }}">
                                 <small class="text-muted">Jika kosong, akan otomatis diisi tanggal hari ini.</small>
                             </div>
 
+                            <!-- Tanggal Aktif -->
                             <div class="col-md-3">
                                 <label class="form-label">Tanggal Aktif <span class="text-danger">*</span></label>
-                                <input type="date" name="tgl_masuk" class="form-control"
-                                       value="{{ old('tgl_masuk', $bukuInduk->tgl_masuk?->format('Y-m-d')) }}" required>
+                                <input type="text" name="tgl_masuk" id="tgl_masuk" class="form-control"
+                                    value="{{ old('tgl_masuk', $bukuInduk->tgl_masuk?->format('d-m-Y')) }}" required>
                             </div>
 
-                            
+                            <!-- Lama Belajar -->
                             <div class="col-md-3">
                                 <label class="form-label text-primary fw-bold">Lama Belajar</label>
-                                <input type="text" class="form-control bg-light text-center" readonly
-                                       value="{{ $bukuInduk->lama_bljr ?? '-' }}">
+                                <input type="text" id="lama_belajar_display" class="form-control bg-light text-center" readonly
+                                    value="{{ $bukuInduk->lama_bljr ?? '0 tahun 0 bulan' }}">
                             </div>
 
                             <!--NIM DI hidden -->
@@ -172,13 +173,13 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">Tanggal Keluar</label>
-                                <input type="date" name="tgl_keluar" class="form-control"
+                                <input type="text" name="tgl_keluar" id="tgl_keluar" class="form-control" placeholder="Masukan Tanggal Keluar"
                                        value="{{ old('tgl_keluar', $bukuInduk->tgl_keluar?->format('Y-m-d')) }}">
                             </div>
 
                             <div class="col-md-3">
                                 <label class="form-label">Kategori Keluar</label>
-                                <select name="kategori_keluar" class="form-select">
+                                <select name="kategori_keluar" id="kategori_keluar" class="form-select">
                                     <option value="">-- Pilih Kategori --</option>
                                     @foreach($kategoriKeluarOptions as $kk)
                                         <option value="{{ $kk }}" {{ old('kategori_keluar', $bukuInduk->kategori_keluar) == $kk ? 'selected' : '' }}>{{ $kk }}</option>
@@ -195,7 +196,7 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">Kelas <span class="text-danger">*</span></label>
-                                <select name="kelas" class="form-select" required>
+                                <select name="kelas" id="kelas" class="form-select" required>
                                     <option value="">-- Pilih Kelas --</option>
                                     @foreach($kelasOptions as $k)
                                         <option value="{{ $k }}" {{ old('kelas', $bukuInduk->kelas) == $k ? 'selected' : '' }}>{{ $k }}</option>
@@ -205,11 +206,12 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">Gol <span class="text-danger">*</span></label>
-                                <select name="gol" id="gol" class="form-select" required>
-                                    <option value="">-- Pilih Gol --</option>
-                                    @foreach($HargaSaptataruna as $item)
-                                        <option value="{{ $item->kode }}" {{ old('gol', $bukuInduk->gol) == $item->kode ? 'selected' : '' }}>
-                                            {{ $item->kode }}
+                                <select name="gol" id="gol" class="form-control">
+                                    <option value="">-- Pilih Golongan --</option>
+                                    @foreach($golOptions as $gol)
+                                        <option value="{{ $gol->kode }}" 
+                                            {{ old('gol', $bukuInduk->gol) == $gol->kode ? 'selected' : '' }}>
+                                            {{ $gol->kode }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -252,8 +254,8 @@
 
                             <div class="col-md-3">
                                 <label class="form-label text-success fw-bold">Tanggal Tahap</label>
-                                <input type="date" name="tgl_tahapan" id="tgl_tahapan" class="form-control"
-                                    value="{{ old('tgl_tahapan', $bukuInduk->tgl_tahapan?->format('Y-m-d')) }}">
+                                <input type="text" name="tgl_tahapan" id="tgl_tahapan" class="form-control"
+                                    value="{{ old('tgl_tahapan', $bukuInduk->tgl_tahapan?->format('d-m-Y')) }}">
                             </div>
 
                             <div class="w-100"></div> <!-- 🔥 ini bikin turun ke baris baru -->
@@ -261,7 +263,7 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Petugas Trial</label>
-                                <select name="petugas_trial" class="form-select">
+                                <select name="petugas_trial" id="petugas_trial" class="form-select">
                                     <option value="">-- Tidak Ada --</option>
                                     @foreach($profil as $p)
                                         <option value="{{ $p->nama }}"
@@ -274,7 +276,7 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Guru / Motivator</label>
-                                <select name="guru" class="form-select">
+                                <select name="guru" id="guru" class="form-select">
                                     <option value="">-- Pilih Guru --</option>
                                     @foreach($profil as $p)
                                         <option value="{{ $p->nama }}"
@@ -289,7 +291,7 @@
 
                              <div class="col-md-2">
                                 <label class="form-label">Jenis KBM</label>
-                                <select name="jenis_kbm" class="form-select">
+                                <select name="jenis_kbm" id="jenis_kbm" class="form-select">
                                     <option value="">-- Pilih Jenis --</option>
                                     @foreach($jenisKbmOptions as $jk)
                                         <option value="{{ $jk }}" {{ old('jenis_kbm', $bukuInduk->jenis_kbm) == $jk ? 'selected' : '' }}>{{ $jk }}</option>
@@ -311,7 +313,7 @@
 
                             <div class="col-md-3">
                                 <label class="form-label text-success fw-bold">Tanggal Kenaikan Level</label>
-                                <input type="date" name="tgl_level" id="tgl_level" class="form-control"
+                                <input type="text" name="tgl_level" id="tgl_level" class="form-control" placeholder="Masukan Tanggal Kenaikan Level"
                                     value="{{ old('tgl_level', $bukuInduk->tgl_level?->format('Y-m-d')) }}">
                             </div>
 
@@ -357,7 +359,7 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Note</label>
-                                <select name="note" class="form-select">
+                                <select name="note" id="note" class="form-select">
                                     <option value="">-- Tidak Ada --</option>
                                     @foreach($noteOptions as $n)
                                         <option value="{{ $n }}" {{ old('note', $bukuInduk->note) == $n ? 'selected' : '' }}>{{ $n }}</option>
@@ -408,7 +410,7 @@
 
                             <div class="col-md-2">
                                 <label class="form-label fw-bold text-success">Kode Jadwal <span class="text-danger">*</span></label>
-                                <select name="kode_jadwal" class="form-select" required>
+                                <select name="kode_jadwal" id="kode_jadwal" class="form-select" required>
                                     <option value="">-- Pilih Kode Jadwal --</option>
                                     @foreach($kodeJadwalOptions as $kode)
                                         <option value="{{ $kode }}"
@@ -420,54 +422,38 @@
                             </div>
 
                             <div class="col-md-4">
-                                    <label class="form-label fw-bold text-success">Hari & Jam</label>
-                                    <div class="form-control-plaintext border p-2 bg-light">
+                                <label class="form-label fw-bold text-success">Hari & Jam</label>
+                                <div id="jadwal_preview" class="form-control-plaintext border p-2 bg-light">
+                                    @php
+                                        $details = $bukuInduk->jadwal()
+                                            ->select('hari', 'jam_ke', 'shift')
+                                            ->distinct()
+                                            ->orderByRaw("FIELD(hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu')")
+                                            ->orderBy('jam_ke')
+                                            ->get();
+                                    @endphp
+
+                                    @if($details->isNotEmpty())
                                         @php
-                                            $details = $bukuInduk->jadwal()
-                                                ->select('hari', 'jam_ke', 'shift')
-                                                ->distinct()
-                                                ->orderByRaw("FIELD(hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu')")
-                                                ->orderBy('jam_ke')
-                                                ->get();
+                                            $shift = $details->first()->shift;
+                                            $hariList = $details->pluck('hari')->unique()->values()->toArray();
+                                            $jamMap = [
+                                                1 => '08:00', 2 => '09:00', 3 => '10:00', 4 => '11:00', 5 => '12:00',
+                                                6 => '13:00', 7 => '14:00', 8 => '15:00', 9 => '16:00'
+                                            ];
+                                            $jamKe = $details->min('jam_ke');
+                                            $jam = $jamMap[$jamKe] ?? '-';
                                         @endphp
 
-                                        @if($details->isNotEmpty())
-                                            @php
-                                                // Ambil shift
-                                                $shift = $details->first()->shift;
+                                        <strong>{{ $shift }}</strong>
+                                        <span class="text-muted">({{ implode(' | ', $hariList) }})</span>
+                                        - <span class="fw-bold text-primary">{{ $jam }}</span>
 
-                                                // Ambil hari unik
-                                                $hariList = $details->pluck('hari')->unique()->values()->toArray();
-
-                                                // 🔥 Mapping jam_ke → jam asli
-                                                $jamMap = [
-                                                    1 => '08:00',
-                                                    2 => '09:00',
-                                                    3 => '10:00',
-                                                    4 => '11:00',
-                                                    5 => '12:00',
-                                                    6 => '13:00',
-                                                    7 => '14:00',
-                                                    8 => '15:00',
-                                                    9 => '16:00',
-                                                ];
-
-                                                // Ambil jam terkecil (biar konsisten)
-                                                $jamKe = $details->min('jam_ke');
-
-                                                $jam = $jamMap[$jamKe] ?? '-';
-                                            @endphp
-
-                                            <strong>{{ $shift }}</strong>
-                                            <span class="text-muted">({{ implode(' | ', $hariList) }})</span>
-                                            -
-                                            <span class="fw-bold text-primary">{{ $jam }}</span>
-
-                                        @else
-                                            <span class="text-muted">Belum ada jadwal</span>
-                                        @endif
-                                    </div>
+                                    @else
+                                        <span class="text-muted">Pilih kode jadwal terlebih dahulu</span>
+                                    @endif
                                 </div>
+                            </div>
 
                             {{-- ================= BEASISWA ================= --}}
                              <div class="col-12"><hr class="my-4"></div>
@@ -498,21 +484,21 @@
                                     {{-- TGL MULAI --}}
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold text-success">Tanggal Mulai</label>
-                                        <input type="date"
+                                        <input type="text"
                                             name="tgl_mulai"
                                             id="tgl_mulai"
                                             class="form-control"
-                                            value="{{ old('tgl_mulai', $bukuInduk->tgl_mulai?->format('Y-m-d')) }}">
+                                            value="{{ old('tgl_mulai', $bukuInduk->tgl_mulai?->format('d-m-Y')) }}">
                                     </div>
 
                                     {{-- TGL AKHIR --}}
                                     <div class="col-md-3" id="beasiswaSection">
                                         <label class="form-label fw-bold text-success">Tanggal Akhir</label>
-                                        <input type="date"
+                                        <input type="text"
                                             name="tgl_akhir"
                                             id="tgl_akhir"
                                             class="form-control"
-                                            value="{{ old('tgl_akhir', $bukuInduk->tgl_akhir?->format('Y-m-d')) }}">
+                                            value="{{ old('tgl_akhir', $bukuInduk->tgl_akhir?->format('d-m-Y')) }}">
                                     </div>
 
                                     {{-- JUMLAH --}}
@@ -689,251 +675,308 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ===============================
-    // ELEMENTS
-    // ===============================
-    const unitSelect = document.getElementById('bimba_unit_select');
-    const displayCabang = document.getElementById('no_cabang_display');
-    const hiddenCabang = document.getElementById('no_cabang_hidden');
+    // ==================== SELECT2 ====================
+    $('#gol, #kd, #kelas, #bimba_unit_select, #tahap_select, #level, #info_select, #petugas_trial, #guru, #jenis_kbm, #note, #note_garansi, #kategori_keluar, #kode_jadwal')
+        .select2({ 
+            width: '100%', 
+            placeholder: '-- Pilih --', 
+            allowClear: true 
+        });
 
-    const gol = document.getElementById('gol');
-    const kd = document.getElementById('kd');
+    // ==================== ELEMENTS ====================
+    const golSelect          = document.getElementById('gol');
+    const kdSelect           = document.getElementById('kd');
+    const sppHidden          = document.getElementById('spp');
+    const sppDisplay         = document.getElementById('spp_display');
 
-    const sppHidden = document.getElementById('spp');
-    const sppDisplay = document.getElementById('spp_display');
+    // Beasiswa
+    const beasiswaSection1   = document.getElementById('beasiswaSection');   
+    const beasiswaSection2   = document.getElementById('beasiswaSection2');  
+    const alertBeasiswa      = document.getElementById('alert');
+    const periodeSelect      = document.getElementById('periode');
+    const tglMulai           = document.getElementById('tgl_mulai');
+    const tglAkhir           = document.getElementById('tgl_akhir');
+    const jumlahBeasiswa     = document.getElementById('jumlah_beasiswa');
 
-    const tglMulai = document.getElementById('tgl_mulai');
-    const tglAkhir = document.getElementById('tgl_akhir');
-    const jumlahBeasiswa = document.getElementById('jumlah_beasiswa');
-    const sectionBeasiswa = document.getElementById('beasiswaSection');
-    const alertCheckbox = document.getElementById('alert');
+    // Paket 72
+    const paket72Section     = document.getElementById('paket72Section');
+    const alert72            = document.getElementById('alert2');
+    const tglBayar           = document.getElementById('tgl_bayar');
+    const tglSelesai72       = document.getElementById('tgl_selesai');
 
-    const tglBayar = document.getElementById('tgl_bayar');
-    const tglSelesai = document.getElementById('tgl_selesai');
-    const alert2 = document.getElementById('alert2');
+    // Date Fields
+    const tglLahir           = document.getElementById('tgl_lahir');
+    const usiaDisplay        = document.getElementById('usia_display');
+    const tglMasuk           = document.getElementById('tgl_masuk');
+    const lamaBelajarDisplay = document.getElementById('lama_belajar_display');
 
-    const tahapSelect = document.getElementById('tahap_select');
-    const tglTahapan = document.getElementById('tgl_tahapan');
+    // Jadwal
+    const kodeJadwalSelect   = document.getElementById('kode_jadwal');
+    const jadwalPreview      = document.getElementById('jadwal_preview');
 
-    const level = document.getElementById('level');
-    const tglLevel = document.getElementById('tgl_level');
+    const sppMapping = @json($sppMapping ?? []);
+    const beasiswaGol = ['S3B1', 'S3B2', 'S3B3', 'D'];
 
-    const infoSelect = document.getElementById('info_select');
-    const ketWrapper = document.getElementById('keterangan_info_wrapper');
+    // ==================== HELPER ====================
+function normalizeDate(val) {
+    if (!val) return '';
+    val = val.toString().trim();
 
-    const pengajuanGaransi = document.querySelector('[name="tgl_pengajuan_garansi"]');
-    const selesaiGaransi = document.querySelector('[name="tgl_selesai_garansi"]');
-    const masaGaransi = document.querySelector('[name="masa_aktif_garansi"]');
+    // dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy → dd-mm-yyyy
+    let m = val.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (m) return `${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}-${m[3]}`;
 
-    const periode = document.querySelector('[name="periode"]');
+    // yyyy-mm-dd, yyyy/mm/dd → dd-mm-yyyy
+    m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (m) return `${m[3].padStart(2,'0')}-${m[2].padStart(2,'0')}-${m[1]}`;
 
-    const sppMapping = @json($sppMapping);
+    return val;
+}
 
-    const allowedGol = ['S3B1', 'S3B2', 'S3B3', 'D'];
+// Fungsi baru yang LEBIH AKURAT
+function addMonthsForDateInput(dateStr, months) {
+    if (!dateStr) return '';
 
-    // ===============================
-    // HELPER
-    // ===============================
-    function formatDate(date) {
-        return date.toISOString().split('T')[0];
+    // Pastikan dulu diubah ke format YYYY-MM-DD (paling aman untuk JS Date)
+    let cleanDate = dateStr;
+    
+    // Jika format dd-mm-yyyy
+    let m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (m) {
+        cleanDate = `${m[3]}-${m[2]}-${m[1]}`;
     }
 
-    function addMonths(date, m) {
-        let d = new Date(date);
-        d.setMonth(d.getMonth() + m);
-        return d;
-    }
+    let d = new Date(cleanDate);
+    if (isNaN(d.getTime())) return '';
 
-    // ===============================
-    // CABANG AUTO
-    // ===============================
-    function updateCabang() {
-        if (!unitSelect) return;
-        const opt = unitSelect.options[unitSelect.selectedIndex];
-        const cab = opt?.getAttribute('data-no-cabang') || '-';
-        if (displayCabang) displayCabang.value = cab;
-        if (hiddenCabang) hiddenCabang.value = cab;
-    }
-    unitSelect?.addEventListener('change', updateCabang);
-    updateCabang();
+    // Tambah bulan dengan cara yang benar
+    d.setMonth(d.getMonth() + months);
 
-    // ===============================
-    // SPP AUTO
-    // ===============================
+    return d.toISOString().split('T')[0];
+}
+
+function calculateAge(dateStr) {
+    if (!dateStr) return '0 tahun 0 bulan';
+    const iso = normalizeDate(dateStr).split('-').reverse().join('-');
+    const birth = new Date(iso);
+    if (isNaN(birth.getTime())) return '0 tahun 0 bulan';
+
+    const today = new Date();
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+    
+    if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+        years--; 
+        months += 12;
+    }
+    return `${years} tahun ${months} bulan`;
+}
+
+function calculateLamaBelajar(dateStr) {
+    if (!dateStr) return '0 tahun 0 bulan';
+    const iso = normalizeDate(dateStr).split('-').reverse().join('-');
+    const start = new Date(iso);
+    if (isNaN(start.getTime())) return '0 tahun 0 bulan';
+
+    const today = new Date();
+    let totalMonths = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+    if (today.getDate() < start.getDate()) totalMonths--;
+
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    return `${years} tahun ${months} bulan`;
+}
+
+// ==================== SETUP DATE FIELD ====================
+function setupDateField(field, displayField = null, calculator = null) {
+    if (!field) return;
+
+    const processDate = () => {
+        field.value = normalizeDate(field.value);
+        if (displayField && calculator) {
+            displayField.value = calculator(field.value);
+        }
+    };
+
+    field.addEventListener('blur', processDate);
+    field.addEventListener('input', () => {
+        if (displayField && calculator) displayField.value = calculator(field.value);
+    });
+    field.addEventListener('paste', () => {
+        setTimeout(processDate, 10);
+    });
+}
+
+    // ==================== SPP ====================
     function updateSPP() {
-        if (!gol || !kd) return;
-
-        const g = gol.value;
-        const k = kd.value;
-
-        if (g && k && sppMapping[g]?.[k] !== undefined) {
-            let harga = parseInt(sppMapping[g][k]) || 0;
+        if (!golSelect || !kdSelect || !sppHidden || !sppDisplay) return;
+        
+        const gol = golSelect.value;
+        const kd  = kdSelect.value;
+        
+        if (gol && kd && sppMapping[gol]?.[kd] !== undefined) {
+            const harga = parseInt(sppMapping[gol][kd]);
             sppHidden.value = harga;
             sppDisplay.value = 'Rp ' + new Intl.NumberFormat('id-ID').format(harga);
         } else {
-            sppHidden.value = '';
             sppDisplay.value = 'Belum ditentukan';
         }
     }
-    gol?.addEventListener('change', updateSPP);
-    kd?.addEventListener('change', updateSPP);
-    updateSPP();
 
-    // ===============================
-    // BEASISWA LOGIC
-    // ===============================
-    function resetBeasiswa() {
-        if (!tglAkhir || !jumlahBeasiswa || !sectionBeasiswa) return;
-        tglAkhir.value = '';
-        jumlahBeasiswa.value = '';
-        sectionBeasiswa.style.display = 'none';
-    }
+        // ==================== BEASISWA ====================
+    function handleBeasiswaAutoFill() {
+        const gol = golSelect ? golSelect.value : '';
+        if (!beasiswaGol.includes(gol)) return;
 
-    function showBeasiswa() {
-        sectionBeasiswa.style.display = 'block';
-    }
+        const beasiswaMapping = {
+            'S3B1': 100000, 'S3B2': 200000, 'S3B3': 50000, 'D': 300000
+        };
+        const nominal = beasiswaMapping[gol] || 0;
 
-    function updateBeasiswa() {
-        if (!tglMulai?.value) {
-            resetBeasiswa();
-            return;
+        if (periodeSelect && !periodeSelect.value) periodeSelect.value = 'Ke-1';
+        if (tglMulai && !tglMulai.value) {
+            tglMulai.value = new Date().toISOString().split('T')[0];
         }
 
-        showBeasiswa();
+        if (tglAkhir && tglMulai && tglMulai.value) {
+            tglAkhir.value = addMonthsForDateInput(tglMulai.value, 6);
+        }
 
-        let start = new Date(tglMulai.value);
-        let end = addMonths(start, 6);
-
-        tglAkhir.value = formatDate(end);
-        jumlahBeasiswa.value = 0;
-
-        cekBeasiswa();
+        if (jumlahBeasiswa) jumlahBeasiswa.value = nominal * 6;
+        if (alertBeasiswa) alertBeasiswa.checked = true;
     }
 
-    function cekBeasiswa() {
-        if (!alertCheckbox || !tglMulai?.value || !tglAkhir?.value) return;
+    // ==================== PAKET 72 ====================
+    function handlePaket72AutoFill() {
+        if (!golSelect || golSelect.value !== 'P72') return;
 
-        let now = new Date();
-        let s = new Date(tglMulai.value);
-        let e = new Date(tglAkhir.value);
+        if (alert72) alert72.checked = true;
 
-        alertCheckbox.checked = (now >= s && now <= e);
-    }
+        if (tglBayar && !tglBayar.value) {
+            tglBayar.value = new Date().toISOString().split('T')[0];
+        }
 
-    tglMulai?.addEventListener('change', updateBeasiswa);
-    tglAkhir?.addEventListener('change', cekBeasiswa);
-
-    if (!tglMulai?.value) resetBeasiswa();
-    else showBeasiswa();
-
-    // ===============================
-    // GOL → AUTO BEASISWA
-    // ===============================
-   gol.addEventListener('change', function () {
-
-    if (!allowedGol.includes(this.value)) return;
-
-    // =========================
-    // PERIODE AUTO INCREMENT
-    // =========================
-    let current = periode.value;
-
-    if (!current) {
-        periode.value = 'Ke-1';
-    } else {
-        let match = current.match(/\d+/);
-        let number = match ? parseInt(match[0]) : 0;
-
-        if (number < 10) {
-            periode.value = `Ke-${number + 1}`;
+        if (tglBayar?.value && tglSelesai72) {
+            tglSelesai72.value = addMonthsForDateInput(tglBayar.value, 6);
         }
     }
 
-    // =========================
-    // TGL MULAI = HARI INI
-    // =========================
-    let today = new Date();
-    tglMulai.value = formatDate(today);
+    function handleGolChange() {
+        if (!golSelect) return;
+        
+        updateSPP();
 
-    // 🔥 TRIGGER supaya event change jalan
-    tglMulai.dispatchEvent(new Event('change'));
+        const gol = golSelect.value;
 
-    // =========================
-    // JUMLAH BEASISWA AUTO
-    // =========================
-    let nominal = beasiswaMapping[this.value] || 0;
+        // === BEASISWA ===
+        if (beasiswaGol.includes(gol)) {
+            if (beasiswaSection1) beasiswaSection1.style.display = 'block';
+            if (beasiswaSection2) beasiswaSection2.style.display = 'block';
+            handleBeasiswaAutoFill();
+        } else {
+            if (beasiswaSection1) beasiswaSection1.style.display = 'none';
+            if (beasiswaSection2) beasiswaSection2.style.display = 'none';
+        }
 
-    if (nominal > 0) {
-        jumlahBeasiswa.value = nominal * 6;
+        // === PAKET 72 ===
+        if (gol === 'P72') {
+            if (paket72Section) paket72Section.style.display = 'block';
+            handlePaket72AutoFill();
+        } else {
+            if (paket72Section) paket72Section.style.display = 'none';
+        }
     }
+
+    function handleTglMulaiChange() {
+        if (tglMulai && tglAkhir && tglMulai.value) {
+            const normalized = normalizeDate(tglMulai.value);
+            tglAkhir.value = addMonthsForDateInput(normalized, 6);
+        }
+    }
+
+    function handleTglBayarChange() {
+        if (tglBayar && tglSelesai72 && tglBayar.value) {
+            tglSelesai72.value = addMonthsForDateInput(tglBayar.value, 6);
+        }
+    }
+
+    // ==================== JADWAL PREVIEW ====================
+    const jadwalMap = { /* ... tetap sama ... */ 
+        108: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '08:00' },
+        109: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '09:00' },
+        110: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '10:00' },
+        111: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '11:00' },
+        112: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '12:00' },
+        113: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '13:00' },
+        114: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '14:00' },
+        115: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '15:00' },
+        116: { shift: 'SRJ', hari: 'Senin | Rabu | Jumat', jam: '16:00' },
+
+        208: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '08:00' },
+        209: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '09:00' },
+        210: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '10:00' },
+        211: { shift: 'SKS', hari: 'Selasa | Kamis | Sabtu', jam: '11:00' },
+
+        308: { shift: 'S6', hari: 'Senin - Sabtu', jam: '08:00' },
+        309: { shift: 'S6', hari: 'Senin - Sabtu', jam: '09:00' },
+        310: { shift: 'S6', hari: 'Senin - Sabtu', jam: '10:00' },
+        311: { shift: 'S6', hari: 'Senin - Sabtu', jam: '11:00' },
+    };
+
+    function updateJadwalPreview() {
+        if (!jadwalPreview || !kodeJadwalSelect) return;
+        const val = kodeJadwalSelect.value.trim();
+        if (jadwalMap[val]) {
+            const j = jadwalMap[val];
+            jadwalPreview.innerHTML = `
+                <strong>${j.shift}</strong><br>
+                <span>${j.hari}</span> - 
+                <span class="fw-bold text-primary">${j.jam}</span>
+            `;
+        } else {
+            jadwalPreview.innerHTML = '<span class="text-muted">Pilih kode jadwal terlebih dahulu</span>';
+        }
+    }
+
+    // ==================== INIT & EVENTS ====================
+    setupDateField(tglLahir, usiaDisplay, calculateAge);
+    setupDateField(tglMasuk, lamaBelajarDisplay, calculateLamaBelajar);
+    setupDateField(document.getElementById('tgl_daftar'));
+    setupDateField(document.getElementById('tgl_tahapan'));
+    setupDateField(tglMulai);
+    setupDateField(tglBayar);
+    setupDateField(tglSelesai72);
+
+    // Event Listeners dengan safety check
+    if (golSelect) $(golSelect).on('change', handleGolChange);
+    if (kdSelect)  $(kdSelect).on('change', updateSPP);
+
+    if (tglMulai) {
+        tglMulai.addEventListener('change', handleTglMulaiChange);
+        tglMulai.addEventListener('blur', handleTglMulaiChange);
+    }
+
+    if (tglBayar) {
+        tglBayar.addEventListener('change', handleTglBayarChange);
+        tglBayar.addEventListener('blur', handleTglBayarChange);
+    }
+
+    if (kodeJadwalSelect) {
+        $(kodeJadwalSelect).on('change', updateJadwalPreview);
+        updateJadwalPreview();
+    }
+
+    // Initial Load
+    handleGolChange();
 
 });
-
-    // ===============================
-    // PAKET 72
-    // ===============================
-    tglBayar?.addEventListener('change', function () {
-        if (!this.value) {
-            tglSelesai.value = '';
-            alert2.checked = false;
-            return;
-        }
-
-        let d = new Date(this.value);
-        d.setDate(d.getDate() + 72);
-
-        tglSelesai.value = formatDate(d);
-        alert2.checked = true;
-    });
-
-    // ===============================
-    // GARANSI
-    // ===============================
-    pengajuanGaransi?.addEventListener('change', function () {
-        if (!this.value) return;
-
-        let d = addMonths(new Date(this.value), 6);
-        selesaiGaransi.value = formatDate(d);
-        masaGaransi.value = '6 bulan';
-    });
-
-    // ===============================
-    // TAHAP
-    // ===============================
-    tahapSelect?.addEventListener('change', function () {
-        if (this.value === 'Lanjutan' && !tglTahapan.value) {
-            tglTahapan.value = formatDate(new Date());
-        } else if (this.value === 'Persiapan') {
-            tglTahapan.value = '';
-        }
-    });
-    tahapSelect?.dispatchEvent(new Event('change'));
-
-    // ===============================
-    // LEVEL
-    // ===============================
-    level?.addEventListener('change', function () {
-        if (this.value && !tglLevel.value) {
-            tglLevel.value = formatDate(new Date());
-        }
-    });
-
-    // ===============================
-    // INFO LAINNYA
-    // ===============================
-    function toggleInfo() {
-        if (!infoSelect || !ketWrapper) return;
-        ketWrapper.style.display = infoSelect.value === 'Lainnya' ? 'block' : 'none';
-    }
-    infoSelect?.addEventListener('change', toggleInfo);
-    toggleInfo();
-
-});
-const beasiswaMapping = {
-    'S3B1': 100000,
-    'S3B2': 200000,
-    'S3B3': 50000,
-    'D'   : 300000
-};
 </script>
+
+<style>
+    .select2-container .select2-selection--single {
+        height: calc(1.5em + 0.75rem + 2px) !important;
+        padding-top: 0.375rem !important;
+        padding-bottom: 0.375rem !important;
+    }
+</style>
 @endpush
