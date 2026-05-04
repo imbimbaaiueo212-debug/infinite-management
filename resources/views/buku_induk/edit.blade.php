@@ -583,10 +583,17 @@
                                 <h4 class="col-12 mb-3">📚 SUPLLY MODUL</h4>
                                 
 
-                            <div class="col-md-3">
+                             <div class="col-md-3">
                                 <label class="form-label">Asal Modul</label>
-                                <input type="text" name="asal_modul" class="form-control"
-                                       value="{{ old('asal_modul', $bukuInduk->asal_modul) }}">
+                                <select name="asal_modul" id="asal_modul" class="form-select">
+                                    <option value="">-- Pilih Asal Modul --</option>
+                                    @foreach($asalModulOptions as $am)
+                                        <option value="{{ $am }}" 
+                                            {{ old('asal_modul', $bukuInduk->asal_modul) == $am ? 'selected' : '' }}>
+                                            {{ $am }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="col-md-6">
@@ -633,7 +640,7 @@
 
                              <div class="col-md-3">
                                 <label class="form-label">Perpanjang Garansi</label>
-                                <select name="perpanjang_garansi" class="form-select">
+                                <select name="perpanjang_garansi" id="perpanjang_garansi" class="form-select">
                                     <option value="">-- Pilih --</option>
                                     <option value="Ya" {{ old('perpanjang_garansi', $bukuInduk->perpanjang_garansi) == 'Ya' ? 'selected' : '' }}>Ya</option>
                                     <option value="Tidak" {{ old('perpanjang_garansi', $bukuInduk->perpanjang_garansi) == 'Tidak' ? 'selected' : '' }}>Tidak</option>
@@ -642,7 +649,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Note Garansi</label>
-                                <select name="note_garansi" class="form-select">
+                                <select name="note_garansi" id="note_garansi" class="form-select">
                                     <option value="">-- Pilih Note --</option>
                                     @foreach($noteGaransiOptions as $ng)
                                         <option value="{{ $ng }}"
@@ -676,7 +683,7 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== SELECT2 ====================
-    $('#gol, #kd, #kelas, #bimba_unit_select, #tahap_select, #level, #info_select, #petugas_trial, #guru, #jenis_kbm, #note, #note_garansi, #kategori_keluar, #kode_jadwal')
+    $('#gol, #kd, #kelas, #bimba_unit_select, #tahap_select, #level, #info_select, #petugas_trial, #guru, #jenis_kbm, #note, #note_garansi, #kategori_keluar, #kode_jadwal, #asal_modul, #perpanjang_garansi')
         .select2({ 
             width: '100%', 
             placeholder: '-- Pilih --', 
