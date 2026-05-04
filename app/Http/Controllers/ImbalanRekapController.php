@@ -814,7 +814,6 @@ if (array_key_exists('installment_id', $fields)) {
             ]);
 
             $isNew = !$rekap->exists;
-
             $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
 
             // ================= RB MASTER =================
@@ -825,7 +824,6 @@ if (array_key_exists('installment_id', $fields)) {
                 50 => 200, 55 => 220, 60 => 240
             ];
 
-            // ambil RB awal dari profile
             $rbAwal = 40;
             if (!empty($p->rb) && preg_match('/(\d+)/', $p->rb, $m)) {
                 $rbAwal = (int)$m[1];
@@ -841,30 +839,35 @@ if (array_key_exists('installment_id', $fields)) {
                 ->first();
 
             if ($potongan) {
-                $totalPotong =
+                $totalPotong = 
                     ($potongan->sakit ?? 0) +
                     ($potongan->izin ?? 0) +
                     ($potongan->alpa ?? 0) +
                     ($potongan->tidak_aktif ?? 0) +
                     ($potongan->lain_lain ?? 0);
 
-                $hariDipotong = round($totalPotong / 24000);
+                // PERBAIKAN UTAMA: Pakai floor + pembulatan yang lebih tepat
+                $hariDipotong = (int) floor($totalPotong / 24000);
             }
 
             // ================= HITUNG JAM =================
             $jamPerHari = 7;
             $jamPotong  = $hariDipotong * $jamPerHari;
-
             $jamEfektif = max(0, $durasiFull - $jamPotong);
 
-            // ================= RB DINAMIS (FIX UTAMA) =================
+            // ================= RB DINAMIS =================
             $rbBaru = 5;
             $durasiBaru = 20;
 
-            foreach ($rbMap as $rb => $jam) {
-                if ($jamEfektif >= $jam) {
-                    $rbBaru = $rb;
-                    $durasiBaru = $jam;
+            if ($jamEfektif >= 140) {
+                $rbBaru = 40;
+                $durasiBaru = 160;
+            } else {
+                foreach ($rbMap as $rb => $jam) {
+                    if ($jamEfektif >= $jam) {
+                        $rbBaru = $rb;
+                        $durasiBaru = $jam;
+                    }
                 }
             }
 
@@ -875,11 +878,10 @@ if (array_key_exists('installment_id', $fields)) {
 
             $persentase = max(0, min(100, $persentase));
 
-            // ================= IMBALAN =================
+            // ================= IMBALAN & TRANSPORT =================
             $imbalanFull = $p->imbalan_pokok_default ?? $p->rp ?? 900000;
             $imbalanFix  = ($persentase / 100) * $imbalanFull;
 
-            // ================= TRANSPORT =================
             $hariMasuk = max(0, 25 - $hariDipotong);
             $transport = $hariMasuk * 24000;
 
@@ -887,7 +889,6 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->nama = $p->nama;
             $rekap->bulan = $labelBulan;
 
-            // 🔥 INI YANG FIX
             $rekap->waktu_mgg = 'RB ' . $rbBaru;
             $rekap->waktu_bln = $durasiBaru . ' Jam';
             $rekap->durasi_kerja = $jamEfektif;
@@ -902,17 +903,9 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->insentif_mentor = $p->insentif_mentor ?? 0;
             $rekap->cicilan = $p->cicilan_default ?? 0;
 
-            $rekap->total_imbalan =
-                $rekap->imbalan_pokok +
-                $rekap->imbalan_lainnya +
-                $rekap->insentif_mentor +
-                $rekap->tambahan_transport;
+            $rekap->total_imbalan = $rekap->imbalan_pokok + $rekap->imbalan_lainnya + $rekap->insentif_mentor + $rekap->tambahan_transport;
+            $rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
 
-            $rekap->yang_dibayarkan =
-                $rekap->total_imbalan -
-                ($rekap->cicilan ?? 0);
-
-            // ================= MAGANG =================
             if ($isMagang) {
                 $rekap->persen = 0;
                 $rekap->imbalan_pokok = 0;
