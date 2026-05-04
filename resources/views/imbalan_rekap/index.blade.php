@@ -193,7 +193,7 @@
                 <table class="table table-sm table-bordered table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem; min-width: 3200px;">
                     <thead>
                         <tr class="text-white fw-bold text-center">
-                            <th colspan="9" class="bg-primary text-dark">PROFIL RELAWAN</th>
+                            <th colspan="3" class="bg-primary text-dark">PROFIL RELAWAN</th>
                             <th colspan="8" class="bg-success text-dark">IMBALAN POKOK</th>
                             <th colspan="2" class="bg-warning text-dark">INSENTIF MENTOR</th>
                             <th colspan="2" class="bg-warning text-dark">TRANSPORT</th>
