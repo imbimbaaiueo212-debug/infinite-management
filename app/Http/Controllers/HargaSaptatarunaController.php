@@ -9,98 +9,112 @@ use App\Imports\HargaSaptatarunaImport;
 
 class HargaSaptatarunaController extends Controller
 {
-    // Menampilkan semua data
-public function index()
-{
-    $items = HargaSaptataruna::all(); // jangan salah model
-    return view('harga.index', compact('items'));
-}
+    public function index()
+    {
+        $items = HargaSaptataruna::all();
+        return view('harga.index', compact('items'));
+    }
 
-    // Menampilkan form untuk membuat data baru
     public function create()
     {
         return view('harga.create');
     }
 
-    // Menyimpan data baru
+    // ================= STORE (CREATE) =================
     public function store(Request $request)
     {
         $data = $request->validate([
-            'kategori' => 'nullable|string|max:255',
-            'sub_kategori' => 'nullable|string|max:255',
-            'kode' => 'nullable|string|max:50',
-            'nama' => 'nullable|string|max:255',
-            'duafa' => 'nullable|numeric',
-            'promo_2019' => 'nullable|numeric',
-            'daftar_ulang' => 'nullable|numeric',
-            'spesial' => 'nullable|numeric',
-            'umum1' => 'nullable|numeric',
-            'umum2' => 'nullable|numeric',
-            'harga' => 'nullable|numeric',
-            'a' => 'nullable|numeric',
-            'b' => 'nullable|numeric',
-            'c' => 'nullable|numeric',
-            'd' => 'nullable|numeric',
-            'e' => 'nullable|numeric',
-            'f' => 'nullable|numeric',
+            'kategori'      => 'nullable|string|max:255',
+            'sub_kategori'  => 'nullable|string|max:255',
+            'kode'          => 'nullable|string|max:50',
+            'nama'          => 'nullable|string|max:255',
+            'duafa'         => 'nullable|numeric',
+            'promo_2019'    => 'nullable|numeric',
+            'daftar_ulang'  => 'nullable|numeric',
+            'spesial'       => 'nullable|numeric',
+            'umum1'         => 'nullable|numeric',
+            'umum2'         => 'nullable|numeric',
+            'harga'         => 'nullable|numeric',
+            'a'             => 'nullable|numeric',
+            'b'             => 'nullable|numeric',
+            'c'             => 'nullable|numeric',
+            'd'             => 'nullable|numeric',
+            'e'             => 'nullable|numeric',
+            'f'             => 'nullable|numeric',
         ]);
+
+        // 🔥 FIX: Ubah empty string menjadi null untuk kolom decimal/numeric
+        $numericFields = ['duafa', 'promo_2019', 'daftar_ulang', 'spesial', 'umum1', 'umum2', 'harga', 'a', 'b', 'c', 'd', 'e', 'f'];
+
+        foreach ($numericFields as $field) {
+            if (isset($data[$field]) && $data[$field] === '') {
+                $data[$field] = null;
+            }
+        }
 
         HargaSaptataruna::create($data);
 
-        return redirect()->route('harga.index')->with('success', 'Data berhasil ditambahkan.');
+        return redirect()->route('harga.index')
+                         ->with('success', 'Data berhasil ditambahkan.');
     }
 
-    // Menampilkan detail data
     public function show(HargaSaptataruna $hargaSaptataruna)
     {
         return view('harga.show', compact('hargaSaptataruna'));
     }
 
-    // Menampilkan form edit
-public function edit(HargaSaptataruna $harga)
-{
-    return view('harga.edit', ['hargaSaptataruna' => $harga]);
-}
+    public function edit(HargaSaptataruna $harga)
+    {
+        return view('harga.edit', compact('harga'));
+    }
 
-    // Update data
+    // ================= UPDATE =================
     public function update(Request $request, HargaSaptataruna $harga)
-{
-    $data = $request->validate([
-        'kategori' => 'nullable|string|max:255',
-        'sub_kategori' => 'nullable|string|max:255',
-        'kode' => 'nullable|string|max:50',
-        'nama' => 'nullable|string|max:255',
-        'duafa' => 'nullable|numeric',
-        'promo_2019' => 'nullable|numeric',
-        'daftar_ulang' => 'nullable|numeric',
-        'spesial' => 'nullable|numeric',
-        'umum1' => 'nullable|numeric',
-        'umum2' => 'nullable|numeric',
-        'harga' => 'nullable|numeric',
-        'a' => 'nullable|numeric',
-        'b' => 'nullable|numeric',
-        'c' => 'nullable|numeric',
-        'd' => 'nullable|numeric',
-        'e' => 'nullable|numeric',
-        'f' => 'nullable|numeric',
-    ]);
+    {
+        $data = $request->validate([
+            'kategori'      => 'nullable|string|max:255',
+            'sub_kategori'  => 'nullable|string|max:255',
+            'kode'          => 'nullable|string|max:50',
+            'nama'          => 'nullable|string|max:255',
+            'duafa'         => 'nullable|numeric',
+            'promo_2019'    => 'nullable|numeric',
+            'daftar_ulang'  => 'nullable|numeric',
+            'spesial'       => 'nullable|numeric',
+            'umum1'         => 'nullable|numeric',
+            'umum2'         => 'nullable|numeric',
+            'harga'         => 'nullable|numeric',
+            'a'             => 'nullable|numeric',
+            'b'             => 'nullable|numeric',
+            'c'             => 'nullable|numeric',
+            'd'             => 'nullable|numeric',
+            'e'             => 'nullable|numeric',
+            'f'             => 'nullable|numeric',
+        ]);
 
-    $harga->update($data);
+        // 🔥 FIX yang sama untuk update
+        $numericFields = ['duafa', 'promo_2019', 'daftar_ulang', 'spesial', 'umum1', 'umum2', 'harga', 'a', 'b', 'c', 'd', 'e', 'f'];
 
-    return redirect()->route('harga.index')->with('success', 'Data berhasil diupdate.');
-}
+        foreach ($numericFields as $field) {
+            if (isset($data[$field]) && $data[$field] === '') {
+                $data[$field] = null;
+            }
+        }
 
+        $harga->update($data);
 
-    // Hapus data
+        return redirect()->route('harga.index')
+                         ->with('success', 'Data berhasil diupdate.');
+    }
+
     public function destroy($id)
-{
-    $item = HargaSaptataruna::findOrFail($id);
-    $item->delete();
+    {
+        $item = HargaSaptataruna::findOrFail($id);
+        $item->delete();
 
-    return redirect()->route('harga.index')->with('success', 'Data berhasil dihapus');
-}
+        return redirect()->route('harga.index')
+                         ->with('success', 'Data berhasil dihapus.');
+    }
 
-    // Import Excel
     public function import(Request $request)
     {
         $request->validate([
@@ -109,6 +123,7 @@ public function edit(HargaSaptataruna $harga)
 
         Excel::import(new HargaSaptatarunaImport, $request->file('file'));
 
-        return redirect()->route('harga.index')->with('success', 'Data berhasil diimport dari Excel.');
+        return redirect()->route('harga.index')
+                         ->with('success', 'Data berhasil diimport dari Excel.');
     }
 }

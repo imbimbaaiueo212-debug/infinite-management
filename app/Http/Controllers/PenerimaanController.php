@@ -215,7 +215,7 @@ public function updateUkuranKaos(Request $request)
     $selectedNim = $request->nim;
 
     // Semua murid aktif/baru
-    $murids = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru'])
+    $murids = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['Aktif', 'Baru'])
         ->orderBy('nama')
         ->get()
         ->map(function ($murid) {
@@ -231,14 +231,12 @@ public function updateUkuranKaos(Request $request)
     $vouchers = collect();
 
     if ($selectedNim) {
-        // Jika ada NIM di URL (?nim=...), hanya tampilkan voucher milik murid tersebut
         $vouchers = VoucherLama::where('nim', $selectedNim)
             ->where('jumlah_voucher', '>', 0)
             ->where('status', 'penyerahan')
             ->orderBy('no_voucher')
             ->get();
     } else {
-        // Jika belum pilih NIM, tampilkan SEMUA voucher (akan difilter JS nanti)
         $vouchers = VoucherLama::where('jumlah_voucher', '>', 0)
             ->where('status', 'penyerahan')
             ->orderBy('no_voucher')
@@ -271,32 +269,77 @@ public function updateUkuranKaos(Request $request)
         ->pluck('no_cabang')
         ->toArray();
 
+    // === AMBIL HARGA KAOS ===
+    $hargaKaos = HargaSaptataruna::where('kategori', 'PENJUALAN')
+        ->where('nama', 'LIKE', '%kaos%')
+        ->get();
+
+    // Kaos Pendek
+    $kaosPendekList = $hargaKaos->filter(function ($item) {
+        return stripos($item->nama, 'pendek') !== false || 
+               stripos($item->nama, 'lengan pendek') !== false;
+    })->map(function ($item) {
+        return [
+            'kode'   => $item->kode,
+            'nama'   => $item->nama,
+            'harga'  => (float)$item->harga,
+            'ukuran' => $this->extractUkuran($item->nama),
+        ];
+    })->values();
+
+    // Kaos Panjang
+    $kaosPanjangList = $hargaKaos->filter(function ($item) {
+        return stripos($item->nama, 'panjang') !== false || 
+               stripos($item->nama, 'lengan panjang') !== false;
+    })->map(function ($item) {
+        return [
+            'kode'   => $item->kode,
+            'nama'   => $item->nama,
+            'harga'  => (float)$item->harga,
+            'ukuran' => $this->extractUkuran($item->nama),
+        ];
+    })->values();
+
     return view('penerimaan.create', compact(
         'murids',
         'vouchers',
         'sppLunas',
         'unitOptions',
-        'cabangOptions'
+        'cabangOptions',
+        'kaosPendekList',     // ← Ditambahkan
+        'kaosPanjangList'     // ← Ditambahkan
     ));
+}
+
+private function extractUkuran($nama)
+{
+    if (preg_match('/\((S|M|L|XL|XXL|XXXL)\)/i', $nama, $matches)) {
+        return strtoupper($matches[1]);
+    }
+    return 'Standar';
 }
 
 public function store(Request $request)
 {
-    // === Bersihkan semua nominal ===
-    $spp               = $this->cleanMoneyInput($request->spp);
-    $daftar            = $this->cleanMoneyInput($request->daftar);
-    $kaosPendek        = $this->cleanMoneyInput($request->kaos_pendek);
-    $kaosPanjang       = $this->cleanMoneyInput($request->kaos_panjang);
-    $kpk               = $this->cleanMoneyInput($request->kpk);
-    $sertifikat        = $this->cleanMoneyInput($request->sertifikat);
-    $stpb              = $this->cleanMoneyInput($request->stpb);
-    $tas               = $this->cleanMoneyInput($request->tas);
-    $event             = $this->cleanMoneyInput($request->event);
-    $lainLain          = $this->cleanMoneyInput($request->lain_lain);
+    // === BERSIHKAN NOMINAL ===
+    $spp         = $this->cleanMoneyInput($request->spp);
+    $daftar      = $this->cleanMoneyInput($request->daftar);
+    $kaosPendek  = $this->cleanMoneyInput($request->kaos_pendek);   // total dari hidden
+    $kaosPanjang = $this->cleanMoneyInput($request->kaos_panjang);  // total dari hidden
+    $kpk         = $this->cleanMoneyInput($request->kpk);
+    $sertifikat  = $this->cleanMoneyInput($request->sertifikat);
+    $stpb        = $this->cleanMoneyInput($request->stpb);
+    $tas         = $this->cleanMoneyInput($request->tas);
+    $event       = $this->cleanMoneyInput($request->event);
+    $lainLain    = $this->cleanMoneyInput($request->lain_lain);
 
-    // === PROSES UKURAN KAOS ===
+    if ($spp > 0 && $spp < 1000) $spp *= 1000;
+
+    // === PROSES DETAIL UKURAN KAOS (jika ada) ===
     $ukuranPendekInput = array_filter($request->input('ukuran_kaos_pendek', []));
-    $ukuranKaosPendekString = !empty($ukuranPendekInput) ? implode(',', array_unique($ukuranPendekInput)) : null;
+    $ukuranKaosPendekString = !empty($ukuranPendekInput) 
+        ? implode(',', array_unique($ukuranPendekInput)) 
+        : null;
 
     $kaosPendekDetails = [];
     foreach ($ukuranPendekInput as $ukuran) {
@@ -305,7 +348,9 @@ public function store(Request $request)
     $kaosPendekDetails = empty($kaosPendekDetails) ? null : $kaosPendekDetails;
 
     $ukuranPanjangInput = array_filter($request->input('ukuran_kaos_panjang', []));
-    $ukuranKaosPanjangString = !empty($ukuranPanjangInput) ? implode(',', array_unique($ukuranPanjangInput)) : null;
+    $ukuranKaosPanjangString = !empty($ukuranPanjangInput) 
+        ? implode(',', array_unique($ukuranPanjangInput)) 
+        : null;
 
     $kaosPanjangDetails = [];
     foreach ($ukuranPanjangInput as $ukuran) {
@@ -313,15 +358,12 @@ public function store(Request $request)
     }
     $kaosPanjangDetails = empty($kaosPanjangDetails) ? null : $kaosPanjangDetails;
 
-    if ($spp > 0 && $spp < 1000) $spp *= 1000;
-
     // === VALIDASI ===
     $request->validate([
         'via'                => 'required|in:cash,transfer,edc',
         'tanggal'            => 'required|date',
         'nim'                => 'required|exists:buku_induk,nim',
         'nama_murid'         => 'required',
-        'spp'                => 'nullable|numeric',
         'bukti_transfer'     => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         'voucher'            => 'nullable|array',
         'voucher.*'          => 'string|distinct',
@@ -356,7 +398,7 @@ public function store(Request $request)
     $periodeTerpilih = [];
     if ($spp > 0) {
         foreach (($request->bulan_bayar ?? []) as $i => $bulan) {
-            if (!empty($bulan) && !empty($request->tahun_bayar[$i])) {
+            if (!empty($bulan) && !empty($request->tahun_bayar[$i] ?? null)) {
                 $key = strtolower($bulan) . '-' . $request->tahun_bayar[$i];
                 $periodeTerpilih[$key] = [
                     'bulan' => trim($bulan),
@@ -369,6 +411,7 @@ public function store(Request $request)
             return back()->withErrors(['bulan_bayar' => 'Pilih minimal satu bulan untuk SPP!'])->withInput();
         }
 
+        // Cek duplikat
         foreach ($periodeTerpilih as $bt) {
             $exists = Penerimaan::where('nim', $request->nim)
                 ->whereRaw('LOWER(TRIM(bulan)) = ?', [strtolower($bt['bulan'])])
@@ -382,12 +425,12 @@ public function store(Request $request)
         }
     }
 
-    // === HITUNG TOTAL ===
+    // === HITUNG TOTAL & CEK ADA BIAYA LAIN ===
     $totalBiayaLain = $daftar + $kaosPendek + $kaosPanjang + $kpk + $sertifikat + $stpb + $tas + $event + $lainLain + $rbas + $bcabs01 + $bcabs02;
     $adaBiayaLain   = $totalBiayaLain > 0;
     $kelebihanSpp   = $spp > 0 ? ($spp - count($periodeTerpilih) * $sppPerBulan) : 0;
 
-    // === VOUCHER - HANYA UNTUK MURID PEMILIK ===
+    // === VOUCHER ===
     $voucherTerpakai = [];
     $diskonPerVoucher = 50000;
 
@@ -399,26 +442,18 @@ public function store(Request $request)
         }
 
         foreach ($voucherDipilih as $noVoucher) {
-            // VALIDASI KETAT: Voucher harus milik murid ini
             $v = VoucherLama::where('no_voucher', $noVoucher)
                 ->where('status', 'penyerahan')
                 ->where('jumlah_voucher', '>', 0)
-                ->where('nim', $request->nim)           // ← Paling Penting
+                ->where('nim', $request->nim)
                 ->first();
 
             if (!$v) {
-                return back()->withErrors(['voucher' => "Voucher {$noVoucher} tidak ditemukan atau bukan milik murid ini."])
-                             ->withInput();
+                return back()->withErrors(['voucher' => "Voucher {$noVoucher} tidak ditemukan atau bukan milik murid ini."])->withInput();
             }
 
-            if ($v->jumlah_voucher <= 0) {
-                return back()->withErrors(['voucher' => "Voucher {$noVoucher} sudah habis digunakan."])->withInput();
-            }
-
-            // Gunakan voucher
             $v->decrement('jumlah_voucher', 1);
 
-            // Catat histori penggunaan
             VoucherHistori::create([
                 'voucher_lama_id'   => $v->id,
                 'nim'               => $request->nim,
@@ -440,76 +475,71 @@ public function store(Request $request)
 
     $tanggal = Carbon::parse($request->tanggal);
 
-            // ==================================================================
-    // === GENERATE KWITANSI (DENGAN SUPPORT MANUAL) ===
     // ==================================================================
-
+    // === GENERATE KWITANSI BASE ===
+    // ==================================================================
     $isManual = $request->boolean('manual_kwitansi') && $request->filled('kwitansi_base_manual');
 
     if ($isManual) {
         $kwitansiBase = trim($request->kwitansi_base_manual);
-        // Bersihkan suffix angka di belakang jika ada
         $kwitansiBase = preg_replace('/-\d+$/', '', $kwitansiBase);
-        
-        if (empty($kwitansiBase)) {
-            $isManual = false;
-        }
+        if (empty($kwitansiBase)) $isManual = false;
     }
 
     if (!$isManual) {
-        // Generate otomatis
-        $nimLast3  = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
-        $tahun2    = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
-        $bulan2    = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
-        $tanggal2  = str_pad($tanggal->day, 2, '0', STR_PAD_LEFT);
-
+        $nimLast3 = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
+        $tahun2   = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
+        $bulan2   = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
+        $tanggal2 = str_pad($tanggal->day, 2, '0', STR_PAD_LEFT);
         $kwitansiBase = "KW{$nimLast3}{$tahun2}{$bulan2}{$tanggal2}";
     }
 
     $index = 1;
+    $kwitansiList = [];
+    $firstSppId = null;
+
+    // Hitung total item kwitansi
+    $jumlahItemSPP = count($periodeTerpilih);
+    $jumlahItemKaosPendek = $kaosPendek > 0 ? 1 : 0;
+    $jumlahItemKaosPanjang = $kaosPanjang > 0 ? 1 : 0;
+    $jumlahItemBiayaLainLain = ($daftar + $kpk + $sertifikat + $stpb + $tas + $event + $lainLain + $rbas + $bcabs01 + $bcabs02 > 0) ? 1 : 0;
+
+    $totalItem = $jumlahItemSPP + $jumlahItemKaosPendek + $jumlahItemKaosPanjang + $jumlahItemBiayaLainLain;
 
     DB::beginTransaction();
     try {
-        $kwitansiList = [];
-        $firstSppId = null;
 
-        // Hitung total item yang akan dibuat
-        $totalItem = count($periodeTerpilih) + ($adaBiayaLain ? 1 : 0);
-
-        // === SIMPAN SPP PER BULAN ===
+        // === 1. SIMPAN SPP PER BULAN ===
         foreach ($periodeTerpilih as $bt) {
             $diskon = isset($voucherTerpakai[$index - 1]) ? $diskonPerVoucher : 0;
 
-            // Logika penting: Jika manual DAN total hanya 1 item → jangan tambah -01
-            if ($isManual && $totalItem === 1) {
-                $kwitansi = $kwitansiBase;
-            } else {
-                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
-            }
+            $kwitansi = ($isManual && $totalItem === 1) 
+                        ? $kwitansiBase 
+                        : $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
 
             $p = Penerimaan::create([
-                'kwitansi'               => $kwitansi,
-                'via'                    => $request->via,
-                'tanggal'                => $request->tanggal,
-                'nim'                    => $request->nim,
-                'nama_murid'             => $request->nama_murid,
-                'kelas'                  => $dataMurid['kelas'],
-                'status'                 => $dataMurid['status'],
-                'guru'                   => $dataMurid['guru'],
-                'gol'                    => $dataMurid['gol'] ?? null,
-                'kd'                     => $dataMurid['kd'] ?? null,
-                'bulan'                  => $bt['bulan'],
-                'tahun'                  => $bt['tahun'],
-                'spp'                    => $sppPerBulan,
-                'voucher'                => $diskon,
-                'total'                  => $sppPerBulan - $diskon,
-                'bimba_unit'             => $dataMurid['bimba_unit'],
-                'no_cabang'              => $dataMurid['no_cabang'],
-                'RBAS'                   => $rbas,
-                'BCABS01'                => $bcabs01,
-                'BCABS02'                => $bcabs02,
-                'bukti_transfer_path'    => $buktiPath,
-                'is_manual_kwitansi'     => $isManual,
+                'kwitansi'            => $kwitansi,
+                'via'                 => $request->via,
+                'tanggal'             => $request->tanggal,
+                'nim'                 => $request->nim,
+                'nama_murid'          => $request->nama_murid,
+                'kelas'               => $dataMurid['kelas'],
+                'status'              => $dataMurid['status'],
+                'guru'                => $dataMurid['guru'],
+                'gol'                 => $dataMurid['gol'] ?? null,
+                'kd'                  => $dataMurid['kd'] ?? null,
+                'bulan'               => $bt['bulan'],
+                'tahun'               => $bt['tahun'],
+                'spp'                 => $sppPerBulan,
+                'voucher'             => $diskon,
+                'total'               => $sppPerBulan - $diskon,
+                'bimba_unit'          => $dataMurid['bimba_unit'],
+                'no_cabang'           => $dataMurid['no_cabang'],
+                'RBAS'                => $rbas,
+                'BCABS01'             => $bcabs01,
+                'BCABS02'             => $bcabs02,
+                'bukti_transfer_path' => $buktiPath,
+                'is_manual_kwitansi'  => $isManual,
             ]);
 
             if (!$firstSppId) $firstSppId = $p->id;
@@ -517,7 +547,7 @@ public function store(Request $request)
             $index++;
         }
 
-        // === DEPOSIT (kelebihan SPP) ===
+        // === 2. DEPOSIT KELEBIHAN SPP ===
         if ($kelebihanSpp > 0) {
             $last = collect($periodeTerpilih)->last();
             $bulanDeposit = Carbon::create($last['tahun'], $this->bulanKeAngka($last['bulan']))->addMonth();
@@ -537,56 +567,49 @@ public function store(Request $request)
             ]);
         }
 
-        // === KHUSUS DHUAFA ===
+        // === 3. KHUSUS DHUAFA / GRATIS ===
         if ($spp == 0 && !$adaBiayaLain) {
-            if ($isManual && $totalItem === 1) {
-                $kwitansi = $kwitansiBase;
-            } else {
-                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
-            }
-
-            $bulanInput = $request->bulan_bayar[0] ?? null;
-            $tahunInput = $request->tahun_bayar[0] ?? null;
+            $kwitansi = ($isManual && $totalItem === 1) 
+                        ? $kwitansiBase 
+                        : $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
 
             $p = Penerimaan::create([
-                'kwitansi'               => $kwitansi,
-                'via'                    => $request->via,
-                'tanggal'                => $request->tanggal,
-                'nim'                    => $request->nim,
-                'nama_murid'             => $request->nama_murid,
-                'kelas'                  => $dataMurid['kelas'],
-                'status'                 => $dataMurid['status'],
-                'guru'                   => $dataMurid['guru'],
-                'gol'                    => $dataMurid['gol'] ?? null,
-                'kd'                     => $dataMurid['kd'] ?? null,
-                'bulan'                  => $bulanInput,
-                'tahun'                  => $tahunInput,
-                'spp'                    => 0,
-                'voucher'                => 0,
-                'total'                  => 0,
-                'keterangan'             => 'Dhuafa / Gratis',
-                'bimba_unit'             => $dataMurid['bimba_unit'],
-                'no_cabang'              => $dataMurid['no_cabang'],
-                'RBAS'                   => $rbas,
-                'BCABS01'                => $bcabs01,
-                'BCABS02'                => $bcabs02,
-                'bukti_transfer_path'    => $buktiPath,
-                'is_manual_kwitansi'     => $isManual,
+                'kwitansi'            => $kwitansi,
+                'via'                 => $request->via,
+                'tanggal'             => $request->tanggal,
+                'nim'                 => $request->nim,
+                'nama_murid'          => $request->nama_murid,
+                'kelas'               => $dataMurid['kelas'],
+                'status'              => $dataMurid['status'],
+                'guru'                => $dataMurid['guru'],
+                'gol'                 => $dataMurid['gol'] ?? null,
+                'kd'                  => $dataMurid['kd'] ?? null,
+                'bulan'               => $request->bulan_bayar[0] ?? null,
+                'tahun'               => $request->tahun_bayar[0] ?? null,
+                'spp'                 => 0,
+                'voucher'             => 0,
+                'total'               => 0,
+                'keterangan'          => 'Dhuafa / Gratis',
+                'bimba_unit'          => $dataMurid['bimba_unit'],
+                'no_cabang'           => $dataMurid['no_cabang'],
+                'RBAS'                => $rbas,
+                'BCABS01'             => $bcabs01,
+                'BCABS02'             => $bcabs02,
+                'bukti_transfer_path' => $buktiPath,
+                'is_manual_kwitansi'  => $isManual,
             ]);
 
             $kwitansiList[] = $kwitansi;
             $index++;
         }
 
-        // === BIAYA LAIN ===
+        // === 4. BIAYA LAIN (Termasuk Kaos) ===
         if ($adaBiayaLain) {
-            if ($isManual && $totalItem === 1) {
-                $kwitansi = $kwitansiBase;
-            } else {
-                $kwitansi = $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
-            }
+            $kwitansi = ($isManual && $totalItem === 1) 
+                        ? $kwitansiBase 
+                        : $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
 
-            $p = Penerimaan::create([
+            Penerimaan::create([
                 'kwitansi'                => $kwitansi,
                 'via'                     => $request->via,
                 'tanggal'                 => $request->tanggal,
@@ -598,8 +621,8 @@ public function store(Request $request)
                 'gol'                     => $dataMurid['gol'] ?? null,
                 'kd'                      => $dataMurid['kd'] ?? null,
                 'daftar'                  => $daftar,
-                'kaos'                    => $kaosPendek,
-                'kaos_lengan_panjang'     => $kaosPanjang,
+                'kaos'                    => $kaosPendek,           // Kaos Pendek
+                'kaos_lengan_panjang'     => $kaosPanjang,         // Kaos Panjang
                 'ukuran_kaos_pendek'      => $ukuranKaosPendekString,
                 'ukuran_kaos_panjang'     => $ukuranKaosPanjangString,
                 'kaos_pendek_details'     => $kaosPendekDetails,
@@ -615,6 +638,9 @@ public function store(Request $request)
                 'no_cabang'               => $dataMurid['no_cabang'],
                 'bukti_transfer_path'     => $buktiPath,
                 'is_manual_kwitansi'      => $isManual,
+                // Optional: simpan kode select
+                'kaos_pendek_kode'        => $request->kaos_pendek_kode,
+                'kaos_panjang_kode'       => $request->kaos_panjang_kode,
             ]);
 
             $kwitansiList[] = $kwitansi;
@@ -630,9 +656,9 @@ public function store(Request $request)
         if ($buktiPath) {
             Storage::disk('public')->delete($buktiPath);
         }
+        return back()->withErrors(['error' => 'Gagal menyimpan data: ' . $e->getMessage()])->withInput();
     }
-        return back()->withErrors(['error' => 'Gagal simpan: ' . $e->getMessage()])->withInput();
-    }
+}
 
     private function bulanKeAngka($bulanNama)
 {
