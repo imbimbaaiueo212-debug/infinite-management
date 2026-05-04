@@ -300,6 +300,26 @@ public function updateUkuranKaos(Request $request)
         ];
     })->values();
 
+// === AMBIL HANYA BIAYA DAFTAR (biMBA-AIUEO & English biMBA) ===
+$daftarList = HargaSaptataruna::whereIn('kode', ['bA', 'Eb'])
+    ->orWhere('nama', 'LIKE', '%biMBA-AIUEO%')
+    ->orWhere('nama', 'LIKE', '%English biMBA%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'          => $item->kode,
+            'nama'          => $item->nama,
+            'harga_duafa'   => (float)($item->duafa ?? 0),
+            'harga_promo'   => (float)($item->promo_2019 ?? 0),
+            'harga_daftar'  => (float)($item->daftar_ulang ?? 0),
+            'harga_spesial' => (float)($item->spesial ?? 0),
+            'harga_umum1'   => (float)($item->umum1 ?? 0),
+            'harga_umum2'   => (float)($item->umum2 ?? 0),
+        ];
+    });
+   
+
     return view('penerimaan.create', compact(
         'murids',
         'vouchers',
@@ -307,7 +327,8 @@ public function updateUkuranKaos(Request $request)
         'unitOptions',
         'cabangOptions',
         'kaosPendekList',     // ← Ditambahkan
-        'kaosPanjangList'     // ← Ditambahkan
+        'kaosPanjangList',     // ← Ditambahkan
+        'daftarList',
     ));
 }
 
@@ -335,28 +356,44 @@ public function store(Request $request)
 
     if ($spp > 0 && $spp < 1000) $spp *= 1000;
 
-    // === PROSES DETAIL UKURAN KAOS (jika ada) ===
-    $ukuranPendekInput = array_filter($request->input('ukuran_kaos_pendek', []));
-    $ukuranKaosPendekString = !empty($ukuranPendekInput) 
-        ? implode(',', array_unique($ukuranPendekInput)) 
-        : null;
+    // ================================================
+    // PROSES KAOS PENDEK & PANJANG (MULTIPLE UKURAN)
+    // ================================================
+    $kaosPendekKode = $request->input('kaos_pendek_kode', []);
+    $kaosPendekQty  = $request->input('kaos_pendek_qty', []);
 
+    $kaosPanjangKode = $request->input('kaos_panjang_kode', []);
+    $kaosPanjangQty  = $request->input('kaos_panjang_qty', []);
+
+    // Proses Kaos Pendek
+    $ukuranKaosPendekString = '';
     $kaosPendekDetails = [];
-    foreach ($ukuranPendekInput as $ukuran) {
-        $kaosPendekDetails[$ukuran] = ($kaosPendekDetails[$ukuran] ?? 0) + 1;
+    $kaosPendekKodeArray = []; // untuk simpan semua kode
+
+    foreach ($kaosPendekKode as $i => $kode) {
+        if (!empty($kode) && isset($kaosPendekQty[$i]) && $kaosPendekQty[$i] > 0) {
+            $qty = (int)$kaosPendekQty[$i];
+            $ukuranKaosPendekString .= $kode . ($qty > 1 ? "×{$qty}" : '') . ', ';
+            $kaosPendekDetails[$kode] = ($kaosPendekDetails[$kode] ?? 0) + $qty;
+            $kaosPendekKodeArray[] = $kode;
+        }
     }
-    $kaosPendekDetails = empty($kaosPendekDetails) ? null : $kaosPendekDetails;
+    $ukuranKaosPendekString = rtrim($ukuranKaosPendekString, ', ');
 
-    $ukuranPanjangInput = array_filter($request->input('ukuran_kaos_panjang', []));
-    $ukuranKaosPanjangString = !empty($ukuranPanjangInput) 
-        ? implode(',', array_unique($ukuranPanjangInput)) 
-        : null;
-
+    // Proses Kaos Panjang
+    $ukuranKaosPanjangString = '';
     $kaosPanjangDetails = [];
-    foreach ($ukuranPanjangInput as $ukuran) {
-        $kaosPanjangDetails[$ukuran] = ($kaosPanjangDetails[$ukuran] ?? 0) + 1;
+    $kaosPanjangKodeArray = [];
+
+    foreach ($kaosPanjangKode as $i => $kode) {
+        if (!empty($kode) && isset($kaosPanjangQty[$i]) && $kaosPanjangQty[$i] > 0) {
+            $qty = (int)$kaosPanjangQty[$i];
+            $ukuranKaosPanjangString .= $kode . ($qty > 1 ? "×{$qty}" : '') . ', ';
+            $kaosPanjangDetails[$kode] = ($kaosPanjangDetails[$kode] ?? 0) + $qty;
+            $kaosPanjangKodeArray[] = $kode;
+        }
     }
-    $kaosPanjangDetails = empty($kaosPanjangDetails) ? null : $kaosPanjangDetails;
+    $ukuranKaosPanjangString = rtrim($ukuranKaosPanjangString, ', ');
 
     // === VALIDASI ===
     $request->validate([
@@ -411,7 +448,6 @@ public function store(Request $request)
             return back()->withErrors(['bulan_bayar' => 'Pilih minimal satu bulan untuk SPP!'])->withInput();
         }
 
-        // Cek duplikat
         foreach ($periodeTerpilih as $bt) {
             $exists = Penerimaan::where('nim', $request->nim)
                 ->whereRaw('LOWER(TRIM(bulan)) = ?', [strtolower($bt['bulan'])])
@@ -425,12 +461,12 @@ public function store(Request $request)
         }
     }
 
-    // === HITUNG TOTAL & CEK ADA BIAYA LAIN ===
+    // === HITUNG TOTAL ===
     $totalBiayaLain = $daftar + $kaosPendek + $kaosPanjang + $kpk + $sertifikat + $stpb + $tas + $event + $lainLain + $rbas + $bcabs01 + $bcabs02;
     $adaBiayaLain   = $totalBiayaLain > 0;
     $kelebihanSpp   = $spp > 0 ? ($spp - count($periodeTerpilih) * $sppPerBulan) : 0;
 
-    // === VOUCHER ===
+    // === VOUCHER (tetap sama) ===
     $voucherTerpakai = [];
     $diskonPerVoucher = 50000;
 
@@ -476,7 +512,7 @@ public function store(Request $request)
     $tanggal = Carbon::parse($request->tanggal);
 
     // ==================================================================
-    // === GENERATE KWITANSI BASE ===
+    // GENERATE KWITANSI BASE
     // ==================================================================
     $isManual = $request->boolean('manual_kwitansi') && $request->filled('kwitansi_base_manual');
 
@@ -484,9 +520,7 @@ public function store(Request $request)
         $kwitansiBase = trim($request->kwitansi_base_manual);
         $kwitansiBase = preg_replace('/-\d+$/', '', $kwitansiBase);
         if (empty($kwitansiBase)) $isManual = false;
-    }
-
-    if (!$isManual) {
+    } else {
         $nimLast3 = str_pad(substr((string)$request->nim, -3), 3, '0', STR_PAD_LEFT);
         $tahun2   = str_pad($tanggal->year % 100, 2, '0', STR_PAD_LEFT);
         $bulan2   = str_pad($tanggal->month, 2, '0', STR_PAD_LEFT);
@@ -498,18 +532,19 @@ public function store(Request $request)
     $kwitansiList = [];
     $firstSppId = null;
 
-    // Hitung total item kwitansi
+    // Hitung total item untuk kwitansi
     $jumlahItemSPP = count($periodeTerpilih);
     $jumlahItemKaosPendek = $kaosPendek > 0 ? 1 : 0;
     $jumlahItemKaosPanjang = $kaosPanjang > 0 ? 1 : 0;
-    $jumlahItemBiayaLainLain = ($daftar + $kpk + $sertifikat + $stpb + $tas + $event + $lainLain + $rbas + $bcabs01 + $bcabs02 > 0) ? 1 : 0;
+    $jumlahItemBiayaLain = ($daftar + $kpk + $sertifikat + $stpb + $tas + $event + $lainLain + $rbas + $bcabs01 + $bcabs02 > 0 && 
+                           ($kaosPendek == 0 && $kaosPanjang == 0)) ? 1 : 0;
 
-    $totalItem = $jumlahItemSPP + $jumlahItemKaosPendek + $jumlahItemKaosPanjang + $jumlahItemBiayaLainLain;
+    $totalItem = $jumlahItemSPP + $jumlahItemKaosPendek + $jumlahItemKaosPanjang + $jumlahItemBiayaLain;
 
     DB::beginTransaction();
     try {
 
-        // === 1. SIMPAN SPP PER BULAN ===
+        // 1. SPP
         foreach ($periodeTerpilih as $bt) {
             $diskon = isset($voucherTerpakai[$index - 1]) ? $diskonPerVoucher : 0;
 
@@ -518,28 +553,28 @@ public function store(Request $request)
                         : $kwitansiBase . str_pad($index, 2, '0', STR_PAD_LEFT);
 
             $p = Penerimaan::create([
-                'kwitansi'            => $kwitansi,
-                'via'                 => $request->via,
-                'tanggal'             => $request->tanggal,
-                'nim'                 => $request->nim,
-                'nama_murid'          => $request->nama_murid,
-                'kelas'               => $dataMurid['kelas'],
-                'status'              => $dataMurid['status'],
-                'guru'                => $dataMurid['guru'],
-                'gol'                 => $dataMurid['gol'] ?? null,
-                'kd'                  => $dataMurid['kd'] ?? null,
-                'bulan'               => $bt['bulan'],
-                'tahun'               => $bt['tahun'],
-                'spp'                 => $sppPerBulan,
-                'voucher'             => $diskon,
-                'total'               => $sppPerBulan - $diskon,
-                'bimba_unit'          => $dataMurid['bimba_unit'],
-                'no_cabang'           => $dataMurid['no_cabang'],
-                'RBAS'                => $rbas,
-                'BCABS01'             => $bcabs01,
-                'BCABS02'             => $bcabs02,
-                'bukti_transfer_path' => $buktiPath,
-                'is_manual_kwitansi'  => $isManual,
+                'kwitansi'               => $kwitansi,
+                'via'                    => $request->via,
+                'tanggal'                => $request->tanggal,
+                'nim'                    => $request->nim,
+                'nama_murid'             => $request->nama_murid,
+                'kelas'                  => $dataMurid['kelas'],
+                'status'                 => $dataMurid['status'],
+                'guru'                   => $dataMurid['guru'],
+                'gol'                    => $dataMurid['gol'] ?? null,
+                'kd'                     => $dataMurid['kd'] ?? null,
+                'bulan'                  => $bt['bulan'],
+                'tahun'                  => $bt['tahun'],
+                'spp'                    => $sppPerBulan,
+                'voucher'                => $diskon,
+                'total'                  => $sppPerBulan - $diskon,
+                'bimba_unit'             => $dataMurid['bimba_unit'],
+                'no_cabang'              => $dataMurid['no_cabang'],
+                'RBAS'                   => $rbas,
+                'BCABS01'                => $bcabs01,
+                'BCABS02'                => $bcabs02,
+                'bukti_transfer_path'    => $buktiPath,
+                'is_manual_kwitansi'     => $isManual,
             ]);
 
             if (!$firstSppId) $firstSppId = $p->id;
@@ -567,6 +602,7 @@ public function store(Request $request)
             ]);
         }
 
+        // 3. Dhuafa
         // === 3. KHUSUS DHUAFA / GRATIS ===
         if ($spp == 0 && !$adaBiayaLain) {
             $kwitansi = ($isManual && $totalItem === 1) 
@@ -603,7 +639,7 @@ public function store(Request $request)
             $index++;
         }
 
-        // === 4. BIAYA LAIN (Termasuk Kaos) ===
+        // 4. BIAYA LAIN + KAOS
         if ($adaBiayaLain) {
             $kwitansi = ($isManual && $totalItem === 1) 
                         ? $kwitansiBase 
@@ -621,12 +657,12 @@ public function store(Request $request)
                 'gol'                     => $dataMurid['gol'] ?? null,
                 'kd'                      => $dataMurid['kd'] ?? null,
                 'daftar'                  => $daftar,
-                'kaos'                    => $kaosPendek,           // Kaos Pendek
-                'kaos_lengan_panjang'     => $kaosPanjang,         // Kaos Panjang
+                'kaos'                    => $kaosPendek,
+                'kaos_lengan_panjang'     => $kaosPanjang,
                 'ukuran_kaos_pendek'      => $ukuranKaosPendekString,
                 'ukuran_kaos_panjang'     => $ukuranKaosPanjangString,
-                'kaos_pendek_details'     => $kaosPendekDetails,
-                'kaos_panjang_details'    => $kaosPanjangDetails,
+                'kaos_pendek_details'     => !empty($kaosPendekDetails) ? $kaosPendekDetails : null,
+                'kaos_panjang_details'    => !empty($kaosPanjangDetails) ? $kaosPanjangDetails : null,
                 'kpk'                     => $kpk,
                 'sertifikat'              => $sertifikat,
                 'stpb'                    => $stpb,
@@ -638,9 +674,8 @@ public function store(Request $request)
                 'no_cabang'               => $dataMurid['no_cabang'],
                 'bukti_transfer_path'     => $buktiPath,
                 'is_manual_kwitansi'      => $isManual,
-                // Optional: simpan kode select
-                'kaos_pendek_kode'        => $request->kaos_pendek_kode,
-                'kaos_panjang_kode'       => $request->kaos_panjang_kode,
+                'kaos_pendek_kode'        => !empty($kaosPendekKodeArray) ? implode(',', $kaosPendekKodeArray) : null,
+                'kaos_panjang_kode'       => !empty($kaosPanjangKodeArray) ? implode(',', $kaosPanjangKodeArray) : null,
             ]);
 
             $kwitansiList[] = $kwitansi;

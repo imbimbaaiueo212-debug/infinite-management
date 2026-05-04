@@ -207,46 +207,82 @@
 
         <h5>Biaya Lain-lain</h5>
         <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Daftar</label>
-                <input type="text" name="daftar" class="form-control biaya-lain text-end" value="0">
-            </div>
+          <div class="col-md-4">
+    <label class="form-label">Biaya Daftar</label>
+    
+    <select name="daftar_kode" id="daftar_select" class="form-select mb-1">
+        <option value="">-- Pilih Biaya Daftar --</option>
+        @foreach($daftarList as $item)
+            <option value="{{ $item['kode'] }}" 
+                    data-harga-duafa="{{ $item['harga_duafa'] }}"
+                    data-harga-promo="{{ $item['harga_promo'] }}"
+                    data-harga-daftar="{{ $item['harga_daftar'] }}"
+                    data-harga-spesial="{{ $item['harga_spesial'] }}"
+                    data-harga-umum1="{{ $item['harga_umum1'] }}"
+                    data-harga-umum2="{{ $item['harga_umum2'] }}">
+                {{ $item['nama'] }}
+            </option>
+        @endforeach
+    </select>
+
+    <select name="daftar_tipe_harga" id="daftar_tipe_harga" class="form-select form-select-sm mb-2">
+        <option value="harga_daftar">Daftar Ulang</option>
+        <option value="harga_duafa">Dhuafa</option>
+        <option value="harga_promo">Promo 2019</option>
+        <option value="harga_spesial">Spesial</option>
+        <option value="harga_umum1">Umum 1</option>
+        <option value="harga_umum2">Umum 2</option>
+    </select>
+
+    <input type="number" id="daftar_qty" class="form-control text-center" value="0" min="0" style="width:80px; display:inline-block;">
+    <small class="text-muted">× Harga</small>
+    
+    <input type="hidden" name="daftar" id="daftar_hidden" value="0">
+    <div id="daftar-container" class="mt-2"></div>
+</div>
 
             <!--- Kaos Pendek --->
-            <div class="col-md-3">
+           <!-- KAOS PENDEK -->
+            <div class="col-md-6">
                 <label class="form-label">Kaos Pendek</label>
-                <select name="kaos_pendek_kode" id="kaos_pendek_select" class="form-select mb-1">
-                    <option value="">-- Pilih Ukuran Kaos Pendek --</option>
-                    @foreach($kaosPendekList as $kaos)  {{-- Pastikan $kaosPendekList dikirim dari controller --}}
-                        <option value="{{ $kaos['kode'] }}" 
-                                data-harga="{{ $kaos['harga'] }}"
-                                data-nama="{{ $kaos['nama'] }}">
-                            {{ $kaos['nama'] }} - Rp {{ number_format($kaos['harga'], 0) }}
-                        </option>
-                    @endforeach
-                </select>
-                <input type="number" id="kaos_pendek_qty" class="form-control text-center" value="0" min="0" style="width:80px; display:inline-block;">
-                <small class="text-muted">× Harga</small>
+                <div id="kaos-pendek-container">
+                    <!-- Baris pertama default -->
+                    <div class="kaos-pendek-row d-flex gap-2 mb-2 align-items-end">
+                        <select name="kaos_pendek_kode[]" class="form-select kaos-pendek-select" style="width: 60%;">
+                            <option value="">-- Pilih Ukuran --</option>
+                            @foreach($kaosPendekList as $kaos)
+                                <option value="{{ $kaos['kode'] }}" 
+                                        data-harga="{{ $kaos['harga'] }}">
+                                    {{ $kaos['nama'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <input type="number" name="kaos_pendek_qty[]" class="form-control kaos-pendek-qty" value="0" min="0" style="width: 80px;">
+                        <button type="button" class="btn btn-success btn-sm btn-add-kaos-pendek">Tambah</button>
+                    </div>
+                </div>
                 <input type="hidden" name="kaos_pendek" id="kaos_pendek_hidden" value="0">
                 <div id="ukuran-pendek-container" class="mt-2"></div>
             </div>
-            <!--- End --->
 
-            <!--- Kaos Panjang --->
-            <div class="col-md-3">
+            <!-- KAOS PANJANG -->
+            <div class="col-md-6">
                 <label class="form-label">Kaos Panjang (Lengan Panjang)</label>
-                <select name="kaos_panjang_kode" id="kaos_panjang_select" class="form-select mb-1">
-                    <option value="">-- Pilih Ukuran Kaos Panjang --</option>
-                    @foreach($kaosPanjangList as $kaos)
-                        <option value="{{ $kaos['kode'] }}" 
-                                data-harga="{{ $kaos['harga'] }}"
-                                data-nama="{{ $kaos['nama'] }}">
-                            {{ $kaos['nama'] }} - Rp {{ number_format($kaos['harga'], 0) }}
-                        </option>
-                    @endforeach
-                </select>
-                <input type="number" id="kaos_panjang_qty" class="form-control text-center" value="0" min="0" style="width:80px; display:inline-block;">
-                <small class="text-muted">× Harga</small>
+                <div id="kaos-panjang-container">
+                    <div class="kaos-panjang-row d-flex gap-2 mb-2 align-items-end">
+                        <select name="kaos_panjang_kode[]" class="form-select kaos-panjang-select" style="width: 60%;">
+                            <option value="">-- Pilih Ukuran --</option>
+                            @foreach($kaosPanjangList as $kaos)
+                                <option value="{{ $kaos['kode'] }}" 
+                                        data-harga="{{ $kaos['harga'] }}">
+                                    {{ $kaos['nama'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <input type="number" name="kaos_panjang_qty[]" class="form-control kaos-panjang-qty" value="0" min="0" style="width: 80px;">
+                        <button type="button" class="btn btn-success btn-sm btn-add-kaos-panjang">Tambah</button>
+                    </div>
+                </div>
                 <input type="hidden" name="kaos_panjang" id="kaos_panjang_hidden" value="0">
                 <div id="ukuran-panjang-container" class="mt-2"></div>
             </div>
@@ -314,7 +350,7 @@
     </form>
 </div>
 
-<<!-- Dependencies -->
+<!-- Dependencies -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -327,7 +363,7 @@ $(document).ready(function() {
     let isManualMode = false;
 
     // ────────────────────────────────────────────────
-    // Fungsi bantu
+    // Fungsi Bantu
     // ────────────────────────────────────────────────
     function formatRupiah(angka) {
         if (!angka) return '0';
@@ -351,7 +387,7 @@ $(document).ready(function() {
     }
 
     // ================================================
-    // UPDATE KWITANSI PREVIEW (DENGAN KAOS PENDEK & PANJANG)
+    // UPDATE KWITANSI PREVIEW
     // ================================================
     function updateKwitansiPreview() {
         const jumlahBulan = $('.bulan-row').length;
@@ -359,10 +395,8 @@ $(document).ready(function() {
         const totalPendek  = unformatRupiah($('#kaos_pendek_hidden').val());
         const totalPanjang = unformatRupiah($('#kaos_panjang_hidden').val());
         
-        // Hitung apakah ada biaya lain + kaos
         const adaBiayaLain = $('.biaya-lain').toArray().some(el => unformatRupiah($(el).val()) > 0);
 
-        // Setiap jenis kaos yang dibeli dihitung sebagai item terpisah
         let totalItem = jumlahBulan;
         if (adaBiayaLain) totalItem++;
         if (totalPendek > 0) totalItem++;
@@ -372,16 +406,13 @@ $(document).ready(function() {
 
         if (isManualMode) {
             const manualBase = $('#kwitansi_base_manual').val().trim();
-            
             if (!manualBase) {
                 teks = 'Masukkan base kwitansi manual';
                 $('#kwitansi-preview').removeClass('text-primary').addClass('text-muted');
             } else {
-                if (totalItem === 0) {
-                    teks = manualBase + ' (belum ada item)';
-                } else if (totalItem === 1) {
-                    teks = manualBase;
-                } else {
+                if (totalItem === 0) teks = manualBase + ' (belum ada item)';
+                else if (totalItem === 1) teks = manualBase;
+                else {
                     const prefix = manualBase.endsWith('-') ? '' : '-';
                     teks = manualBase + prefix + '01 s/d ' + manualBase + prefix + String(totalItem).padStart(2, '0');
                 }
@@ -393,11 +424,9 @@ $(document).ready(function() {
                 teks = 'Pilih NIM terlebih dahulu';
                 $('#kwitansi-preview').removeClass('text-primary').addClass('text-muted');
             } else {
-                if (totalItem === 0) {
-                    teks = base + ' (belum ada item)';
-                } else if (totalItem === 1) {
-                    teks = base + '01';
-                } else {
+                if (totalItem === 0) teks = base + ' (belum ada item)';
+                else if (totalItem === 1) teks = base + '01';
+                else {
                     teks = base + '01 s/d ' + base + String(totalItem).padStart(2, '0');
                 }
                 $('#kwitansi-preview').removeClass('text-muted').addClass('text-primary');
@@ -412,7 +441,6 @@ $(document).ready(function() {
     // ================================================
     $('#manual_kwitansi_toggle').on('change', function() {
         isManualMode = this.checked;
-        
         if (isManualMode) {
             $('#manual_kwitansi_input').slideDown(200);
             $('#kwitansi_base_manual').focus();
@@ -436,54 +464,155 @@ $(document).ready(function() {
     });
 
     // ================================================
-    // HANDLE KAOS PENDEK & PANJANG (DENGAN QUANTITY)
+    // HANDLE MULTIPLE KAOS (BISA BERBEDA UKURAN)
     // ================================================
-    function hitungKaos() {
-        // Kaos Pendek
-        const pendekHarga = parseFloat($('#kaos_pendek_select').find(':selected').data('harga')) || 0;
-        const pendekQty   = parseInt($('#kaos_pendek_qty').val()) || 0;
-        const totalPendek = pendekHarga * pendekQty;
-        $('#kaos_pendek_hidden').val(totalPendek);
+    function hitungTotalKaos() {
+        let totalPendek = 0;
+        let totalPanjang = 0;
 
-        if (pendekQty > 0 && pendekHarga > 0) {
-            $('#ukuran-pendek-container').html(`
-                <div class="alert alert-info py-2 small">
-                    ${pendekQty} Kaos Pendek × Rp ${formatRupiah(pendekHarga)} = 
-                    <strong>Rp ${formatRupiah(totalPendek)}</strong>
-                </div>
-            `);
-        } else {
-            $('#ukuran-pendek-container').html('');
-        }
+        // Kaos Pendek
+        $('.kaos-pendek-row').each(function() {
+            const harga = parseFloat($(this).find('.kaos-pendek-select option:selected').data('harga')) || 0;
+            const qty = parseInt($(this).find('.kaos-pendek-qty').val()) || 0;
+            totalPendek += harga * qty;
+        });
 
         // Kaos Panjang
-        const panjangHarga = parseFloat($('#kaos_panjang_select').find(':selected').data('harga')) || 0;
-        const panjangQty   = parseInt($('#kaos_panjang_qty').val()) || 0;
-        const totalPanjang = panjangHarga * panjangQty;
+        $('.kaos-panjang-row').each(function() {
+            const harga = parseFloat($(this).find('.kaos-panjang-select option:selected').data('harga')) || 0;
+            const qty = parseInt($(this).find('.kaos-panjang-qty').val()) || 0;
+            totalPanjang += harga * qty;
+        });
+
+        $('#kaos_pendek_hidden').val(totalPendek);
         $('#kaos_panjang_hidden').val(totalPanjang);
 
-        if (panjangQty > 0 && panjangHarga > 0) {
-            $('#ukuran-panjang-container').html(`
-                <div class="alert alert-info py-2 small">
-                    ${panjangQty} Kaos Panjang × Rp ${formatRupiah(panjangHarga)} = 
-                    <strong>Rp ${formatRupiah(totalPanjang)}</strong>
-                </div>
-            `);
-        } else {
-            $('#ukuran-panjang-container').html('');
-        }
-
+        updateKaosInfo();
         hitungTotal();
         updateKwitansiPreview();
     }
 
-    // Event Listener Kaos
-    $('#kaos_pendek_select, #kaos_panjang_select').on('change', hitungKaos);
-    $('#kaos_pendek_qty, #kaos_panjang_qty').on('input', function() {
-        let qty = parseInt(this.value) || 0;
-        if (qty < 0) this.value = 0;
-        hitungKaos();
+    function updateKaosInfo() {
+        // Info Kaos Pendek
+        let pendekHtml = '';
+        $('.kaos-pendek-row').each(function() {
+            const opt = $(this).find('.kaos-pendek-select option:selected');
+            const nama = opt.text().trim() || 'Kaos Pendek';
+            const harga = parseFloat(opt.data('harga')) || 0;
+            const qty = parseInt($(this).find('.kaos-pendek-qty').val()) || 0;
+            if (qty > 0 && harga > 0) {
+                pendekHtml += `<div>${qty} × ${nama} = <strong>Rp ${formatRupiah(harga * qty)}</strong></div>`;
+            }
+        });
+        $('#ukuran-pendek-container').html(pendekHtml ? `<div class="alert alert-info py-2 small">${pendekHtml}</div>` : '');
+
+        // Info Kaos Panjang
+        let panjangHtml = '';
+        $('.kaos-panjang-row').each(function() {
+            const opt = $(this).find('.kaos-panjang-select option:selected');
+            const nama = opt.text().trim() || 'Kaos Panjang';
+            const harga = parseFloat(opt.data('harga')) || 0;
+            const qty = parseInt($(this).find('.kaos-panjang-qty').val()) || 0;
+            if (qty > 0 && harga > 0) {
+                panjangHtml += `<div>${qty} × ${nama} = <strong>Rp ${formatRupiah(harga * qty)}</strong></div>`;
+            }
+        });
+        $('#ukuran-panjang-container').html(panjangHtml ? `<div class="alert alert-info py-2 small">${panjangHtml}</div>` : '');
+    }
+
+    // Event Kaos (Multiple Rows)
+    $(document).on('change input', '.kaos-pendek-select, .kaos-pendek-qty, .kaos-panjang-select, .kaos-panjang-qty', hitungTotalKaos);
+
+    // Tambah Baris Kaos Pendek
+    $(document).on('click', '.btn-add-kaos-pendek', function() {
+        const clone = $(this).closest('.kaos-pendek-row').clone();
+        clone.find('select').val('');
+        clone.find('input[type=number]').val(0);
+        clone.find('.btn-add-kaos-pendek')
+             .removeClass('btn-success')
+             .addClass('btn-danger btn-remove-kaos-pendek')
+             .text('Hapus');
+        $('#kaos-pendek-container').append(clone);
+        hitungTotalKaos();
     });
+
+    // Hapus Baris Kaos Pendek
+    $(document).on('click', '.btn-remove-kaos-pendek', function() {
+        if ($('.kaos-pendek-row').length > 1) {
+            $(this).closest('.kaos-pendek-row').remove();
+            hitungTotalKaos();
+        }
+    });
+
+    // Tambah Baris Kaos Panjang
+    $(document).on('click', '.btn-add-kaos-panjang', function() {
+        const clone = $(this).closest('.kaos-panjang-row').clone();
+        clone.find('select').val('');
+        clone.find('input[type=number]').val(0);
+        clone.find('.btn-add-kaos-panjang')
+             .removeClass('btn-success')
+             .addClass('btn-danger btn-remove-kaos-panjang')
+             .text('Hapus');
+        $('#kaos-panjang-container').append(clone);
+        hitungTotalKaos();
+    });
+
+    // Hapus Baris Kaos Panjang
+    $(document).on('click', '.btn-remove-kaos-panjang', function() {
+        if ($('.kaos-panjang-row').length > 1) {
+            $(this).closest('.kaos-panjang-row').remove();
+            hitungTotalKaos();
+        }
+    });
+
+// ================================================
+// HANDLE DAFTAR (FIXED + AUTO QTY = 1)
+// ================================================
+function hitungDaftar() {
+    const selectKode = $('#daftar_select');
+    const selectTipe = $('#daftar_tipe_harga');
+    const qtyInput   = $('#daftar_qty');
+
+    const kode = selectKode.val();
+    const tipe = selectTipe.val();
+    
+    // AUTO SET QTY = 1 saat memilih item
+    let qty = parseInt(qtyInput.val()) || 0;
+    if (kode && qty === 0) {
+        qty = 1;
+        qtyInput.val(1);
+    }
+
+    let harga = 0;
+    if (kode) {
+        const dataKey = tipe.replace('harga_', 'harga-'); 
+        harga = parseFloat(selectKode.find(':selected').data(dataKey)) || 0;
+    }
+
+    const total = harga * qty;
+
+    $('#daftar_hidden').val(total);
+
+    if (qty > 0 && harga > 0) {
+        const namaItem = selectKode.find(':selected').text();
+        const namaTipe = selectTipe.find(':selected').text();
+        
+        $('#daftar-container').html(`
+            <div class="alert alert-info py-2 small">
+                ${qty} × ${namaItem} (${namaTipe}) = 
+                <strong>Rp ${formatRupiah(total)}</strong>
+            </div>
+        `);
+    } else {
+        $('#daftar-container').html('');
+    }
+
+    hitungTotal();
+    updateKwitansiPreview();
+}
+
+// Event Listener
+$('#daftar_select, #daftar_tipe_harga, #daftar_qty').on('change input', hitungDaftar);
 
     // ================================================
     // FUNGSI LOAD VOUCHER
@@ -561,7 +690,9 @@ $(document).ready(function() {
         updateKwitansiPreview();
     });
 
-    // Fungsi lain (SPP, Bulan, Total, dll)
+    // ================================================
+    // SPP & BULAN
+    // ================================================
     function updateSppDropdown(harga) {
         const el = $('#spp_dropdown');
         el.empty().append('<option value="">-- Pilih jumlah bulan --</option>');
@@ -624,7 +755,7 @@ $(document).ready(function() {
             sum += unformatRupiah($(this).val()); 
         });
 
-        // Kaos Pendek + Panjang
+        sum += unformatRupiah($('#daftar_hidden').val());
         sum += unformatRupiah($('#kaos_pendek_hidden').val());
         sum += unformatRupiah($('#kaos_panjang_hidden').val());
 
@@ -637,7 +768,7 @@ $(document).ready(function() {
         $('#total').val(formatRupiah(sum));
     }
 
-    // Event tambah/hapus baris bulan
+    // Event Bulan
     $(document).on('click', '.btn-add-remove', function() {
         if ($(this).hasClass('btn-success')) {
             const clone = $(this).closest('.bulan-row').clone(true, true);
@@ -652,7 +783,6 @@ $(document).ready(function() {
     });
 
     $('#tambah-bulan-lagi').click(() => $('.btn-add-remove.btn-success').first()?.click());
-
     $('#spp_dropdown').on('change', updateInfoBulan);
 
     $('.biaya-lain').on('input', function() {
@@ -688,19 +818,6 @@ $(document).ready(function() {
         setTimeout(() => {
             $('#nimSelect').val('{{ old('nim') }}').trigger('change');
         }, 300);
-    @endif
-
-    // Restore Kaos jika ada error validasi
-    @if(old('kaos_pendek_kode'))
-        setTimeout(() => {
-            $('#kaos_pendek_select').val('{{ old('kaos_pendek_kode') }}').trigger('change');
-        }, 400);
-    @endif
-
-    @if(old('kaos_panjang_kode'))
-        setTimeout(() => {
-            $('#kaos_panjang_select').val('{{ old('kaos_panjang_kode') }}').trigger('change');
-        }, 500);
     @endif
 });
 </script>
