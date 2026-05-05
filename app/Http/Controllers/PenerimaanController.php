@@ -10,6 +10,7 @@ use App\Exports\PenerimaanExport;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\DaftarMuridDeposit;
 use App\Models\HargaSaptataruna;
 use Illuminate\Support\Facades\Storage;
@@ -174,7 +175,7 @@ public function updateUkuranKaos(Request $request)
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('Gagal update ukuran kaos: ' . $e->getMessage(), $request->all());
+        Log::error('Gagal update ukuran kaos: ' . $e->getMessage(), $request->all());
 
         return response()->json([
             'success' => false,
@@ -1589,7 +1590,7 @@ public function updateTanggalPenyerahan(Request $request)
         return response()->json(['success' => true]);
 
     } catch (\Exception $e) {
-        \Log::error('Update tanggal produk error: ' . $e->getMessage(), $request->all());
+        Log::error('Update tanggal produk error: ' . $e->getMessage(), $request->all());
 
         return response()->json([
             'success' => false,
@@ -1612,7 +1613,7 @@ public function updateTanggalPenyerahan(Request $request)
         try {
             Storage::disk('public')->delete($path);
         } catch (\Throwable $e) {
-            \Log::warning('deleteBuktiTransferFile failed', ['path' => $path, 'err' => $e->getMessage()]);
+            Log::warning('deleteBuktiTransferFile failed', ['path' => $path, 'err' => $e->getMessage()]);
         }
     }
     public function rbas(Request $request)

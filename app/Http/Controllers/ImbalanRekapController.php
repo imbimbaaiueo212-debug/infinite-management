@@ -833,7 +833,6 @@ if (array_key_exists('installment_id', $fields)) {
 
             // ================= POTONGAN =================
             $hariDipotong = 0;
-
             $potongan = PotonganTunjangan::where('nama', $p->nama)
                 ->where('bulan', $bulanFormatYm)
                 ->first();
@@ -846,7 +845,6 @@ if (array_key_exists('installment_id', $fields)) {
                     ($potongan->tidak_aktif ?? 0) +
                     ($potongan->lain_lain ?? 0);
 
-                // PERBAIKAN UTAMA: Pakai floor + pembulatan yang lebih tepat
                 $hariDipotong = (int) floor($totalPotong / 24000);
             }
 
@@ -855,33 +853,33 @@ if (array_key_exists('installment_id', $fields)) {
             $jamPotong  = $hariDipotong * $jamPerHari;
             $jamEfektif = max(0, $durasiFull - $jamPotong);
 
-            // ================= RB DINAMIS =================
+            // ================= RB DINAMIS + IMBALAN POKOK =================
             $rbBaru = 5;
             $durasiBaru = 20;
+            $imbalanPokokFull = $p->imbalan_pokok_default ?? $p->rp ?? 900000;
 
             if ($jamEfektif >= 140) {
                 $rbBaru = 40;
                 $durasiBaru = 160;
+                $imbalanPokokFull = 1_200_000;     // ← Hardcode atau ambil dari master
             } else {
                 foreach ($rbMap as $rb => $jam) {
                     if ($jamEfektif >= $jam) {
                         $rbBaru = $rb;
                         $durasiBaru = $jam;
+                        // Kamu perlu mapping imbalan per tingkat RB
                     }
                 }
             }
 
-            // ================= PERSENTASE =================
-            $persentase = $durasiFull > 0
-                ? ($jamEfektif / $durasiFull) * 100
-                : 0;
-
+            // Persentase hanya untuk tampilan
+            $persentase = $durasiFull > 0 ? ($jamEfektif / $durasiFull) * 100 : 0;
             $persentase = max(0, min(100, $persentase));
 
-            // ================= IMBALAN & TRANSPORT =================
-            $imbalanFull = $p->imbalan_pokok_default ?? $p->rp ?? 900000;
-            $imbalanFix  = ($persentase / 100) * $imbalanFull;
+            // Imbalan pokok = FULL sesuai tingkat RB (bukan proporsional)
+            $imbalanFix = $imbalanPokokFull;   // ← Perubahan penting
 
+            // Transport
             $hariMasuk = max(0, 25 - $hariDipotong);
             $transport = $hariMasuk * 24000;
 
