@@ -10,27 +10,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    {{-- DEBUG FILTER (HAPUS SETELAH SUDAH BERES) --}}
-    <div class="alert alert-info small mb-3">
-        <strong>Debug Filter Saat Ini:</strong><br>
-        Murid (NIM): <strong>{{ request('search') ?: 'Semua' }}</strong> |
-        Bimba Unit: <strong>{{ request('unit') ?: 'Semua' }}</strong> |
-        Periode: <strong>{{ request('periode_dari') ?: '?' }} s/d {{ request('periode_sampai') ?: '?' }}</strong> |
-        Total Data: <strong>{{ $penerimaan->total() }}</strong> baris
-    </div>
-
     <form method="GET" class="row g-3 align-items-end mb-4 bg-light p-3 rounded shadow-sm card-body" id="filterForm">
-        <div class="col-md-3 col-lg-3">
-            <label for="searchProduk" class="form-label small text-muted">Murid (NIM)</label>
-            <select id="searchProduk" name="search" class="form-select">
-                <option value="">-- Semua Murid --</option>
-                @foreach($namaList as $m)
-                    <option value="{{ $m->nim }}" {{ request('search') == $m->nim ? 'selected' : '' }}>
-                        {{ $m->nim }} | {{ $m->nama_murid }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
 
         @if (auth()->check() && (auth()->user()->is_admin ?? false))
         <div class="col-md-3 col-lg-3">
@@ -45,6 +25,17 @@
             </select>
         </div>
         @endif
+        <div class="col-md-3 col-lg-3">
+            <label for="searchProduk" class="form-label small text-muted">Murid (NIM)</label>
+            <select id="searchProduk" name="search" class="form-select">
+                <option value="">-- Semua Murid --</option>
+                @foreach($namaList as $m)
+                    <option value="{{ $m->nim }}" {{ request('search') == $m->nim ? 'selected' : '' }}>
+                        {{ $m->nim }} | {{ $m->nama_murid }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
 
         <div class="col-md-2 col-lg-2">
             <label for="periode_dari" class="form-label small text-muted">Periode Dari</label>
@@ -489,18 +480,15 @@ $(document).ready(function () {
     });
 
     // Auto submit filter saat ada perubahan
-    $('#searchProduk, #unit, #periode_dari, #periode_sampai').on('change', function () {
+    $('#unit, #periode_dari, #periode_sampai').on('change', function () {
         if ($(this).attr('id') === 'unit') {
-            $('#searchProduk').val(null).trigger('change');
+            $('#searchProduk').val('').trigger('change.select2'); // Clear murid
         }
         $('#filterForm').submit();
     });
 
-    // Cegah klik pada tombol edit tanggal yang sudah disabled
-    $(document).on('click', '.edit-serah-btn:disabled', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
+    $('#searchProduk').on('change', function () {
+        $('#filterForm').submit();
     });
 
     // ========================================
