@@ -318,18 +318,123 @@ $daftarList = HargaSaptataruna::whereIn('kode', ['bA', 'Eb'])
             'harga_umum2'   => (float)($item->umum2 ?? 0),
         ];
     });
-   
 
-    return view('penerimaan.create', compact(
-        'murids',
-        'vouchers',
-        'sppLunas',
-        'unitOptions',
-        'cabangOptions',
-        'kaosPendekList',     // ← Ditambahkan
-        'kaosPanjangList',     // ← Ditambahkan
-        'daftarList',
-    ));
+// === AMBIL DATA KPK ===
+$kpkList = HargaSaptataruna::where('nama', 'LIKE', '%KPK%')
+    ->orWhere('kode', 'LIKE', '%KPK%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,   // ambil harga utama
+        ];
+    })
+    ->values();
+
+// === AMBIL DATA TAS ===
+$tasList = HargaSaptataruna::where('nama', 'LIKE', '%TAS%')
+    ->orWhere('kode', 'LIKE', '%TAS%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,     // ← Perbaikan: harga (bukan hargi)
+        ];
+    })
+    ->values();
+
+    // === AMBIL DATA SERTIFIKAT ===
+$sertifikatList = HargaSaptataruna::where('nama', 'LIKE', '%SERTIFIKAT%')
+    ->orWhere('nama', 'LIKE', '%STF%')
+    ->orWhere('kode', 'LIKE', '%STF%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+    // === AMBIL DATA TAS ===
+$stpbList = HargaSaptataruna::where('nama', 'LIKE', '%STPB%')
+    ->orWhere('kode', 'LIKE', '%STPB%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,     // ← Perbaikan: harga (bukan hargi)
+        ];
+    })
+    ->values();
+
+    // === AMBIL DATA RBAS ===
+$rbasList = HargaSaptataruna::where('nama', 'LIKE', '%RBAS%')
+    ->orWhere('kode', 'LIKE', '%RBAS%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+    // === AMBIL DATA BCABS01 & BCABS02 ===
+$bcabs01List = HargaSaptataruna::where('kode', 'BCABS.01')
+    ->orWhere('kode', 'LIKE', '%BCABS01%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+$bcabs02List = HargaSaptataruna::where('kode', 'BCABS.02')
+    ->orWhere('kode', 'LIKE', '%BCABS02%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+return view('penerimaan.create', compact(
+    'murids',
+    'vouchers',
+    'sppLunas',
+    'unitOptions',
+    'cabangOptions',
+    'kaosPendekList',
+    'kaosPanjangList',
+    'daftarList',
+    'kpkList',          // ← TAMBAHKAN INI
+    'tasList',
+    'sertifikatList',
+    'stpbList',
+    'rbasList',
+    'bcabs01List',
+    'bcabs02List',
+
+));
 }
 
 private function extractUkuran($nama)
@@ -353,6 +458,8 @@ public function store(Request $request)
     $tas         = $this->cleanMoneyInput($request->tas);
     $event       = $this->cleanMoneyInput($request->event);
     $lainLain    = $this->cleanMoneyInput($request->lain_lain);
+    $bcabs01     = $this->cleanMoneyInput($request->BCABS01);   // ← Pastikan ini
+    $bcabs02     = $this->cleanMoneyInput($request->BCABS02);   // ← Pastikan ini
 
     if ($spp > 0 && $spp < 1000) $spp *= 1000;
 
@@ -427,9 +534,10 @@ public function store(Request $request)
         'BCABS02'    => $murid->BCABS02 ?? null,
     ];
 
-    $rbas    = $request->filled('RBAS')    ? $request->RBAS    : $dataMurid['RBAS'];
-    $bcabs01 = $request->filled('BCABS01') ? $request->BCABS01 : $dataMurid['BCABS01'];
-    $bcabs02 = $request->filled('BCABS02') ? $request->BCABS02 : $dataMurid['BCABS02'];
+    // Ambil dari form (hidden input) jika ada, kalau tidak ambil dari data murid
+    $rbas    = $this->cleanMoneyInput($request->RBAS)    ?: ($dataMurid['RBAS'] ?? 0);
+    $bcabs01 = $this->cleanMoneyInput($request->BCABS01) ?: ($dataMurid['BCABS01'] ?? 0);
+    $bcabs02 = $this->cleanMoneyInput($request->BCABS02) ?: ($dataMurid['BCABS02'] ?? 0);
 
     // === PERIODE SPP ===
     $periodeTerpilih = [];
@@ -676,6 +784,9 @@ public function store(Request $request)
                 'is_manual_kwitansi'      => $isManual,
                 'kaos_pendek_kode'        => !empty($kaosPendekKodeArray) ? implode(',', $kaosPendekKodeArray) : null,
                 'kaos_panjang_kode'       => !empty($kaosPanjangKodeArray) ? implode(',', $kaosPanjangKodeArray) : null,
+                'RBAS'                    => $rbas,           // ← tambahkan
+                'BCABS01'                 => $bcabs01,        // ← tambahkan
+                'BCABS02'                 => $bcabs02,        // ← tambahkan
             ]);
 
             $kwitansiList[] = $kwitansi;
@@ -1340,47 +1451,79 @@ public function produk(Request $request)
     $totalSudahDiserahkan = $totalSemuaProdukPcs - $totalBelumDiserahkan;
 
     // === RINGKASAN UKURAN KAOS ===
-    $ukuranOptions = ['KAS', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
+$ukuranPendekOptions  = ['KAS', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
+$ukuranPanjangOptions = ['KAS01', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
 
-    $belumUkuranPendek  = array_fill_keys($ukuranOptions, 0);
-    $sudahUkuranPendek  = array_fill_keys($ukuranOptions, 0);
-    $belumUkuranPanjang = array_fill_keys($ukuranOptions, 0);
-    $sudahUkuranPanjang = array_fill_keys($ukuranOptions, 0);
+$belumUkuranPendek  = array_fill_keys($ukuranPendekOptions, 0);
+$sudahUkuranPendek  = array_fill_keys($ukuranPendekOptions, 0);
+$belumUkuranPanjang = array_fill_keys($ukuranPanjangOptions, 0);
+$sudahUkuranPanjang = array_fill_keys($ukuranPanjangOptions, 0);
 
-    $recordsWithKaos = (clone $query)
-        ->where(function ($q) {
-            $q->where('kaos', '>', 0)->orWhere('kaos_lengan_panjang', '>', 0);
-        })
-        ->select([
-            'kaos', 'kaos_lengan_panjang',
-            'ukuran_kaos_pendek', 'ukuran_kaos_panjang',
-            'tanggal_penyerahan_kaos_pendek', 'tanggal_penyerahan_kaos_panjang'
-        ])
-        ->get();
+$recordsWithKaos = (clone $query)
+    ->where(function ($q) {
+        $q->where('kaos', '>', 0)->orWhere('kaos_lengan_panjang', '>', 0);
+    })
+    ->select([
+        'kaos', 'kaos_lengan_panjang',
+        'ukuran_kaos_pendek', 'ukuran_kaos_panjang',
+        'tanggal_penyerahan_kaos_pendek', 'tanggal_penyerahan_kaos_panjang'
+    ])
+    ->get();
 
-    foreach ($recordsWithKaos as $row) {
-        if ($row->kaos > 0 && $row->ukuran_kaos_pendek) {
-            $sizes = array_filter(array_map('trim', explode(',', strtoupper($row->ukuran_kaos_pendek))));
+foreach ($recordsWithKaos as $row) {
+
+    // ====================== KAOS PENDEK ======================
+    $pcsPendek = (int) floor(($row->kaos ?? 0) / 70000);
+
+    if ($pcsPendek > 0 && $row->ukuran_kaos_pendek) {
+        $sizes = array_filter(array_map('trim', explode(',', strtoupper($row->ukuran_kaos_pendek))));
+
+        // Jika jumlah ukuran yang tercatat == pcs → gunakan per ukuran
+        if (count($sizes) === $pcsPendek) {
             foreach ($sizes as $size) {
-                if (in_array($size, $ukuranOptions)) {
+                if (in_array($size, $ukuranPendekOptions)) {
                     is_null($row->tanggal_penyerahan_kaos_pendek)
                         ? $belumUkuranPendek[$size]++
                         : $sudahUkuranPendek[$size]++;
                 }
             }
+        } 
+        // Jika tidak sama (contoh: hanya 1 ukuran untuk banyak pcs) → distribusikan ke ukuran tersebut
+        else if (count($sizes) === 1) {
+            $size = $sizes[0];
+            if (in_array($size, $ukuranPendekOptions)) {
+                is_null($row->tanggal_penyerahan_kaos_pendek)
+                    ? $belumUkuranPendek[$size] += $pcsPendek
+                    : $sudahUkuranPendek[$size] += $pcsPendek;
+            }
         }
+        // Kasus lain (jarang): abaikan atau log warning
+    }
 
-        if ($row->kaos_lengan_panjang > 0 && $row->ukuran_kaos_panjang) {
-            $sizes = array_filter(array_map('trim', explode(',', strtoupper($row->ukuran_kaos_panjang))));
+    // ====================== KAOS PANJANG ======================
+    $pcsPanjang = (int) floor(($row->kaos_lengan_panjang ?? 0) / 85000);
+
+    if ($pcsPanjang > 0 && $row->ukuran_kaos_panjang) {
+        $sizes = array_filter(array_map('trim', explode(',', strtoupper($row->ukuran_kaos_panjang))));
+
+        if (count($sizes) === $pcsPanjang) {
             foreach ($sizes as $size) {
-                if (in_array($size, $ukuranOptions)) {
+                if (in_array($size, $ukuranPanjangOptions)) {
                     is_null($row->tanggal_penyerahan_kaos_panjang)
                         ? $belumUkuranPanjang[$size]++
                         : $sudahUkuranPanjang[$size]++;
                 }
             }
+        } else if (count($sizes) === 1) {
+            $size = $sizes[0];
+            if (in_array($size, $ukuranPanjangOptions)) {
+                is_null($row->tanggal_penyerahan_kaos_panjang)
+                    ? $belumUkuranPanjang[$size] += $pcsPanjang
+                    : $sudahUkuranPanjang[$size] += $pcsPanjang;
+            }
         }
     }
+}
 
     return view('penerimaan.produk', compact(
         'penerimaan',

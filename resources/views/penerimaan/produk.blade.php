@@ -371,13 +371,13 @@
                                 <td colspan="2" class="pt-2 pb-1">
                                     <div class="ps-5 small">
                                         <small class="text-muted d-block mb-1">Rincian Ukuran:</small>
-                                        KAS     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAS'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAM     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAM'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAL     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXL    : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXL   : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXXL  : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXXLS : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXXLS'] ?? 0, 0, ',', '.') }}</span>
+                                        KAS01     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAS01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAM01     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAM01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAL01     : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXL01    : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXL01   : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXXL01  : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXXLS01 : <span class="fw-bold text-danger">{{ number_format($belumUkuranPanjang['KAXXXLS01'] ?? 0, 0, ',', '.') }}</span>
                                     </div>
                                 </td>
                             </tr>
@@ -440,13 +440,13 @@
                                 <td colspan="2" class="pt-2 pb-1">
                                     <div class="ps-5 small">
                                         <small class="text-muted d-block mb-1">Rincian Ukuran:</small>
-                                        KAS     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAS'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAM     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAM'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAL     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXL    : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXL   : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXXL  : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXXL'] ?? 0, 0, ',', '.') }}</span><br>
-                                        KAXXXLS : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXXLS'] ?? 0, 0, ',', '.') }}</span>
+                                        KAS01     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAS01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAM01     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAM01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAL01     : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXL01    : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXL01   : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXXL01  : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXXL01'] ?? 0, 0, ',', '.') }}</span><br>
+                                        KAXXXLS01 : <span class="fw-bold text-success">{{ number_format($sudahUkuranPanjang['KAXXXLS01'] ?? 0, 0, ',', '.') }}</span>
                                     </div>
                                 </td>
                             </tr>
