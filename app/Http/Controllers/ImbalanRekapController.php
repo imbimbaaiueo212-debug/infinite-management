@@ -804,6 +804,14 @@ if (array_key_exists('installment_id', $fields)) {
 
     $profiles = Profile::orderBy('nama')->get();
 
+    // ================= RB MASTER =================
+    $rbMap = [
+        5 => 20, 8 => 32, 10 => 40, 15 => 60,
+        20 => 80, 25 => 100, 30 => 120,
+        35 => 140, 40 => 160, 45 => 180,
+        50 => 200, 55 => 220, 60 => 240
+    ];
+
     foreach ($profiles as $p) {
 
         try {
@@ -816,14 +824,7 @@ if (array_key_exists('installment_id', $fields)) {
             $isNew = !$rekap->exists;
             $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
 
-            // ================= RB MASTER =================
-            $rbMap = [
-                5 => 20, 8 => 32, 10 => 40, 15 => 60,
-                20 => 80, 25 => 100, 30 => 120,
-                35 => 140, 40 => 160, 45 => 180,
-                50 => 200, 55 => 220, 60 => 240
-            ];
-
+            // ================= AMBIL RB AWAL DARI PROFILE =================
             $rbAwal = 40;
             if (!empty($p->rb) && preg_match('/(\d+)/', $p->rb, $m)) {
                 $rbAwal = (int)$m[1];
@@ -861,25 +862,34 @@ if (array_key_exists('installment_id', $fields)) {
             if ($jamEfektif >= 140) {
                 $rbBaru = 40;
                 $durasiBaru = 160;
-                $imbalanPokokFull = 1_200_000;     // ← Hardcode atau ambil dari master
+                $imbalanPokokFull = 1_200_000;
             } else {
                 foreach ($rbMap as $rb => $jam) {
                     if ($jamEfektif >= $jam) {
                         $rbBaru = $rb;
                         $durasiBaru = $jam;
-                        // Kamu perlu mapping imbalan per tingkat RB
+                        // Kamu bisa tambahkan mapping imbalan per RB di sini nanti
                     }
                 }
             }
 
-            // Persentase hanya untuk tampilan
-            $persentase = $durasiFull > 0 ? ($jamEfektif / $durasiFull) * 100 : 0;
+            // ================= PERSENTASE KHUSUS =================
+            if ($rbBaru === 40) {
+                // RB 40 tetap 100% selama jam efektif >= 140
+                $persentase = 100.00;
+            } else {
+                // Untuk RB di bawah 40, hitung proporsional
+                $persentase = $durasiFull > 0 
+                    ? ($jamEfektif / $durasiFull) * 100 
+                    : 0;
+            }
+
             $persentase = max(0, min(100, $persentase));
 
-            // Imbalan pokok = FULL sesuai tingkat RB (bukan proporsional)
-            $imbalanFix = $imbalanPokokFull;   // ← Perubahan penting
+            // Imbalan pokok = FULL sesuai tingkat RB
+            $imbalanFix = $imbalanPokokFull;
 
-            // Transport
+            // ================= TRANSPORT =================
             $hariMasuk = max(0, 25 - $hariDipotong);
             $transport = $hariMasuk * 24000;
 
@@ -901,7 +911,11 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->insentif_mentor = $p->insentif_mentor ?? 0;
             $rekap->cicilan = $p->cicilan_default ?? 0;
 
-            $rekap->total_imbalan = $rekap->imbalan_pokok + $rekap->imbalan_lainnya + $rekap->insentif_mentor + $rekap->tambahan_transport;
+            $rekap->total_imbalan = $rekap->imbalan_pokok 
+                                  + $rekap->imbalan_lainnya 
+                                  + $rekap->insentif_mentor 
+                                  + $rekap->tambahan_transport;
+
             $rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
 
             if ($isMagang) {
