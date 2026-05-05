@@ -804,6 +804,23 @@ if (array_key_exists('installment_id', $fields)) {
 
     $profiles = Profile::orderBy('nama')->get();
 
+    // ================= RB CONFIG (DENGAN TOLERANSI) =================
+    $rbConfig = [
+        60 => ['min_jam' => 220, 'jam_label' => 240, 'imbalan' => 1_600_000],
+        55 => ['min_jam' => 200, 'jam_label' => 220, 'imbalan' => 1_500_000],
+        50 => ['min_jam' => 180, 'jam_label' => 200, 'imbalan' => 1_400_000],
+        45 => ['min_jam' => 160, 'jam_label' => 180, 'imbalan' => 1_300_000],
+        40 => ['min_jam' => 140, 'jam_label' => 160, 'imbalan' => 1_200_000],
+        35 => ['min_jam' => 130, 'jam_label' => 140, 'imbalan' => 1_100_000],  // Toleransi sampai 130
+        30 => ['min_jam' => 110, 'jam_label' => 120, 'imbalan' => 1_000_000],
+        25 => ['min_jam' => 90,  'jam_label' => 100, 'imbalan' => 900_000],
+        20 => ['min_jam' => 70,  'jam_label' => 80,  'imbalan' => 900_000],
+        15 => ['min_jam' => 50,  'jam_label' => 60,  'imbalan' => 900_000],
+        10 => ['min_jam' => 35,  'jam_label' => 40,  'imbalan' => 900_000],
+        8  => ['min_jam' => 25,  'jam_label' => 32,  'imbalan' => 900_000],
+        5  => ['min_jam' => 0,   'jam_label' => 20,  'imbalan' => 900_000],
+    ];
+
     foreach ($profiles as $p) {
 
         try {
@@ -816,20 +833,13 @@ if (array_key_exists('installment_id', $fields)) {
             $isNew = !$rekap->exists;
             $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
 
-            // ================= RB MASTER =================
-            $rbMap = [
-                5 => 20, 8 => 32, 10 => 40, 15 => 60,
-                20 => 80, 25 => 100, 30 => 120,
-                35 => 140, 40 => 160, 45 => 180,
-                50 => 200, 55 => 220, 60 => 240
-            ];
-
+            // RB Awal Karyawan
             $rbAwal = 40;
             if (!empty($p->rb) && preg_match('/(\d+)/', $p->rb, $m)) {
                 $rbAwal = (int)$m[1];
             }
 
-            $durasiFull = $rbMap[$rbAwal] ?? 160;
+            $durasiFull = $rbConfig[$rbAwal]['jam_label'] ?? 160;
 
             // ================= POTONGAN =================
             $hariDipotong = 0;
@@ -838,52 +848,41 @@ if (array_key_exists('installment_id', $fields)) {
                 ->first();
 
             if ($potongan) {
-                $totalPotong = 
-                    ($potongan->sakit ?? 0) +
-                    ($potongan->izin ?? 0) +
-                    ($potongan->alpa ?? 0) +
-                    ($potongan->tidak_aktif ?? 0) +
-                    ($potongan->lain_lain ?? 0);
+                $totalPotong = ($potongan->sakit ?? 0) + ($potongan->izin ?? 0) + 
+                               ($potongan->alpa ?? 0) + ($potongan->tidak_aktif ?? 0) + 
+                               ($potongan->lain_lain ?? 0);
 
                 $hariDipotong = (int) floor($totalPotong / 24000);
             }
 
-            // ================= HITUNG JAM =================
+            // ================= JAM EFEKTIF =================
             $jamPerHari = 7;
             $jamPotong  = $hariDipotong * $jamPerHari;
             $jamEfektif = max(0, $durasiFull - $jamPotong);
 
-            // ================= RB DINAMIS + IMBALAN POKOK =================
+            // ================= RB DINAMIS (DARI TERTINGGI) =================
             $rbBaru = 5;
             $durasiBaru = 20;
-            $imbalanPokokFull = $p->imbalan_pokok_default ?? $p->rp ?? 900000;
+            $imbalanPokokFull = 900_000;
 
-            if ($jamEfektif >= 140) {
-                $rbBaru = 40;
-                $durasiBaru = 160;
-                $imbalanPokokFull = 1_200_000;     // ← Hardcode atau ambil dari master
-            } else {
-                foreach ($rbMap as $rb => $jam) {
-                    if ($jamEfektif >= $jam) {
-                        $rbBaru = $rb;
-                        $durasiBaru = $jam;
-                        // Kamu perlu mapping imbalan per tingkat RB
-                    }
+            foreach ($rbConfig as $rb => $cfg) {
+                if ($jamEfektif >= $cfg['min_jam']) {
+                    $rbBaru = $rb;
+                    $durasiBaru = $cfg['jam_label'];
+                    $imbalanPokokFull = $cfg['imbalan'];
+                    break;
                 }
             }
 
-            // Persentase hanya untuk tampilan
+            // Persentase
             $persentase = $durasiFull > 0 ? ($jamEfektif / $durasiFull) * 100 : 0;
             $persentase = max(0, min(100, $persentase));
-
-            // Imbalan pokok = FULL sesuai tingkat RB (bukan proporsional)
-            $imbalanFix = $imbalanPokokFull;   // ← Perubahan penting
 
             // Transport
             $hariMasuk = max(0, 25 - $hariDipotong);
             $transport = $hariMasuk * 24000;
 
-            // ================= APPLY =================
+            // ================= SAVE =================
             $rekap->nama = $p->nama;
             $rekap->bulan = $labelBulan;
 
@@ -892,7 +891,7 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->durasi_kerja = $jamEfektif;
 
             $rekap->persen = round($persentase, 2);
-            $rekap->imbalan_pokok = round($imbalanFix);
+            $rekap->imbalan_pokok = round($imbalanPokokFull);
 
             $rekap->tambahan_transport = $transport;
             $rekap->at_hari = $hariMasuk;
@@ -901,7 +900,9 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->insentif_mentor = $p->insentif_mentor ?? 0;
             $rekap->cicilan = $p->cicilan_default ?? 0;
 
-            $rekap->total_imbalan = $rekap->imbalan_pokok + $rekap->imbalan_lainnya + $rekap->insentif_mentor + $rekap->tambahan_transport;
+            $rekap->total_imbalan = $rekap->imbalan_pokok + $rekap->imbalan_lainnya 
+                                  + $rekap->insentif_mentor + $rekap->tambahan_transport;
+
             $rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
 
             if ($isMagang) {
