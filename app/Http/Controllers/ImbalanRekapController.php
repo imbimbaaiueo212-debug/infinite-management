@@ -9,6 +9,7 @@ use App\Models\Adjustment;
 use App\Models\CashAdvanceInstallment;
 use App\Models\CashAdvance;
 use App\Models\DurasiKegiatan;
+use App\Models\Ktr;
 use App\Models\Profile;
 use App\Models\PotonganTunjangan;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -804,21 +805,21 @@ if (array_key_exists('installment_id', $fields)) {
 
     $profiles = Profile::orderBy('nama')->get();
 
-    // ================= RB CONFIG (DENGAN TOLERANSI) =================
+    // ================= RB CONFIG =================
     $rbConfig = [
-        60 => ['min_jam' => 220, 'jam_label' => 240, 'imbalan' => 1_600_000],
-        55 => ['min_jam' => 200, 'jam_label' => 220, 'imbalan' => 1_500_000],
-        50 => ['min_jam' => 180, 'jam_label' => 200, 'imbalan' => 1_400_000],
-        45 => ['min_jam' => 160, 'jam_label' => 180, 'imbalan' => 1_300_000],
-        40 => ['min_jam' => 140, 'jam_label' => 160, 'imbalan' => 1_200_000],
-        35 => ['min_jam' => 130, 'jam_label' => 140, 'imbalan' => 1_100_000],  // Toleransi sampai 130
-        30 => ['min_jam' => 110, 'jam_label' => 120, 'imbalan' => 1_000_000],
-        25 => ['min_jam' => 90,  'jam_label' => 100, 'imbalan' => 900_000],
-        20 => ['min_jam' => 70,  'jam_label' => 80,  'imbalan' => 900_000],
-        15 => ['min_jam' => 50,  'jam_label' => 60,  'imbalan' => 900_000],
-        10 => ['min_jam' => 35,  'jam_label' => 40,  'imbalan' => 900_000],
-        8  => ['min_jam' => 25,  'jam_label' => 32,  'imbalan' => 900_000],
-        5  => ['min_jam' => 0,   'jam_label' => 20,  'imbalan' => 900_000],
+        60 => ['min_jam' => 220, 'jam_label' => 240],
+        55 => ['min_jam' => 200, 'jam_label' => 220],
+        50 => ['min_jam' => 180, 'jam_label' => 200],
+        45 => ['min_jam' => 160, 'jam_label' => 180],
+        40 => ['min_jam' => 140, 'jam_label' => 160],
+        35 => ['min_jam' => 130, 'jam_label' => 140],
+        30 => ['min_jam' => 110, 'jam_label' => 120],
+        25 => ['min_jam' =>  90, 'jam_label' => 100],
+        20 => ['min_jam' =>  70, 'jam_label' =>  80],
+        15 => ['min_jam' =>  50, 'jam_label' =>  60],
+        10 => ['min_jam' =>  35, 'jam_label' =>  40],
+        8  => ['min_jam' =>  25, 'jam_label' =>  32],
+        5  => ['min_jam' =>   0, 'jam_label' =>  20],
     ];
 
     foreach ($profiles as $p) {
@@ -833,7 +834,7 @@ if (array_key_exists('installment_id', $fields)) {
             $isNew = !$rekap->exists;
             $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
 
-            // RB Awal Karyawan
+            // ================= RB AWAL =================
             $rbAwal = 40;
             if (!empty($p->rb) && preg_match('/(\d+)/', $p->rb, $m)) {
                 $rbAwal = (int)$m[1];
@@ -843,14 +844,18 @@ if (array_key_exists('installment_id', $fields)) {
 
             // ================= POTONGAN =================
             $hariDipotong = 0;
+
             $potongan = PotonganTunjangan::where('nama', $p->nama)
                 ->where('bulan', $bulanFormatYm)
                 ->first();
 
             if ($potongan) {
-                $totalPotong = ($potongan->sakit ?? 0) + ($potongan->izin ?? 0) + 
-                               ($potongan->alpa ?? 0) + ($potongan->tidak_aktif ?? 0) + 
-                               ($potongan->lain_lain ?? 0);
+                $totalPotong =
+                    ($potongan->sakit ?? 0) +
+                    ($potongan->izin ?? 0) +
+                    ($potongan->alpa ?? 0) +
+                    ($potongan->tidak_aktif ?? 0) +
+                    ($potongan->lain_lain ?? 0);
 
                 $hariDipotong = (int) floor($totalPotong / 24000);
             }
@@ -860,25 +865,63 @@ if (array_key_exists('installment_id', $fields)) {
             $jamPotong  = $hariDipotong * $jamPerHari;
             $jamEfektif = max(0, $durasiFull - $jamPotong);
 
-            // ================= RB DINAMIS (DARI TERTINGGI) =================
+            // ================= RB BARU =================
             $rbBaru = 5;
             $durasiBaru = 20;
-            $imbalanPokokFull = 900_000;
 
             foreach ($rbConfig as $rb => $cfg) {
                 if ($jamEfektif >= $cfg['min_jam']) {
                     $rbBaru = $rb;
                     $durasiBaru = $cfg['jam_label'];
-                    $imbalanPokokFull = $cfg['imbalan'];
                     break;
                 }
             }
 
-            // Persentase
-            $persentase = $durasiFull > 0 ? ($jamEfektif / $durasiFull) * 100 : 0;
+            // ================= KTR FIX (PENTING) =================
+            $imbalanPokokFull = 900000; // fallback aman
+
+            $kategoriInput = trim(
+                $p->ktr ??
+                $p->kategori ??
+                $p->kategori_ktr ??
+                $p->ktr_level ??
+                ''
+            );
+
+            if ($kategoriInput) {
+
+                // Normalisasi kategori (hapus spasi & simbol)
+                $kategoriClean = preg_replace('/[^A-Z0-9]/', '', strtoupper($kategoriInput));
+
+                $rbLabel1 = 'RB ' . $rbBaru;
+                $rbLabel2 = 'RB'.$rbBaru;
+                $rbLabel3 = 'RB '.str_pad($rbBaru, 2, '0', STR_PAD_LEFT);
+
+                $ktr = Ktr::where(function($q) use ($rbLabel1, $rbLabel2, $rbLabel3) {
+                        $q->where('waktu', $rbLabel1)
+                          ->orWhere('waktu', $rbLabel2)
+                          ->orWhere('waktu', $rbLabel3);
+                    })
+                    ->where(function($q) use ($kategoriInput, $kategoriClean) {
+                        $q->whereRaw('UPPER(REPLACE(kategori," ","")) = ?', [$kategoriClean])
+                          ->orWhereRaw('UPPER(kategori) = ?', [strtoupper($kategoriInput)]);
+                    })
+                    ->orderBy('jumlah', 'asc') // ⛔ cegah ambil nominal lebih besar
+                    ->first();
+
+                if ($ktr) {
+                    $imbalanPokokFull = (int) $ktr->jumlah;
+                }
+            }
+
+            // ================= PERSENTASE =================
+            $persentase = $durasiFull > 0
+                ? ($jamEfektif / $durasiFull) * 100
+                : 0;
+
             $persentase = max(0, min(100, $persentase));
 
-            // Transport
+            // ================= TRANSPORT =================
             $hariMasuk = max(0, 25 - $hariDipotong);
             $transport = $hariMasuk * 24000;
 
@@ -891,6 +934,8 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->durasi_kerja = $jamEfektif;
 
             $rekap->persen = round($persentase, 2);
+
+            // 🔥 INI YANG DIPAKAI
             $rekap->imbalan_pokok = round($imbalanPokokFull);
 
             $rekap->tambahan_transport = $transport;
@@ -900,11 +945,17 @@ if (array_key_exists('installment_id', $fields)) {
             $rekap->insentif_mentor = $p->insentif_mentor ?? 0;
             $rekap->cicilan = $p->cicilan_default ?? 0;
 
-            $rekap->total_imbalan = $rekap->imbalan_pokok + $rekap->imbalan_lainnya 
-                                  + $rekap->insentif_mentor + $rekap->tambahan_transport;
+            $rekap->total_imbalan =
+                $rekap->imbalan_pokok +
+                $rekap->imbalan_lainnya +
+                $rekap->insentif_mentor +
+                $rekap->tambahan_transport;
 
-            $rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
+            $rekap->yang_dibayarkan =
+                $rekap->total_imbalan -
+                ($rekap->cicilan ?? 0);
 
+            // ================= KHUSUS MAGANG =================
             if ($isMagang) {
                 $rekap->persen = 0;
                 $rekap->imbalan_pokok = 0;
