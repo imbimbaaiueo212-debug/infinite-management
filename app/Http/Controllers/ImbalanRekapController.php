@@ -37,19 +37,6 @@ class ImbalanRekapController extends Controller
     $nama        = $request->get('nama');
     $showAll     = $request->has('all');
 
-    $isCurrentPeriod = ($start_tahun == now()->year && $start_bulan == now()->format('m'));
-
-    // Auto generate jika periode saat ini
-    if ($isCurrentPeriod) {
-        try {
-            $this->generateForPeriod($start_bulan, $start_tahun); // method generate kamu
-            // atau panggil service/action yang sama dengan route generate
-        } catch (\Exception $e) {
-            // log error, tapi tidak boleh menghentikan halaman
-            \Log::error('Auto generate gagal: ' . $e->getMessage());
-        }
-    }
-
     /* ======================================================
      * 2. RANGE TANGGAL
      * ====================================================== */
