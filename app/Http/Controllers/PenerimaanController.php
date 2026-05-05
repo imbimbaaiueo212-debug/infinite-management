@@ -1452,7 +1452,7 @@ public function produk(Request $request)
 
     // === RINGKASAN UKURAN KAOS ===
 $ukuranPendekOptions  = ['KAS', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
-$ukuranPanjangOptions = ['KAS01', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
+$ukuranPanjangOptions = ['KAS01', 'KAM01', 'KAL01', 'KAXL01', 'KAXXL01', 'KAXXXL01', 'KAXXXLS01'];
 
 $belumUkuranPendek  = array_fill_keys($ukuranPendekOptions, 0);
 $sudahUkuranPendek  = array_fill_keys($ukuranPendekOptions, 0);
