@@ -61,57 +61,57 @@ class RekapAbsensiController extends Controller
      * Hitung Jadwal & Jumlah Murid dari Buku Induk
      * (jumlah_rombim tidak direset)
      */
-    private function hitungJadwalDariBukuInduk()
-    {
-        // Reset hanya kolom perhitungan
-        RekapAbsensi::query()->update([
-            'srj_108' => 0, 'srj_109' => 0, 'srj_110' => 0, 'srj_111' => 0,
-            'srj_112' => 0, 'srj_113' => 0, 'srj_114' => 0, 'srj_115' => 0,
-            'sks_208' => 0, 'sks_209' => 0, 'sks_210' => 0, 'sks_211' => 0,
-            's6_308'  => 0, 's6_309'  => 0, 's6_310'  => 0, 's6_311'  => 0,
-            'jumlah_murid' => 0,
-        ]);
+   private function hitungJadwalDariBukuInduk()
+{
+    // Reset hanya kolom perhitungan
+    RekapAbsensi::query()->update([
+        'srj_108' => 0, 'srj_109' => 0, 'srj_110' => 0, 'srj_111' => 0,
+        'srj_112' => 0, 'srj_113' => 0, 'srj_114' => 0, 'srj_115' => 0,
+        'sks_208' => 0, 'sks_209' => 0, 'sks_210' => 0, 'sks_211' => 0,
+        's6_308'  => 0, 's6_309'  => 0, 's6_310'  => 0, 's6_311'  => 0,
+        'jumlah_murid' => 0,
+    ]);
 
-        $data = BukuInduk::whereNotNull('kode_jadwal')
-            ->whereNotNull('guru')
-            ->where('status', 'aktif')
-            ->select(
-                'guru',
-                'bimba_unit',
-                'no_cabang',
-                'kode_jadwal',
-                DB::raw('COUNT(*) as total_murid')
-            )
-            ->groupBy('guru', 'bimba_unit', 'no_cabang', 'kode_jadwal')
-            ->get();
+    $data = BukuInduk::whereNotNull('kode_jadwal')
+        ->whereNotNull('guru')
+        ->whereRaw("LOWER(TRIM(status)) != 'keluar'") // 🔥 KUNCI UTAMA
+        ->select(
+            'guru',
+            'bimba_unit',
+            'no_cabang',
+            'kode_jadwal',
+            DB::raw('COUNT(*) as total_murid')
+        )
+        ->groupBy('guru', 'bimba_unit', 'no_cabang', 'kode_jadwal')
+        ->get();
 
-        foreach ($data as $item) {
-            $namaGuru = trim(strtoupper($item->guru));
+    foreach ($data as $item) {
+        $namaGuru = trim(strtoupper($item->guru));
 
-            $rekap = RekapAbsensi::whereRaw('UPPER(TRIM(nama_relawan)) = ?', [$namaGuru])
-                ->where('bimba_unit', $item->bimba_unit)
-                ->where('no_cabang', $item->no_cabang)
-                ->first();
+        $rekap = RekapAbsensi::whereRaw('UPPER(TRIM(nama_relawan)) = ?', [$namaGuru])
+            ->where('bimba_unit', $item->bimba_unit)
+            ->where('no_cabang', $item->no_cabang)
+            ->first();
 
-            if ($rekap && $item->total_murid > 0) {
-                $kolom = null;
-                $kode  = $item->kode_jadwal;
+        if ($rekap && $item->total_murid > 0) {
+            $kolom = null;
+            $kode  = $item->kode_jadwal;
 
-                if (in_array($kode, [108,109,110,111,112,113,114,115,116])) {
-                    $kolom = 'srj_' . $kode;
-                } elseif (in_array($kode, [206,207,208,209,210,211])) {
-                    $kolom = 'sks_' . $kode;
-                } elseif (in_array($kode, [306,307,308,309,310,311])) {
-                    $kolom = 's6_' . $kode;
-                }
+            if (in_array($kode, [108,109,110,111,112,113,114,115,116])) {
+                $kolom = 'srj_' . $kode;
+            } elseif (in_array($kode, [206,207,208,209,210,211])) {
+                $kolom = 'sks_' . $kode;
+            } elseif (in_array($kode, [306,307,308,309,310,311])) {
+                $kolom = 's6_' . $kode;
+            }
 
-                if ($kolom) {
-                    $rekap->increment($kolom, $item->total_murid);
-                    $rekap->increment('jumlah_murid', $item->total_murid);
-                }
+            if ($kolom) {
+                $rekap->increment($kolom, $item->total_murid);
+                $rekap->increment('jumlah_murid', $item->total_murid);
             }
         }
     }
+}
 
     /**
      * Tombol "Sinkron Data" di halaman Rekap

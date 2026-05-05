@@ -49,7 +49,7 @@
                                         <select name="bimba_unit" id="bimba_unit_select"
                                             class="form-select @error('bimba_unit') is-invalid @enderror" required>
 
-                                            <option value="">-- Pilih Unit biMBA --</option>
+                                            <option value="">-- Pilih biMBA Unit --</option>
 
                                             @foreach($units as $namaUnit => $noCabang)
                                                 <option value="{{ $namaUnit }}"
@@ -975,6 +975,44 @@ function setupDateField(field, displayField = null, calculator = null) {
 
     // Initial Load
     handleGolChange();
+
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const unitSelect = document.getElementById('bimba_unit_select');
+    const noCabangHidden = document.getElementById('no_cabang_hidden');
+    const noCabangDisplay = document.getElementById('no_cabang_display');
+
+    if (!unitSelect) return;
+
+    // =============================
+    // 1. UNIT → NO CABANG
+    // =============================
+    unitSelect.addEventListener('change', function () {
+        const selected = this.options[this.selectedIndex];
+        const noCabang = selected.getAttribute('data-no-cabang') || '';
+
+        noCabangHidden.value = noCabang;
+        if (noCabangDisplay) {
+            noCabangDisplay.value = noCabang || '-';
+        }
+    });
+
+    // =============================
+    // 2. NO CABANG → UNIT (INI YANG KAMU BUTUH)
+    // =============================
+    const currentCabang = noCabangHidden?.value;
+
+    if (currentCabang) {
+        for (let i = 0; i < unitSelect.options.length; i++) {
+            const opt = unitSelect.options[i];
+            if (opt.getAttribute('data-no-cabang') === currentCabang) {
+                unitSelect.value = opt.value;
+                break;
+            }
+        }
+    }
 
 });
 </script>

@@ -269,7 +269,7 @@
         <table class="data">
             <thead><tr><th colspan="2">POTONGAN</th></tr></thead>
             <tbody>
-                @php $tarifHarian = 18000; @endphp
+                @php $tarifHarian = 24000; @endphp
 
                 <!-- Potongan Tetap -->
                 @if($totalPotonganTetap > 0)

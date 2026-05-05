@@ -82,7 +82,7 @@ class PenerimaanController extends Controller
     $totalLainLain    = $queryForSum->sum('lain_lain');
 
     // Data untuk Autocomplete Nama Murid
-    $muridQuery = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru']);
+    $muridQuery = BukuInduk::whereIn(DB::raw('LOWER(status)'), ['aktif', 'baru', 'keluar']);
 
 if (!empty($bimbaUnit)) {
     $muridQuery->where('bimba_unit', $bimbaUnit);

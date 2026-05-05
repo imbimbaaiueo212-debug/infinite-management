@@ -145,7 +145,21 @@ class PenerimaanImport implements ToModel, WithHeadingRow
             $kelas      = trim($this->getValue($row, ['kelas', 'Kelas']) ?? ($buku?->kelas ?? ''));
             $gol        = trim($this->getValue($row, ['gol', 'Gol']) ?? ($buku?->gol ?? ''));
             $kd         = trim($this->getValue($row, ['kd', 'KD']) ?? ($buku?->kd ?? ''));
-            $status     = trim($this->getValue($row, ['status', 'Status']) ?? ($buku?->status ?? 'aktif'));
+            $status = strtolower(trim(
+                $this->getValue($row, ['status', 'Status'])
+                ?? $buku?->status
+                ?? 'aktif'
+            ));
+
+            // Validasi hanya boleh 'aktif' atau 'keluar'
+            if (!in_array($status, ['aktif', 'keluar'])) {
+                Log::warning('IMPORT - Status tidak valid, default ke aktif', [
+                    'nim'    => $nim,
+                    'status' => $status
+                ]);
+
+                $status = 'aktif';
+            }
             $guru       = trim($this->getValue($row, ['guru', 'Guru']) ?? ($buku?->guru ?? ''));
 
             $bimba_unit = trim($this->getValue($row, ['bimba_unit', 'biMBA Unit', 'unit']) ?? ($buku?->bimba_unit ?? ''));
@@ -231,7 +245,12 @@ class PenerimaanImport implements ToModel, WithHeadingRow
                 'total'    => $total,
             ]);
 
-            return new Penerimaan($data);
+            Penerimaan::updateOrCreate(
+                ['kwitansi' => $kwitansi], // kunci unik
+                $data
+            );
+
+            return null;
 
         } catch (\Throwable $e) {
             Log::error('PenerimaanImport GAGAL', [

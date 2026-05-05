@@ -227,39 +227,45 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
      * SINKRON UNIT ↔ CABANG (TIDAK BERUBAH)
      * ===================================================== */
     private function syncCabangUnitFromDB(Collection $row, ?string $bimbaUnit, string $nim): array
-    {
-        $noCabang = $this->getHeaderValue($row, [
-            'no cabang','no_cabang','nocabang','no_cab','cabang_id'
-        ]);
+{
+    $noCabang = $this->getHeaderValue($row, [
+        'no cabang','no_cabang','nocabang','no_cab','cabang_id'
+    ]);
 
-        $unit = $bimbaUnit;
+    $unit = $bimbaUnit;
 
-        if ($noCabang && !$unit) {
-            $found = Unit::withoutGlobalScopes()
-                ->where('no_cabang', $noCabang)->first();
-            if ($found) $unit = $found->bimba_unit;
+    // ===============================
+    // PRIORITAS 1: no_cabang (OVERRIDE TOTAL)
+    // ===============================
+    if ($noCabang) {
+        $found = Unit::withoutGlobalScopes()
+            ->where('no_cabang', $noCabang)
+            ->first();
+
+        if ($found) {
+            $unit = $found->biMBA_unit; // 🔥 paksa ikut cabang
+        } else {
+            Log::warning("IMPORT ERROR | NIM {$nim} | No Cabang tidak ditemukan: {$noCabang}");
         }
-
-        if ($unit && !$noCabang) {
-            $found = Unit::withoutGlobalScopes()
-                ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
-                ->first();
-            if ($found) $noCabang = $found->no_cabang;
-        }
-
-        if ($unit && $noCabang) {
-            $valid = Unit::withoutGlobalScopes()
-                ->where('no_cabang', $noCabang)
-                ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
-                ->exists();
-
-            if (!$valid) {
-                Log::warning("IMPORT MISMATCH | NIM {$nim} | Unit {$unit} | Cabang {$noCabang}");
-            }
-        }
-
-        return [$noCabang, $unit];
     }
+
+    // ===============================
+    // PRIORITAS 2: kalau tidak ada cabang → cari dari unit
+    // ===============================
+    elseif ($unit) {
+        $found = Unit::withoutGlobalScopes()
+            ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
+            ->first();
+
+        if ($found) {
+            $noCabang = $found->no_cabang;
+        } else {
+            Log::warning("IMPORT ERROR | NIM {$nim} | Unit tidak ditemukan: {$unit}");
+        }
+    }
+
+    return [$noCabang, $unit];
+}
 
     /* =====================================================
      * HELPER (TIDAK BERUBAH)
