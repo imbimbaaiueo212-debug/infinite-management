@@ -231,7 +231,7 @@
                                 <td class="text-center">
                                     @if(auth()->user()->is_admin ?? false)
                                         <select class="inline-rb-select form-select form-select-sm" data-id="{{ $profile->id }}">
-                                            <option value="auto">Auto</option>
+                                            <option value="auto" {{ empty($profile->rb) ? 'selected' : '' }}>Auto</option>
                                             @foreach($rbOptions as $rb)
                                                 <option value="{{ $rb }}" {{ $profile->rb == $rb ? 'selected' : '' }}>{{ $rb }}</option>
                                             @endforeach
@@ -242,19 +242,27 @@
                                 </td>
                                 <td class="kolom-rb-calc text-primary fw-bold text-center">{{ $profile->rb_tambahan ?? '-' }}</td>
 
-                                <td class="text-center">
-                                    @if(auth()->user()->is_admin ?? false)
-                                        <select class="inline-ktr-select form-select form-select-sm" data-id="{{ $profile->id }}">
-                                            <option value="">Auto</option>
-                                            @foreach($ktrOptions as $ktr)
-                                                <option value="{{ $ktr }}" {{ $profile->ktr_tambahan == $ktr ? 'selected' : '' }}>{{ $ktr }}</option>
-                                            @endforeach
-                                        </select>
-                                    @else
-                                        {{ $profile->ktr_tambahan ?? $profile->ktr ?? '-' }}
-                                    @endif
-                                </td>
-                                <td class="kolom-ktr-tambahan text-primary fw-bold text-center">{{ $profile->ktr_tambahan ?? '-' }}</td>
+                               <!-- KOLOM KTR -->
+                            <td class="text-center">
+                                @if(auth()->user()->is_admin ?? false)
+                                    <select class="inline-ktr-select form-select form-select-sm" data-id="{{ $profile->id }}">
+                                        <option value="Otomatis" {{ empty($profile->ktr_tambahan) ? 'selected' : '' }}>Auto</option>
+                                        @foreach($ktrOptions as $ktr)
+                                            <option value="{{ $ktr }}" {{ $profile->ktr_tambahan == $ktr ? 'selected' : '' }}>
+                                                {{ $ktr }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <!-- Tampilan untuk non-admin + fallback Auto -->
+                                    {{ $profile->ktr_tambahan ?? $profile->ktr ?? '-' }}
+                                @endif
+                            </td>
+
+                            <!-- KOLOM KTR ! (tambahan / hasil perhitungan) -->
+                            <td class="text-center text-primary fw-bold">
+                                {{ $profile->ktr_tambahan ?? $profile->ktr ?? '-' }}
+                            </td>
 
                                 <td class="text-center fw-bold text-success">
                                     {{ $profile->rp ? number_format($profile->rp, 0, ',', '.') : '-' }}

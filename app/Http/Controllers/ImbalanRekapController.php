@@ -779,13 +779,22 @@ if (array_key_exists('installment_id', $fields)) {
         ->with('success', "Berhasil generate ulang {$result['created']} data untuk periode {$labelBulan}");
 }
 
-       public function createRekapsForPeriode(string $labelBulan): array
+      public function createRekapsForPeriode(string $labelBulan): array
 {
     $created = 0;
     $updated = 0;
     $errors  = [];
 
     $labelBulan = trim($labelBulan);
+
+    $normalize = fn($str) => strtoupper(preg_replace('/\s+/', '', $str ?? ''));
+
+    $extractRbNumber = function ($val, $default = 30) {
+        if (!empty($val) && preg_match('/(\d+)/', $val, $m)) {
+            return (int)$m[1];
+        }
+        return $default;
+    };
 
     // ================= PARSING BULAN =================
     $monthMap = [
@@ -797,15 +806,15 @@ if (array_key_exists('installment_id', $fields)) {
     $split = explode(' ', $labelBulan);
     $bulanFormatYm = ($split[1] ?? date('Y')) . '-' . ($monthMap[$split[0]] ?? date('m'));
 
-    // ================= SYNC POTONGAN =================
+    // Sync Potongan
     try {
         app(\App\Http\Controllers\PotonganTunjanganController::class)
             ->runSyncFromAbsensi($bulanFormatYm);
     } catch (\Throwable $e) {}
 
     $profiles = Profile::orderBy('nama')->get();
+    $ktrList  = Ktr::all();
 
-    // ================= RB CONFIG =================
     $rbConfig = [
         60 => ['min_jam' => 220, 'jam_label' => 240],
         55 => ['min_jam' => 200, 'jam_label' => 220],
@@ -824,8 +833,8 @@ if (array_key_exists('installment_id', $fields)) {
 
     foreach ($profiles as $p) {
 
+        
         try {
-
             $rekap = ImbalanRekap::firstOrNew([
                 'nama'  => $p->nama,
                 'bulan' => $labelBulan
@@ -834,141 +843,123 @@ if (array_key_exists('installment_id', $fields)) {
             $isNew = !$rekap->exists;
             $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
 
-            // ================= RB AWAL =================
-            $rbAwal = 40;
-            if (!empty($p->rb) && preg_match('/(\d+)/', $p->rb, $m)) {
-                $rbAwal = (int)$m[1];
-            }
+            // RB dari Profile
+            $rbAwal = ($p->jabatan === 'Kepala Unit') ? 40 : 30;
+            $rbAwal = $extractRbNumber($p->rb ?? $p->rb_tambahan, $rbAwal);
 
-            $durasiFull = $rbConfig[$rbAwal]['jam_label'] ?? 160;
+            $ktrInput = trim($p->ktr ?? $p->ktr_tambahan ?? '');
 
-            // ================= POTONGAN =================
+            // Durasi Full berdasarkan RB Awal
+            $durasiFull = $rbConfig[$rbAwal]['jam_label'] ?? 140;
+
+            // Potongan Absensi
             $hariDipotong = 0;
-
             $potongan = PotonganTunjangan::where('nama', $p->nama)
                 ->where('bulan', $bulanFormatYm)
                 ->first();
 
             if ($potongan) {
-                $totalPotong =
-                    ($potongan->sakit ?? 0) +
-                    ($potongan->izin ?? 0) +
-                    ($potongan->alpa ?? 0) +
-                    ($potongan->tidak_aktif ?? 0) +
-                    ($potongan->lain_lain ?? 0);
-
+                $totalPotong = ($potongan->sakit ?? 0) + ($potongan->izin ?? 0)
+                             + ($potongan->alpa ?? 0) + ($potongan->tidak_aktif ?? 0)
+                             + ($potongan->lain_lain ?? 0);
                 $hariDipotong = (int) floor($totalPotong / 24000);
             }
 
-            // ================= JAM EFEKTIF =================
-            $jamPerHari = 7;
-            $jamPotong  = $hariDipotong * $jamPerHari;
-            $jamEfektif = max(0, $durasiFull - $jamPotong);
+            $jamEfektif = max(0, $durasiFull - ($hariDipotong * 7));
 
-            // ================= RB BARU =================
-            $rbBaru = 5;
-            $durasiBaru = 20;
+            // RB & Durasi yang tampil di Rekap (boleh turun)
+            $rbFinal = $rbAwal;
+            $durasiFinal = $durasiFull;
 
-            foreach ($rbConfig as $rb => $cfg) {
-                if ($jamEfektif >= $cfg['min_jam']) {
-                    $rbBaru = $rb;
-                    $durasiBaru = $cfg['jam_label'];
-                    break;
+            if ($jamEfektif < $durasiFull) {
+                foreach ($rbConfig as $rb => $cfg) {
+                    if ($jamEfektif >= $cfg['min_jam']) {
+                        $rbFinal = $rb;
+                        $durasiFinal = $cfg['jam_label'];
+                        break;
+                    }
                 }
             }
 
-            // ================= KTR FIX (PENTING) =================
-            $imbalanPokokFull = 900000; // fallback aman
+            // ================= HITUNG POKOK BERDASARKAN RB FINAL =================
+            $imbalanPokokFull = 1050000; // default RB35
 
-            $kategoriInput = trim(
-                $p->ktr ??
-                $p->kategori ??
-                $p->kategori_ktr ??
-                $p->ktr_level ??
-                ''
-            );
+            // Prioritas: Ambil dari tabel KTR berdasarkan RB yang tampil + KTR
+            if ($ktrInput && $rbFinal) {
+                $targetRb = 'RB' . $rbFinal;
+                $ktrClean = $normalize($ktrInput);
 
-            if ($kategoriInput) {
+                $ktr = $ktrList->first(function ($item) use ($ktrClean, $targetRb, $normalize) {
+                    $kategori = $normalize($item->kategori ?? '');
+                    $waktu    = $normalize($item->waktu ?? '');
+                    return (str_contains($kategori, $ktrClean) || str_contains($ktrClean, $kategori)) &&
+                           str_contains($waktu, $targetRb);
+                });
 
-                // Normalisasi kategori (hapus spasi & simbol)
-                $kategoriClean = preg_replace('/[^A-Z0-9]/', '', strtoupper($kategoriInput));
-
-                $rbLabel1 = 'RB ' . $rbBaru;
-                $rbLabel2 = 'RB'.$rbBaru;
-                $rbLabel3 = 'RB '.str_pad($rbBaru, 2, '0', STR_PAD_LEFT);
-
-                $ktr = Ktr::where(function($q) use ($rbLabel1, $rbLabel2, $rbLabel3) {
-                        $q->where('waktu', $rbLabel1)
-                          ->orWhere('waktu', $rbLabel2)
-                          ->orWhere('waktu', $rbLabel3);
-                    })
-                    ->where(function($q) use ($kategoriInput, $kategoriClean) {
-                        $q->whereRaw('UPPER(REPLACE(kategori," ","")) = ?', [$kategoriClean])
-                          ->orWhereRaw('UPPER(kategori) = ?', [strtoupper($kategoriInput)]);
-                    })
-                    ->orderBy('jumlah', 'asc') // ⛔ cegah ambil nominal lebih besar
-                    ->first();
-
-                if ($ktr) {
+                if ($ktr && $ktr->jumlah > 0) {
                     $imbalanPokokFull = (int) $ktr->jumlah;
                 }
             }
-
-            // ================= PERSENTASE =================
-            $persentase = $durasiFull > 0
-                ? ($jamEfektif / $durasiFull) * 100
-                : 0;
-
-            $persentase = max(0, min(100, $persentase));
-
-            // ================= TRANSPORT =================
-            $hariMasuk = max(0, 25 - $hariDipotong);
-            $transport = $hariMasuk * 24000;
+            
 
             // ================= SAVE =================
-            $rekap->nama = $p->nama;
-            $rekap->bulan = $labelBulan;
+$rekap->fill([
+    'nama'                => $p->nama,
+    'bulan'               => $labelBulan,
+    
+    // ================== DATA PROFILE ==================
+    'profile_id'          => $p->id,                    // ← PENTING
+    'posisi'              => $p->jabatan,               // ← dari jabatan
+    'status'              => $p->status_karyawan,       // ← dari status_karyawan
+    'departemen'          => $p->departemen,
+    'bimba_unit'          => $p->bimba_unit ?? $p->biMBA_unit,
+    'no_cabang'           => $p->no_cabang,
+    'masa_kerja'          => $p->masa_kerja,
+    
+    // Data RB & Durasi
+    'waktu_mgg'           => 'RB ' . $rbFinal,
+    'waktu_bln'           => $durasiFinal . ' Jam',
+    'durasi_kerja'        => $jamEfektif,
+    'persen'              => $durasiFull > 0 ? round(($jamEfektif / $durasiFull) * 100, 2) : 0,
+    
+    'ktr'                 => $ktrInput ?: null,
+    'imbalan_pokok'       => round($imbalanPokokFull),
+    
+    'tambahan_transport'  => max(0, 25 - $hariDipotong) * 24000,
+    'at_hari'             => max(0, 25 - $hariDipotong),
+    'imbalan_lainnya'     => $p->imbalan_lainnya_default ?? 0,
+    'insentif_mentor'     => $p->insentif_mentor ?? 0,
+    'cicilan'             => $p->cicilan_default ?? 0,
+    
+    // Field tambahan yang sering dibutuhkan
+    'nik'                 => $p->nik,
+    'jabatan'             => $p->jabatan,
+    'kategori'            => $p->kategori,
+    'status_karyawan'     => $p->status_karyawan,
+]);
 
-            $rekap->waktu_mgg = 'RB ' . $rbBaru;
-            $rekap->waktu_bln = $durasiBaru . ' Jam';
-            $rekap->durasi_kerja = $jamEfektif;
+// Hitung ulang total
+$rekap->total_imbalan = 
+    ($rekap->imbalan_pokok ?? 0) + 
+    ($rekap->imbalan_lainnya ?? 0) + 
+    ($rekap->insentif_mentor ?? 0) + 
+    ($rekap->tambahan_transport ?? 0);
 
-            $rekap->persen = round($persentase, 2);
+$rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
 
-            // 🔥 INI YANG DIPAKAI
-            $rekap->imbalan_pokok = round($imbalanPokokFull);
+if ($isMagang) {
+    $rekap->imbalan_pokok = 0;
+    $rekap->total_imbalan = 0;
+    $rekap->yang_dibayarkan = 0;
+}
 
-            $rekap->tambahan_transport = $transport;
-            $rekap->at_hari = $hariMasuk;
-
-            $rekap->imbalan_lainnya = $p->imbalan_lainnya_default ?? 0;
-            $rekap->insentif_mentor = $p->insentif_mentor ?? 0;
-            $rekap->cicilan = $p->cicilan_default ?? 0;
-
-            $rekap->total_imbalan =
-                $rekap->imbalan_pokok +
-                $rekap->imbalan_lainnya +
-                $rekap->insentif_mentor +
-                $rekap->tambahan_transport;
-
-            $rekap->yang_dibayarkan =
-                $rekap->total_imbalan -
-                ($rekap->cicilan ?? 0);
-
-            // ================= KHUSUS MAGANG =================
-            if ($isMagang) {
-                $rekap->persen = 0;
-                $rekap->imbalan_pokok = 0;
-                $rekap->total_imbalan = 0;
-                $rekap->yang_dibayarkan = 0;
-            }
-
-            $rekap->save();
+$rekap->save();
 
             $isNew ? $created++ : $updated++;
 
         } catch (\Throwable $e) {
             $errors[] = $p->nama . ' => ' . $e->getMessage();
+            Log::error("Gagal generate rekap {$p->nama}", ['error' => $e->getMessage()]);
         }
     }
 

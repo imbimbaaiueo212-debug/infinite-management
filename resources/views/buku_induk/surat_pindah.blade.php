@@ -109,10 +109,10 @@
 <p>Demikianlah surat keterangan ini sebagai informasi antar unit biMBA AIUEO untuk dipergunakan sebagaimana mestinya. Atas perhatian dan kerjasama yang baik, kami ucapkan terima kasih.</p>
 
 <div class="signature">
-    <p>{{ $tanggal_surat }}</p>
+    <p>{{ $alamat_kota_kab ?? '-' }}, {{ $tanggal_surat }}</p>
     <p>Hormat kami,</p>
     <br><br><br>
-    <p><strong>( {{ $nama_penandatangan }} )</strong></p>
+    <p><strong></strong></p>
     <p>Mitra/Kepala Unit</p>
 </div>
 

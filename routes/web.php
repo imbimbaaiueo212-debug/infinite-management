@@ -858,9 +858,10 @@ Route::prefix('imbalan-rekap')->name('imbalan_rekap.')->group(function () {
     Route::post('bayar-periode', [ImbalanRekapController::class, 'bayarPeriode'])->name('bayar_periode');
 });
 
-// Route di luar group (sudah benar, biarkan saja)
-Route::get('/imbalan-rekap/relawan-filter', [ImbalanRekapController::class, 'getRelawansByFilter'])
-    ->name('imbalan_rekap.relawan_filter');
+Route::middleware('auth')->group(function () {
+    Route::get('/imbalan-rekap/relawan-filter', [ImbalanRekapController::class, 'getRelawansByFilter'])
+        ->name('imbalan_rekap.relawan_filter');
+});
 
 
 Route::resource('komisi', KomisiController::class);

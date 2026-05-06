@@ -507,6 +507,7 @@ $golOptions = $HargaSaptataruna
         '208','209','210','211',
         '308','309','310','311'
     ];
+    
 
     $noteGaransiOptions = [
         'Tidak Memenuhi Syarat',
@@ -534,6 +535,7 @@ $golOptions = $HargaSaptataruna
         'units',
         'infoOptions',
         'asalModulOptions'
+        
     ));
 }
 
@@ -626,6 +628,7 @@ $golOptions = $HargaSaptataruna
         'perpanjang_garansi' => 'nullable|string',
         'alasan_garansi' => 'nullable|string',
         'jumlah_beasiswa' => 'nullable|numeric|min:0',
+        'modul_terakhir'    => 'nullable|string',
     ]);
 
     // ← TAMBAHKAN INI
@@ -1286,26 +1289,17 @@ public function suratPindah($id)
 {
     $murid = BukuInduk::findOrFail($id);
 
-    // === AMBIL DATA UNIT (untuk alamat & telepon) ===
-    $unit = Unit::where('biMBA_unit', $murid->bimba_unit)
-                ->orWhere('bimba_unit', $murid->bimba_unit) // antisipasi perbedaan kolom
-                ->first();
+    $unit = Unit::where('bimba_unit', $murid->bimba_unit)->first();
 
-    // === AMBIL PENANDATANGAN DARI PROFILE ===
     $penandatangan = Profile::where('bimba_unit', $murid->bimba_unit)
         ->whereIn('jabatan', ['Kepala Unit', 'Mitra', 'Kepala', 'Unit Head'])
         ->first();
 
-    // Fallback jika penandatangan tidak ditemukan
     if (!$penandatangan) {
-        $penandatangan = (object) [
-            'name_relawan' => 'Kepala Unit',
-            'jabatan'      => 'Kepala Unit',
-            'no_telp'      => '',
-        ];
+        $penandatangan = (object) ['name_relawan' => 'Kepala Unit', 'jabatan' => 'Kepala Unit', 'no_telp' => ''];
     }
 
-    // === SUSUN ALAMAT LENGKAP UNIT ===
+    // === ALAMAT LENGKAP UNIT ===
     $alamatUnit = [];
     if ($unit) {
         if ($unit->alamat_jalan) $alamatUnit[] = $unit->alamat_jalan;
@@ -1317,43 +1311,37 @@ public function suratPindah($id)
     }
     $alamat_lengkap = !empty($alamatUnit) ? implode(', ', $alamatUnit) : '-';
 
+    // === BERSIHKAN NAMA KOTA/KABUPATEN ===
+    $alamat_kota_kab = $unit->alamat_kota_kab ?? '-';
+    $kota_clean = strtoupper(trim($alamat_kota_kab));
+    $kota_clean = str_replace(['KABUPATEN ', 'KOTA '], '', $kota_clean);
+    $alamat_kota_kab = trim($kota_clean);   // hasil: "BOGOR"
+
     $data = [
         'judul'              => 'SURAT KETERANGAN PINDAH MURID biMBA AIUEO',
         
-        // Penandatangan
         'nama_penandatangan' => $penandatangan->name_relawan ?? $penandatangan->nama ?? 'Kepala Unit',
         'jabatan'            => $penandatangan->jabatan ?? 'Kepala Unit',
         
-        // Data Unit
         'unit'               => $murid->bimba_unit ?? '',
         'no_cabang'          => $murid->no_cabang ?? '',
         'alamat_unit'        => $alamat_lengkap,
-        'no_telp'            => $unit->telp ?? $penandatangan->no_telp ?? $penandatangan->no_hp ?? '',
+        'alamat_kota_kab'    => $alamat_kota_kab,           // ← "BOGOR"
+        'no_telp'            => $unit->telp ?? $penandatangan->no_telp ?? '',
 
-        // Data Murid
         'nama_murid'         => $murid->nama,
         'nim'                => $murid->nim,
         'alamat_murid'       => $murid->alamat_murid ?? '-',
-        
-        'tgl_masuk'          => $murid->tgl_masuk 
-                                ? Carbon::parse($murid->tgl_masuk)->format('d/m/Y') 
-                                : '',
-        
-        'tgl_terakhir'       => $murid->tgl_keluar 
-                                ? Carbon::parse($murid->tgl_keluar)->format('d/m/Y') 
-                                : now()->format('d/m/Y'),
-        
+        'tgl_masuk'          => $murid->tgl_masuk ? Carbon::parse($murid->tgl_masuk)->format('d/m/Y') : '',
+        'tgl_terakhir'       => $murid->tgl_keluar ? Carbon::parse($murid->tgl_keluar)->format('d/m/Y') : now()->format('d/m/Y'),
         'level'              => $murid->level ?? '1',
         'modul_terakhir'     => $murid->modul_terakhir ?? '-',
 
         'tanggal_surat'      => now()->isoFormat('D MMMM Y'),
     ];
 
-    // Render PDF
     $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('buku_induk.surat_pindah', $data)
-        ->setPaper('a4', 'portrait')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isRemoteEnabled', true);
+        ->setPaper('a4', 'portrait');
 
     $filename = "Surat_Pindah_{$murid->nim}_" . str_replace([' ', '/'], '_', $murid->nama) . ".pdf";
 

@@ -658,7 +658,21 @@
                                         </option>
                                     @endforeach
                                 </select>
-                            </div>                                
+                            </div>
+                            
+                            <div class="col-12"><hr class="my-4"></div>
+                            <h4 class="col-12 mb-3">📝 TAMBAHAN UNTUK SURAT MUTASI</h4>
+
+                            <!-- MODUL TERAKHIR -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-primary">Modul Terakhir</label>
+                                <input type="text" 
+                                    name="modul_terakhir" 
+                                    id="modul_terakhir"
+                                    class="form-control"
+                                    value="{{ old('modul_terakhir', $bukuInduk->modul_terakhir ?? '') }}"
+                                    placeholder="Masukan Modul Terakhir Murid">
+                            </div>
 
                         </div>
 

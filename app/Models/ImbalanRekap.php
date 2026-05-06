@@ -11,6 +11,7 @@ class ImbalanRekap extends Model
     protected $table = 'imbalan_rekaps';
 
     protected $fillable = [
+        'profile_id',
         'nama',
         'posisi',
         'status',
@@ -237,4 +238,16 @@ public function getBulanKelebihanFullAttribute()
 
     return $months[$bulan] . ' ' . $tahun;
 }
+
+    public function getKtrAttribute($value)
+    {
+        if ($value) return $value;
+        
+        // Fallback ambil dari profile
+        if ($this->profile) {
+            return $this->profile->ktr ?? $this->profile->ktr_tambahan ?? null;
+        }
+        
+        return null;
+    }
 }
