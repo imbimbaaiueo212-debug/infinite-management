@@ -1278,4 +1278,85 @@ private function syncGaransiBCA($bukuInduk)
         GaransiBCA::create($dataGaransi);
     }
 }
+
+/**
+ * Generate Surat Keterangan Pindah Murid (Mutasi)
+ */
+public function suratPindah($id)
+{
+    $murid = BukuInduk::findOrFail($id);
+
+    // === AMBIL DATA UNIT (untuk alamat & telepon) ===
+    $unit = Unit::where('biMBA_unit', $murid->bimba_unit)
+                ->orWhere('bimba_unit', $murid->bimba_unit) // antisipasi perbedaan kolom
+                ->first();
+
+    // === AMBIL PENANDATANGAN DARI PROFILE ===
+    $penandatangan = Profile::where('bimba_unit', $murid->bimba_unit)
+        ->whereIn('jabatan', ['Kepala Unit', 'Mitra', 'Kepala', 'Unit Head'])
+        ->first();
+
+    // Fallback jika penandatangan tidak ditemukan
+    if (!$penandatangan) {
+        $penandatangan = (object) [
+            'name_relawan' => 'Kepala Unit',
+            'jabatan'      => 'Kepala Unit',
+            'no_telp'      => '',
+        ];
+    }
+
+    // === SUSUN ALAMAT LENGKAP UNIT ===
+    $alamatUnit = [];
+    if ($unit) {
+        if ($unit->alamat_jalan) $alamatUnit[] = $unit->alamat_jalan;
+        if ($unit->alamat_rt_rw) $alamatUnit[] = $unit->alamat_rt_rw;
+        if ($unit->alamat_kel_des) $alamatUnit[] = $unit->alamat_kel_des;
+        if ($unit->alamat_kecamatan) $alamatUnit[] = 'Kec. ' . $unit->alamat_kecamatan;
+        if ($unit->alamat_kota_kab) $alamatUnit[] = $unit->alamat_kota_kab;
+        if ($unit->alamat_provinsi) $alamatUnit[] = $unit->alamat_provinsi;
+    }
+    $alamat_lengkap = !empty($alamatUnit) ? implode(', ', $alamatUnit) : '-';
+
+    $data = [
+        'judul'              => 'SURAT KETERANGAN PINDAH MURID biMBA AIUEO',
+        
+        // Penandatangan
+        'nama_penandatangan' => $penandatangan->name_relawan ?? $penandatangan->nama ?? 'Kepala Unit',
+        'jabatan'            => $penandatangan->jabatan ?? 'Kepala Unit',
+        
+        // Data Unit
+        'unit'               => $murid->bimba_unit ?? '',
+        'no_cabang'          => $murid->no_cabang ?? '',
+        'alamat_unit'        => $alamat_lengkap,
+        'no_telp'            => $unit->telp ?? $penandatangan->no_telp ?? $penandatangan->no_hp ?? '',
+
+        // Data Murid
+        'nama_murid'         => $murid->nama,
+        'nim'                => $murid->nim,
+        'alamat_murid'       => $murid->alamat_murid ?? '-',
+        
+        'tgl_masuk'          => $murid->tgl_masuk 
+                                ? Carbon::parse($murid->tgl_masuk)->format('d/m/Y') 
+                                : '',
+        
+        'tgl_terakhir'       => $murid->tgl_keluar 
+                                ? Carbon::parse($murid->tgl_keluar)->format('d/m/Y') 
+                                : now()->format('d/m/Y'),
+        
+        'level'              => $murid->level ?? '1',
+        'modul_terakhir'     => $murid->modul_terakhir ?? '-',
+
+        'tanggal_surat'      => now()->isoFormat('D MMMM Y'),
+    ];
+
+    // Render PDF
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('buku_induk.surat_pindah', $data)
+        ->setPaper('a4', 'portrait')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isRemoteEnabled', true);
+
+    $filename = "Surat_Pindah_{$murid->nim}_" . str_replace([' ', '/'], '_', $murid->nama) . ".pdf";
+
+    return $pdf->stream($filename);
+}
 }

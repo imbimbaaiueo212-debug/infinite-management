@@ -291,6 +291,8 @@ Route::get('/buku-induk/histories', [BukuIndukController::class, 'allHistory'])-
 Route::get('buku-induk/history', [BukuIndukController::class, 'allHistory'])->name('buku_induk.all_history')->middleware('auth');
 
 Route::get('/export-google-sheet', [BukuIndukController::class, 'exportToSheet']);
+Route::get('/buku-induk/{id}/surat-pindah', [BukuIndukController::class, 'suratPindah'])
+     ->name('buku_induk.surat_pindah');
 
 
 

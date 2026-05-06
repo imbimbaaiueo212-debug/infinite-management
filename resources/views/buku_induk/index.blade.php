@@ -290,8 +290,8 @@
                                 <!-- Aksi -->
                                 <td class="text-center" style="min-width: 140px;">
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" type="button"
-                                        data-bs-toggle="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" 
+                                            type="button" data-bs-toggle="dropdown">
                                         Aksi
                                     </button>
 
@@ -302,8 +302,8 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <button class="dropdown-item" type="button" data-bs-toggle="modal"
-                                                data-bs-target="#detailModal{{ $item->id }}">
+                                            <button class="dropdown-item" type="button" 
+                                                    data-bs-toggle="modal" data-bs-target="#detailModal{{ $item->id }}">
                                                 🔍 Detail
                                             </button>
                                         </li>
@@ -316,17 +316,26 @@
                                             </li>
                                         @endif
 
+                                        <li><hr class="dropdown-divider"></li>
+
+                                        <!-- Surat Pindah -->
                                         <li>
-                                            <hr class="dropdown-divider">
+                                            <a class="dropdown-item text-success" 
+                                            href="{{ route('buku_induk.surat_pindah', $item->id) }}" 
+                                            target="_blank">
+                                                📄 Surat Pindah
+                                            </a>
                                         </li>
 
                                         @if (auth()->user()?->role === 'admin')
+                                            <li><hr class="dropdown-divider"></li>
+                                            
                                             <li>
-                                                <form action="{{ route('buku_induk.destroy', $item->id) }}" method="POST"
-                                                    onsubmit="return confirm('Yakin hapus data ini?')">
+                                                <form action="{{ route('buku_induk.destroy', $item->id) }}" 
+                                                    method="POST" onsubmit="return confirm('Yakin hapus data murid ini?')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button class="dropdown-item text-danger">
+                                                    <button type="submit" class="dropdown-item text-danger">
                                                         🗑️ Hapus
                                                     </button>
                                                 </form>
