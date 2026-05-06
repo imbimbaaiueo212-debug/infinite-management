@@ -1311,11 +1311,15 @@ public function suratPindah($id)
     }
     $alamat_lengkap = !empty($alamatUnit) ? implode(', ', $alamatUnit) : '-';
 
-    // === BERSIHKAN NAMA KOTA/KABUPATEN ===
-    $alamat_kota_kab = $unit->alamat_kota_kab ?? '-';
-    $kota_clean = strtoupper(trim($alamat_kota_kab));
-    $kota_clean = str_replace(['KABUPATEN ', 'KOTA '], '', $kota_clean);
-    $alamat_kota_kab = trim($kota_clean);   // hasil: "BOGOR"
+    // === BERSIHKAN NAMA KOTA/KABUPATEN (LEBIH KUAT) ===
+    $alamat_kota_kab_raw = $unit->alamat_kota_kab ?? '-';
+    
+    $kota_clean = strtoupper(trim($alamat_kota_kab_raw));
+    
+    // Hilangkan berbagai variasi Kabupaten / Kab. / Kota
+    $kota_clean = preg_replace('/\b(KABUPATEN|KAB\.?|KOTA)\s*/i', '', $kota_clean);
+    
+    $alamat_kota_kab = trim($kota_clean);
 
     $data = [
         'judul'              => 'SURAT KETERANGAN PINDAH MURID biMBA AIUEO',
@@ -1326,7 +1330,7 @@ public function suratPindah($id)
         'unit'               => $murid->bimba_unit ?? '',
         'no_cabang'          => $murid->no_cabang ?? '',
         'alamat_unit'        => $alamat_lengkap,
-        'alamat_kota_kab'    => $alamat_kota_kab,           // ← "BOGOR"
+        'alamat_kota_kab'    => $alamat_kota_kab,        // ← Contoh: "BEKASI", "BOGOR"
         'no_telp'            => $unit->telp ?? $penandatangan->no_telp ?? '',
 
         'nama_murid'         => $murid->nama,
