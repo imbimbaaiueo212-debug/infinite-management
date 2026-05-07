@@ -257,22 +257,20 @@
                     <input type="date" name="tgl_lahir" id="tgl_lahir" class="form-control"
                            value="{{ old('tgl_lahir', $profile->tgl_lahir?->format('Y-m-d')) }}">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Usia</label>
+<div class="mb-3">
+    <label class="form-label">Usia</label>
 
-                    <input type="text"
-                        id="usia_display"
-                        class="form-control bg-light"
-                        value="{{ old('usia', $profile->usia ?? '') }}"
-                        readonly
-                        placeholder="Otomatis dihitung">
+    <input type="text"
+        id="usia_display"
+        class="form-control bg-light"
+        value="{{ old('usia', $profile->usia_format ?? '0 tahun 0 bulan') }}"
+        readonly>
 
-                    <!-- Hidden field agar usia tersimpan ke database -->
-                    <input type="hidden"
-                        name="usia"
-                        id="usia_hidden"
-                        value="{{ old('usia', $profile->usia ?? '') }}">
-                </div>
+    <input type="hidden"
+        name="usia"
+        id="usia_hidden"
+        value="{{ old('usia', $profile->usia_format ?? '0 tahun 0 bulan') }}">
+</div>
 
                 <!-- KONTAK -->
                 <div class="mb-3">
@@ -505,34 +503,57 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ==================== HITUNG USIA (VERSI PALING AMAN) ====================
-    function hitungUsia() {
-        if (!tglLahir || !usiaDisplay) return;
+    // ==================== HITUNG USIA TAHUN & BULAN ====================
+function hitungUsia() {
+    if (!tglLahir || !usiaDisplay) return;
 
-        const tglValue = tglLahir.value.trim();
-        if (!tglValue) {
-            usiaDisplay.value = '';
-            if (usiaHidden) usiaHidden.value = '';
-            return;
+    const tglValue = tglLahir.value.trim();
+
+    if (!tglValue) {
+        usiaDisplay.value = '0 tahun 0 bulan';
+        
+        if (usiaHidden) {
+            usiaHidden.value = '0 tahun 0 bulan';
         }
 
-        const lahir = new Date(tglValue);
-        if (isNaN(lahir.getTime())) {
-            usiaDisplay.value = 'Tanggal tidak valid';
-            return;
-        }
-
-        const sekarang = new Date();
-        let umur = sekarang.getFullYear() - lahir.getFullYear();
-        const m = sekarang.getMonth() - lahir.getMonth();
-
-        if (m < 0 || (m === 0 && sekarang.getDate() < lahir.getDate())) {
-            umur--;
-        }
-
-        usiaDisplay.value = umur + ' tahun';
-        if (usiaHidden) usiaHidden.value = umur;
+        return;
     }
+
+    const lahir = new Date(tglValue);
+
+    if (isNaN(lahir.getTime())) {
+        usiaDisplay.value = 'Tanggal tidak valid';
+        return;
+    }
+
+    const sekarang = new Date();
+
+    let tahun = sekarang.getFullYear() - lahir.getFullYear();
+    let bulan = sekarang.getMonth() - lahir.getMonth();
+
+    // Jika tanggal sekarang belum melewati tanggal lahir
+    if (sekarang.getDate() < lahir.getDate()) {
+        bulan--;
+    }
+
+    // Jika bulan negatif
+    if (bulan < 0) {
+        tahun--;
+        bulan += 12;
+    }
+
+    // Hindari minus
+    if (tahun < 0) tahun = 0;
+    if (bulan < 0) bulan = 0;
+
+    const hasil = `${tahun} tahun ${bulan} bulan`;
+
+    usiaDisplay.value = hasil;
+
+    if (usiaHidden) {
+        usiaHidden.value = hasil;
+    }
+}
 
     // ==================== HITUNG MASA KERJA ====================
     function hitungMasaKerja() {

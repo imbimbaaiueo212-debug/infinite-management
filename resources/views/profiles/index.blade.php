@@ -209,7 +209,7 @@
                                         data-masa-kerja="{{ $masaKerja }}"
                                         data-tempat-lahir="{{ $tempatLahir }}"
                                         data-tgl-lahir="{{ $tglLahir }}"
-                                        data-usia="{{ $profile->usia ?? '-' }}"
+                                        data-usia="{{ $profile->usia_format ?? '0 tahun 0 bulan' }}"
                                         data-telp="{{ $profile->no_telp ?? '-' }}"
                                         data-email="{{ $profile->email ?? '-' }}"
                                         data-jenis-mutasi="{{ $profile->jenis_mutasi ?? '-' }}"
@@ -454,7 +454,7 @@
                             </div>
                             <div class="col">
                                 <span class="mobile-label text-muted d-block mb-1">Usia</span>
-                                <span class="mobile-value fw-medium">{{ $profile->usia ?? '-' }} th</span>
+                                <span class="mobile-value fw-medium">{{ $profile->usia_format ?? '0 tahun 0 bulan' }}</span>
                             </div>
                             <div class="col">
                                 <span class="mobile-label text-muted d-block mb-1">Telepon</span>

@@ -66,10 +66,31 @@ class Profile extends Model
     // ===================================================================
     // ACCESSORS
     // ===================================================================
-    public function getUsiaAttribute()
-    {
-        return $this->tgl_lahir?->age;
+    /**
+ * Usia dalam format "X tahun Y bulan"
+ */
+public function getUsiaFormatAttribute()
+{
+    if (!$this->tgl_lahir) {
+        return '0 tahun 0 bulan';
     }
+
+    $lahir = Carbon::parse($this->tgl_lahir);
+    $diff  = $lahir->diff(Carbon::now());
+
+    $tahun = $diff->y;
+    $bulan = $diff->m;
+
+    return "{$tahun} tahun {$bulan} bulan";
+}
+
+/**
+ * Bonus: Usia hanya tahun (untuk keperluan lain)
+ */
+public function getUsiaAttribute()
+{
+    return $this->tgl_lahir?->age ?? 0;
+}
 
     public function getMasaKerjaFormatAttribute()
     {

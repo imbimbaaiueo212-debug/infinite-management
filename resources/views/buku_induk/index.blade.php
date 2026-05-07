@@ -132,7 +132,7 @@
                         </thead>
                         @forelse ($bukuInduk as $index => $item)
                             <tr @class([
-                                'table-danger' => $item->tgl_keluar && strtolower($item->status ?? '') === 'Keluar',
+                                'table-danger' => $item->tgl_keluar && strtolower($item->status ?? '') === 'keluar',
                                 'table-primary' => strtolower($item->status ?? '') === 'Baru', 'card-body',
                             ])>
 
