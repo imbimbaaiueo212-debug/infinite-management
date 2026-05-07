@@ -168,59 +168,74 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($profiles as $profile)
-                            @php
-                                $formatDate = fn($d) => $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '-';
-                                
-                                $tglMasuk       = $formatDate($profile->tgl_masuk);
-                                $tglLahir       = $formatDate($profile->tgl_lahir);
-                                $tglMutasi      = $formatDate($profile->tgl_mutasi_jabatan);
-                                $tglSelesaiMagang = $formatDate($profile->tgl_selesai_magang);   // ← ini yang hilang
-                                $tglAmbilSeragam  = $formatDate($profile->tgl_ambil_seragam);
-                                $tglKeluar         = $formatDate($profile->tgl_keluar);   // ← TAMBAHKAN INI
+                       @foreach ($profiles as $profile)
+    @php
+        $formatDate = fn($d) => $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '-';
+        
+        $tglMasuk       = $formatDate($profile->tgl_masuk);
+        $tglLahir       = $formatDate($profile->tgl_lahir);
+        $tglMutasi      = $formatDate($profile->tgl_mutasi_jabatan);
+        $tglSelesaiMagang = $formatDate($profile->tgl_selesai_magang);
+        $tglAmbilSeragam  = $formatDate($profile->tgl_ambil_seragam);
+        $tglKeluar        = $formatDate($profile->tgl_keluar);
 
-                                $masaKerja = $profile->masa_kerja !== null
-                                    ? intdiv($profile->masa_kerja, 12) . ' th ' . ($profile->masa_kerja % 12) . ' bl'
-                                    : '-';
-                                $tempatLahir = $profile->tempat_lahir ?? '-';   // ← TAMBAHKAN INI
-                            @endphp
+        $masaKerja = $profile->masa_kerja !== null
+            ? intdiv($profile->masa_kerja, 12) . ' th ' . ($profile->masa_kerja % 12) . ' bl'
+            : '-';
+        $tempatLahir = $profile->tempat_lahir ?? '-';
 
-                            <tr data-id="{{ $profile->id }}">
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td class="text-center">{{ $profile->nik }}</td>
-                                <td class="text-start fw-medium">{{ $profile->nama }}</td>
+        // Fungsi untuk menentukan warna baris
+        $rowClass = 'table-light'; // default
 
-                                <!-- KOLOM INFO RELAWAN → MODAL -->
-                                <td class="text-center">
-                                    <button class="btn btn-outline-primary btn-sm info-relawan-btn"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#infoModal"
-                                        data-nama="{{ $profile->nama }}"
-                                        data-nik="{{ $profile->nik }}"
-                                        data-jabatan="{{ $profile->jabatan ?? '-' }}"
-                                        data-status="{{ $profile->status_karyawan ?? '-' }}"
-                                        data-tgl-keluar="{{ $tglKeluar }}"
-                                        data-keterangan-keluar="{{ $profile->keterangan_keluar}}"
-                                        data-departemen="{{ $profile->departemen ?? '-' }}"
-                                        data-unit="{{ $profile->bimba_unit ?? '-' }}"
-                                        data-cabang="{{ $profile->no_cabang ?? '-' }}"
-                                        data-tgl-masuk="{{ $tglMasuk }}"
-                                        data-tgl_selesai_magang="{{ $tglSelesaiMagang }}"
-                                        data-masa-kerja="{{ $masaKerja }}"
-                                        data-tempat-lahir="{{ $tempatLahir }}"
-                                        data-tgl-lahir="{{ $tglLahir }}"
-                                        data-usia="{{ $profile->usia_format ?? '0 tahun 0 bulan' }}"
-                                        data-telp="{{ $profile->no_telp ?? '-' }}"
-                                        data-email="{{ $profile->email ?? '-' }}"
-                                        data-jenis-mutasi="{{ $profile->jenis_mutasi ?? '-' }}"
-                                        data-tgl-mutasi="{{ $tglMutasi }}"
-                                        data-masa-jabatan="{{ $profile->masa_kerja_jabatan ?? '-' }}"
-                                        data-no-rek="{{ $profile->no_rekening ?? '-' }}"
-                                        data-bank="{{ $profile->bank ?? '-' }}"
-                                        data-atas-nama="{{ $profile->atas_nama ?? '-' }}">
-                                        <i class="fas fa-info-circle me-1"></i> Klik untuk detail
-                                    </button>
-                                </td>
+        $status = strtolower(trim($profile->status_karyawan ?? ''));
+        if (in_array($status, ['keluar', 'resign'])) {
+            $rowClass = 'table-danger';           // Merah muda (seperti contohmu)
+        } elseif (in_array($status, ['non-aktif', 'non-aktif sementara', 'nonaktif'])) {
+            $rowClass = 'table-warning text-dark';  // Hitam
+        } elseif (str_contains($status, 'sementara')) {
+            $rowClass = 'table-warning';          // Kuning
+        }
+    @endphp
+
+    <!-- Baris dengan warna sesuai status -->
+    <tr data-id="{{ $profile->id }}" class="{{ $rowClass }}">
+        <td class="text-center">{{ $loop->iteration }}</td>
+        <td class="text-center">{{ $profile->nik }}</td>
+        <td class="text-start fw-medium">{{ $profile->nama }}</td>
+
+        <!-- KOLOM INFO RELAWAN -->
+        <td class="text-center">
+            <button class="btn btn-outline-primary btn-sm info-relawan-btn"
+                data-bs-toggle="modal" 
+                data-bs-target="#infoModal"
+                data-nama="{{ $profile->nama }}"
+                data-nik="{{ $profile->nik }}"
+                data-jabatan="{{ $profile->jabatan ?? '-' }}"
+                data-status="{{ $profile->status_karyawan ?? '-' }}"
+                data-tgl-keluar="{{ $tglKeluar }}"
+                data-keterangan-keluar="{{ $profile->keterangan_keluar ?? '-' }}"
+                data-departemen="{{ $profile->departemen ?? '-' }}"
+                data-unit="{{ $profile->bimba_unit ?? '-' }}"
+                data-cabang="{{ $profile->no_cabang ?? '-' }}"
+                data-tgl-masuk="{{ $tglMasuk }}"
+                data-tgl_selesai_magang="{{ $tglSelesaiMagang }}"
+                data-masa-kerja="{{ $masaKerja }}"
+                data-tempat-lahir="{{ $tempatLahir }}"
+                data-tgl-lahir="{{ $tglLahir }}"
+                data-usia="{{ $profile->usia_format ?? '0 tahun 0 bulan' }}"
+                data-telp="{{ $profile->no_telp ?? '-' }}"
+                data-email="{{ $profile->email ?? '-' }}"
+                data-jenis-mutasi="{{ $profile->jenis_mutasi ?? '-' }}"
+                data-tgl-mutasi="{{ $tglMutasi }}"
+                data-masa-jabatan="{{ $profile->masa_kerja_jabatan ?? '-' }}"
+                data-no-rek="{{ $profile->no_rekening ?? '-' }}"
+                data-bank="{{ $profile->bank ?? '-' }}"
+                data-atas-nama="{{ $profile->atas_nama ?? '-' }}">
+                
+                <i class="fas fa-info-circle me-1"></i> Detail
+            </button>
+        </td>
+
 
                                 <!-- JUMLAH MURID -->
                                 <td class="text-center">{{ $profile->jumlah_murid_mba ?? 0 }}</td>
@@ -1065,7 +1080,10 @@ $('#infoModal').on('show.bs.modal', function (event) {
     $('#modal-nama-header').text(button.data('nama'));   // untuk header
     $('#modal-nik').text(button.data('nik'));
     $('#modal-jabatan').text(button.data('jabatan'));
-    $('#modal-status').text(button.data('status'));
+    $('#modal-status')
+    .text(button.data('status'))
+    .removeClass('bg-success bg-danger bg-dark bg-warning bg-secondary text-white text-dark')
+    .addClass(button.data('status-class'));
     $('#modal-tgl-keluar').text(button.data('tgl-keluar'));
     $('#modal-keterangan-keluar').text(button.data('keterangan-keluar'));
     $('#modal-departemen').text(button.data('departemen'));

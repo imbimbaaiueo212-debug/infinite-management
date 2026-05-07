@@ -236,21 +236,26 @@ public function create()
 
     $this->autoActivateMagangInArray($validated);
 
-    // ==================== LOGIC STATUS KARYAWAN ====================
+    // ==================== LOGIC STATUS KARYAWAN (DI MANUALKAN) ====================
     if (!empty($validated['tgl_keluar'])) {
-        // Ada tanggal keluar → status jadi Resign / Keluar
-        $validated['status_karyawan'] = 'Resign';
+        // Hanya isi status 'Resign' jika user tidak memilih status lain (kosong)
+        if (empty($validated['status_karyawan'])) {
+            $validated['status_karyawan'] = 'Resign';
+        }
+        // Jika user sudah memilih (misalnya Non-Aktif / Non-Aktif Sementara), 
+        // maka status tetap mengikuti pilihan user
     } else {
-        // Tanggal keluar dikosongkan → kembalikan ke Aktif
-        $validated['status_karyawan'] = 'Aktif';
+        // Jika tgl_keluar dikosongkan, kembalikan ke Aktif
+        if (empty($validated['status_karyawan'])) {
+            $validated['status_karyawan'] = 'Aktif';
+        }
     }
 
-    // Hanya hitung jika jabatan Guru dan ada perubahan jumlah murid
+    // Hanya hitung jika jabatan Guru...
     if ($profile->jabatan === 'Guru' || ($validated['jabatan'] ?? null) === 'Guru') {
         $this->calculateGuruCounts($validated);
     }
 
-    // RB & KTR
     if (isset($validated['rb']) || isset($validated['ktr'])) {
         $this->assignKtrAndRp($validated);
     }
@@ -258,34 +263,32 @@ public function create()
     $validated['rp'] = $validated['rp'] ?? $profile->rp;
 
     // Update ke database
-        $profile->update($validated);
-        $profile->histories()->updateOrCreate(
-            [
-                'periode' => now()->format('Y-m'),
-            ],
-            [
-                'status_karyawan'      => $profile->status_karyawan,
-                'jumlah_murid_jadwal'  => $profile->jumlah_murid_jadwal,
-                'rb'                   => $profile->rb,
-                'ktr'                  => $profile->ktr,
-                'ktr_tambahan'         => $profile->ktr_tambahan,
-                'rp'                   => $profile->rp,
-                'tgl_keluar'           => $profile->tgl_keluar,
-                'keterangan_keluar'    => $profile->keterangan_keluar,
-                'changed_by'           => Auth::user()->name,
-            ]
-        );
+    $profile->update($validated);
 
-    // Rekalkulasi
+    // Histori
+    $profile->histories()->updateOrCreate(
+        ['periode' => now()->format('Y-m')],
+        [
+            'status_karyawan'      => $profile->status_karyawan,
+            'jumlah_murid_jadwal'  => $profile->jumlah_murid_jadwal,
+            'rb'                   => $profile->rb,
+            'ktr'                  => $profile->ktr,
+            'ktr_tambahan'         => $profile->ktr_tambahan,
+            'rp'                   => $profile->rp,
+            'tgl_keluar'           => $profile->tgl_keluar,
+            'keterangan_keluar'    => $profile->keterangan_keluar,
+            'changed_by'           => Auth::user()->name,
+        ]
+    );
+
     $this->calculateAndSaveMasaKerja($profile);
     $this->calculateAndSaveMasaKerjaJabatan($profile);
 
-    // Refresh rekap imbalan
     $labelBulan = Carbon::now()->locale('id')->translatedFormat('F Y');
     app(ImbalanRekapController::class)->createRekapsForPeriode($labelBulan);
 
     return redirect()->route('profiles.index')
-        ->with('success', 'Profile berhasil diperbarui dan rekap imbalan telah disinkronkan');
+        ->with('success', 'Profile berhasil diperbarui');
 }
 
 /**

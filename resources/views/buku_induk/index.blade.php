@@ -289,7 +289,6 @@
                                 </td>
 
                                 <!-- Aksi -->
-                                <!-- Aksi -->
 <td class="text-center" style="min-width: 140px;">
     <div class="dropdown">
         <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" 
@@ -306,9 +305,9 @@
             
             <!-- EDIT STATUS -->
             <li>
-                <button class="dropdown-item text-warning" type="button" 
+                <button class="dropdown-item text-info" type="button" 
                         data-bs-toggle="modal" data-bs-target="#statusModal{{ $item->id }}">
-                    📝 Edit Status Keluar
+                    📝 Update Status Murid
                 </button>
             </li>
 
@@ -687,58 +686,93 @@
                                     </div>
                                 </div>
                             </div>
-                            {{-- ====================== MODAL EDIT STATUS ====================== --}}
-                            <div class="modal fade" id="statusModal{{ $item->id }}" tabindex="-1" aria-labelledby="statusModalLabel{{ $item->id }}" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-warning text-dark">
-                                            <h5 class="modal-title" id="statusModalLabel{{ $item->id }}">
-                                                Edit Status Keluar - {{ $item->nama }}
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        
-                                        <form action="{{ route('buku_induk.updateStatus', $item->id) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            
-                                            <div class="modal-body">
-                                                <div class="row g-3">
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Tanggal Keluar</label>
-                                                        <input type="date" name="tgl_keluar" class="form-control" 
-                                                            value="{{ $item->tgl_keluar ? \Carbon\Carbon::parse($item->tgl_keluar)->format('Y-m-d') : '' }}">
-                                                    </div>
+                            {{-- ====================== MODAL UBAH STATUS ====================== --}}
+<div class="modal fade" id="statusModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Ubah Status - {{ $item->nama }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form id="statusForm{{ $item->id }}" action="{{ route('buku_induk.updateStatus', $item->id) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @method('PATCH')
+                
+                <div class="modal-body">
+                    <div class="row g-3">
+                        
+                        <!-- PILIH STATUS -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Pilih Status Baru</label>
+                            <select name="status" id="statusSelect{{ $item->id }}" class="form-select form-select-lg" required>
+                                <option value="">-- Pilih Status --</option>
+                                <option value="Keluar">Keluar</option>
+                                <option value="Pindah Golongan">Pindah Golongan</option>
+                                <option value="Cuti">Cuti</option>
+                            </select>
+                        </div>
 
-                                                    <div class="col-md-6">
-                                                        <label class="form-label">Kategori Keluar</label>
-                                                        <select name="kategori_keluar" class="form-select">
-                                                            <option value="">-- Pilih Kategori --</option>
-                                                            @foreach($kategoriKeluarOptions as $kk)
-                                                                <option value="{{ $kk }}" 
-                                                                        {{ old('kategori_keluar', $item->kategori_keluar ?? '') == $kk ? 'selected' : '' }}>
-                                                                    {{ $kk }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <label class="form-label">Alasan Keluar</label>
-                                                        <textarea name="alasan" class="form-control" rows="4" 
-                                                            placeholder="Masukkan alasan keluar...">{{ $item->alasan }}</textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <button type="submit" class="btn btn-warning">Simpan Perubahan Status</button>
-                                            </div>
-                                        </form>
-                                    </div>
+                        <!-- FIELD KELUAR (default disembunyikan) -->
+                        <div id="keluarFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tanggal Keluar</label>
+                                    <input type="date" name="tgl_keluar" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Kategori Keluar</label>
+                                    <select name="kategori_keluar" class="form-select">
+                                        <option value="">-- Pilih Kategori --</option>
+                                        @foreach($kategoriKeluarOptions as $kk)
+                                            <option value="{{ $kk }}">{{ $kk }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Alasan Keluar</label>
+                                    <textarea name="alasan" class="form-control" rows="3" placeholder="Masukkan alasan..."></textarea>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- FIELD CUTI -->
+                        <div id="cutiFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tanggal Mulai Cuti</label>
+                                    <input type="date" name="tgl_cuti" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Upload Surat Dokter <span class="text-danger">*</span></label>
+                                    <input type="file" name="surat_dokter" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FIELD PINDAH GOLONGAN -->
+                        <div id="pindahFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Pindah Golongan</strong><br>
+                                Klik tombol di bawah untuk membuat data pindah golongan baru.
+                            </div>
+                            <a href="{{ route('pindah-golongan.create', ['nim' => $item->nim]) }}" 
+                               target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt"></i> Buat Pindah Golongan
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
                         @empty
                             <tr>
                                 <td colspan="5" class="text-center py-5 text-muted">Tidak ada data</td>
@@ -850,5 +884,25 @@
                 $('#filterForm').submit();
             });
         });
+$(document).ready(function() {
+    @foreach($bukuInduk as $item)
+        const select = $('#statusSelect{{ $item->id }}');
+        
+        select.on('change', function() {
+            // Sembunyikan semua field dulu
+            $('.status-fields').hide();
+
+            if (this.value === 'Keluar') {
+                $('#keluarFields{{ $item->id }}').show();
+            } 
+            else if (this.value === 'Cuti') {
+                $('#cutiFields{{ $item->id }}').show();
+            } 
+            else if (this.value === 'Pindah Golongan') {
+                $('#pindahFields{{ $item->id }}').show();
+            }
+        });
+    @endforeach
+});
     </script>
 @endpush
