@@ -16,92 +16,77 @@ class JadwalDetailController extends Controller
     /**
      * Menampilkan daftar jadwal, difilter berdasarkan guru/pengampu.
      */
-   public function index(Request $request)
+  public function index(Request $request)
 {
     $guruNama     = trim($request->input('guru') ?? '');
     $selectedUnit = trim($request->input('unit') ?? '');
 
-    // Normalisasi unit: hilangkan spasi ekstra, ubah ke uppercase, hilangkan karakter aneh
     $selectedUnitNorm = strtoupper(trim(preg_replace('/\s+/', ' ', urldecode($selectedUnit))));
 
-    // Otomatis sync
+    // Auto sync jika belum ada data
     if (JadwalDetail::count() === 0 || $request->query('sync') === 'auto') {
         $this->generateSilent();
     }
 
-    $jabatanGuru = [
-        'Pengajar', 'Guru', 'Pengajar Tetap', 'Pengajar Honorer', 'Tutor',
-        'Pengajar Senior', 'Guru Tetap', 'Kepala Unit', 'Ka Unit', 'KU', 'Kepalaunit',
-    ];
+    $jabatanTarget = ['Guru', 'Kepala Unit', 'Pengajar', 'Pengajar Tetap', 'Tutor', 'Ka Unit', 'KU'];
 
-    $gurusQuery = Profile::whereNotNull('nik')
+    // Query utama: Hanya guru & kepala unit yang AKTIF / MAGANG
+    $gurusQuery = Profile::whereIn('jabatan', $jabatanTarget)
+        ->whereIn('status_karyawan', ['Aktif', 'Magang'])
+        ->whereNotNull('nik')
         ->whereRaw("TRIM(nik) <> ''")
-        ->whereNotNull('jabatan')
-        ->where(function ($q) use ($jabatanGuru) {
-            foreach ($jabatanGuru as $jab) {
-                $q->orWhereRaw("TRIM(UPPER(jabatan)) = ?", [strtoupper(trim($jab))]);
-            }
-        })
         ->select('nama', 'nik', 'bimba_unit', 'no_cabang', 'jabatan')
         ->orderBy('nik');
 
     $isAdmin = Auth::check() && Auth::user()->is_admin;
 
-    // Filter guru berdasarkan unit
+    // Filter unit (hanya admin)
     if ($isAdmin && $selectedUnit !== '' && $selectedUnit !== 'SEMUA') {
         $gurusQuery->whereRaw("TRIM(UPPER(bimba_unit)) = ?", [$selectedUnitNorm]);
     }
 
-    // DEBUG: log untuk melihat apa yang terjadi
-    Log::debug('Jadwal Index Debug', [
-        'user_id'          => Auth::id(),
-        'is_admin'         => $isAdmin,
-        'selected_unit_raw'=> $selectedUnit,
-        'selected_unit_norm'=> $selectedUnitNorm,
-        'guru_query_sql'   => $gurusQuery->toSql(),
-        'guru_query_bindings' => $gurusQuery->getBindings(),
-        'guru_count_before' => $gurusQuery->count(),
-    ]);
-
     $gurus = $gurusQuery->get();
 
-    // Safety net (pakai array, skip jika nama kosong)
+    // =============================================
+    // SAFETY NET: Tambahkan guru dari jadwal (hanya yang AKTIF)
+    // =============================================
     $namaGuruDiJadwal = JadwalDetail::whereNotNull('guru')
         ->when($isAdmin && $selectedUnit !== '' && $selectedUnit !== 'SEMUA', function ($q) use ($selectedUnitNorm) {
             $q->whereHas('murid', fn($sq) => $sq->whereRaw("TRIM(UPPER(bimba_unit)) = ?", [$selectedUnitNorm]));
         })
-        ->whereRaw("TRIM(guru) <> ''")
-        ->where('guru', '!=', 'TANPA GURU')
+        ->whereRaw("TRIM(guru) <> '' AND guru != 'TANPA GURU'")
         ->distinct()
         ->pluck('guru');
 
-    $namaSudahAda = $gurus->pluck('nama')->map(fn($n) => trim($n));
-    $namaKurang   = $namaGuruDiJadwal->map(fn($n) => trim($n))->diff($namaSudahAda);
+    $namaSudahAda = $gurus->pluck('nama')->map(fn($n) => trim(strtoupper($n)));
+
+    $namaKurang = $namaGuruDiJadwal
+        ->map(fn($n) => trim(strtoupper($n)))
+        ->diff($namaSudahAda);
 
     if ($namaKurang->isNotEmpty()) {
-        $extra = $namaKurang->map(function ($nama) {
-            $trimmed = trim($nama);
-            if ($trimmed === '') return null;
-            return [
-                'nama'       => $trimmed,
-                'nik'        => '—',
-                'jabatan'    => 'Pengampu (dari jadwal)',
-                'bimba_unit' => null,
-                'no_cabang'  => null,
-            ];
-        })->filter();
+        $extra = Profile::whereIn('nama', $namaKurang)
+            ->whereIn('status_karyawan', ['Aktif', 'Magang'])
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'nama'       => $p->nama,
+                    'nik'        => $p->nik ?? '—',
+                    'jabatan'    => $p->jabatan ?? 'Pengampu (dari jadwal)',
+                    'bimba_unit' => $p->bimba_unit,
+                    'no_cabang'  => $p->no_cabang,
+                ];
+            });
 
-        $gurusArray = $gurus->map(fn($guru) => (array) $guru)
-            ->merge($extra)
-            ->unique('nama')
-            ->filter(fn($item) => !empty($item['nama']))
-            ->sortBy('nama')
-            ->values();
-
-        $gurus = collect($gurusArray);
+        if ($extra->isNotEmpty()) {
+            $gurus = $gurus->concat($extra)
+                           ->unique('nama')
+                           ->sortBy('nama')
+                           ->values();
+        }
     }
 
-    // Fallback
+    // Fallback jika tidak ada guru sama sekali
     if ($gurus->isEmpty()) {
         $gurus = collect([[
             'nama'    => 'TANPA GURU',
@@ -110,16 +95,15 @@ class JadwalDetailController extends Controller
         ]]);
     }
 
-    // Daftar unit
+    // Daftar unit untuk filter
     $units = BukuInduk::whereIn('status', ['Aktif', 'Baru'])
         ->whereNotNull('bimba_unit')
-        ->whereRaw("TRIM(bimba_unit) <> ''")
         ->distinct()
         ->orderBy('bimba_unit')
         ->pluck('bimba_unit', 'bimba_unit')
         ->toArray();
 
-    // Query jadwal
+    // Query Jadwal
     $query = JadwalDetail::with('murid')->orderBy('jam_ke', 'asc');
 
     if ($isAdmin && $selectedUnit !== '' && $selectedUnit !== 'SEMUA') {
@@ -128,20 +112,14 @@ class JadwalDetailController extends Controller
         });
     }
 
-    if ($guruNama !== 'SEMUA' && $guruNama !== '') {
+    if ($guruNama !== '' && $guruNama !== 'SEMUA') {
         $query->whereRaw("TRIM(UPPER(guru)) = ?", [strtoupper(trim($guruNama))]);
     }
 
     $jadwal = $query->get()->groupBy('jam_ke');
 
-    $jabatanGuru = null;
-    if ($guruNama !== 'SEMUA' && $guruNama !== '') {
-        $profile = Profile::whereRaw("TRIM(nama) = ?", [$guruNama])->first();
-        $jabatanGuru = $profile?->jabatan;
-    }
-
     return view('jadwal.index', compact(
-        'jadwal', 'gurus', 'guruNama', 'jabatanGuru', 'units', 'selectedUnit'
+        'jadwal', 'gurus', 'guruNama', 'units', 'selectedUnit'
     ));
 }
 

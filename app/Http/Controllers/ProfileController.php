@@ -29,7 +29,7 @@ class ProfileController extends Controller
         'Office Boy', 'Office Girl'
     ];
 
-    private $statusOptions = ['Aktif', 'Magang', 'Non-Aktif', 'Resign'];
+    private $statusOptions = ['Aktif', 'Magang', 'Non-Aktif', 'Resign', 'Non-Aktif Sementara'];
     private $departemenOptions = ['biMBA-AIUEO', 'English biMBA', 'biMBA + English', 'Part Time English'];
 
     // ===================================================================

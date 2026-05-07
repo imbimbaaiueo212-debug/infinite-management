@@ -293,6 +293,8 @@ Route::get('buku-induk/history', [BukuIndukController::class, 'allHistory'])->na
 Route::get('/export-google-sheet', [BukuIndukController::class, 'exportToSheet']);
 Route::get('/buku-induk/{id}/surat-pindah', [BukuIndukController::class, 'suratPindah'])
      ->name('buku_induk.surat_pindah');
+Route::patch('/buku-induk/{id}/status', [BukuIndukController::class, 'updateStatus'])
+     ->name('buku_induk.updateStatus');
 
 
 

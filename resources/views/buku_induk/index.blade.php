@@ -179,9 +179,10 @@
 
                                 <!-- KETERANGAN -->
                                 <td>
-                                    @if (strtolower($item->status ?? '') === 'Keluar')
+                                    @if (strtolower($item->status ?? '') === 'keluar')
                                         @if ($item->tgl_keluar)
-                                            Keluar: {{ \Carbon\Carbon::parse($item->tgl_keluar)->format('d/m/Y') }}
+                                            Tanggal Aktif: {{ \Carbon\Carbon::parse($item->tgl_masuk)->format('d/m/Y') }}
+                                            <br>Tanggal Keluar: {{ \Carbon\Carbon::parse($item->tgl_keluar)->format('d/m/Y') }}
                                             @if ($item->alasan || $item->keterangan)
                                                 <br>Ketegori: <small class="text-danger">{{ trim($item->kategori_keluar) }}</small>
                                                 <br>Alasan: <small class="text-danger">{{ trim($item->alasan) }}</small> 
@@ -191,7 +192,7 @@
                                         @endif
                                     @else
                                         @if ($item->tgl_masuk)
-                                            Aktif: {{ \Carbon\Carbon::parse($item->tgl_masuk)->format('d/m/Y') }}
+                                            Tanggal Aktif: {{ \Carbon\Carbon::parse($item->tgl_masuk)->format('d/m/Y') }}
                                         @else
                                             belum ada tgl masuk
                                         @endif
@@ -288,62 +289,72 @@
                                 </td>
 
                                 <!-- Aksi -->
-                                <td class="text-center" style="min-width: 140px;">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" 
-                                            type="button" data-bs-toggle="dropdown">
-                                        Aksi
-                                    </button>
+                                <!-- Aksi -->
+<td class="text-center" style="min-width: 140px;">
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" 
+                type="button" data-bs-toggle="dropdown">
+            Aksi
+        </button>
 
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <a class="dropdown-item" href="{{ route('buku_induk.edit', $item->id) }}">
-                                                ✏️ Edit
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <button class="dropdown-item" type="button" 
-                                                    data-bs-toggle="modal" data-bs-target="#detailModal{{ $item->id }}">
-                                                🔍 Detail
-                                            </button>
-                                        </li>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <a class="dropdown-item" href="{{ route('buku_induk.edit', $item->id) }}">
+                    ✏️ Edit Lengkap
+                </a>
+            </li>
+            
+            <!-- EDIT STATUS -->
+            <li>
+                <button class="dropdown-item text-warning" type="button" 
+                        data-bs-toggle="modal" data-bs-target="#statusModal{{ $item->id }}">
+                    📝 Edit Status Keluar
+                </button>
+            </li>
 
-                                        @if (auth()->user()?->role === 'admin')
-                                            <li>
-                                                <a class="dropdown-item" href="{{ route('buku_induk.history', $item->id) }}">
-                                                    🕒 Riwayat
-                                                </a>
-                                            </li>
-                                        @endif
+            <li>
+                <button class="dropdown-item" type="button" 
+                        data-bs-toggle="modal" data-bs-target="#detailModal{{ $item->id }}">
+                    🔍 Detail
+                </button>
+            </li>
 
-                                        <li><hr class="dropdown-divider"></li>
+            @if (auth()->user()?->role === 'admin')
+                <li>
+                    <a class="dropdown-item" href="{{ route('buku_induk.history', $item->id) }}">
+                        🕒 Riwayat
+                    </a>
+                </li>
+            @endif
 
-                                        <!-- Surat Pindah -->
-                                        <li>
-                                            <a class="dropdown-item text-success" 
-                                            href="{{ route('buku_induk.surat_pindah', $item->id) }}" 
-                                            target="_blank">
-                                                📄 Surat Pindah
-                                            </a>
-                                        </li>
+            <li><hr class="dropdown-divider"></li>
 
-                                        @if (auth()->user()?->role === 'admin')
-                                            <li><hr class="dropdown-divider"></li>
-                                            
-                                            <li>
-                                                <form action="{{ route('buku_induk.destroy', $item->id) }}" 
-                                                    method="POST" onsubmit="return confirm('Yakin hapus data murid ini?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="dropdown-item text-danger">
-                                                        🗑️ Hapus
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        @endif
-                                    </ul>
-                                </div>
-                            </td>
+            <!-- Surat Pindah -->
+            <li>
+                <a class="dropdown-item text-success" 
+                   href="{{ route('buku_induk.surat_pindah', $item->id) }}" 
+                   target="_blank">
+                    📄 Surat Pindah
+                </a>
+            </li>
+
+            @if (auth()->user()?->role === 'admin')
+                <li><hr class="dropdown-divider"></li>
+                
+                <li>
+                    <form action="{{ route('buku_induk.destroy', $item->id) }}" 
+                          method="POST" onsubmit="return confirm('Yakin hapus data murid ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="dropdown-item text-danger">
+                            🗑️ Hapus
+                        </button>
+                    </form>
+                </li>
+            @endif
+        </ul>
+    </div>
+</td>
 
                             </tr>
                             {{-- MODAL DETAIL – FULL FIELD --}}
@@ -673,6 +684,58 @@
                                             <button type="button" class="btn btn-secondary"
                                                 data-bs-dismiss="modal">Tutup</button>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- ====================== MODAL EDIT STATUS ====================== --}}
+                            <div class="modal fade" id="statusModal{{ $item->id }}" tabindex="-1" aria-labelledby="statusModalLabel{{ $item->id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-warning text-dark">
+                                            <h5 class="modal-title" id="statusModalLabel{{ $item->id }}">
+                                                Edit Status Keluar - {{ $item->nama }}
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        
+                                        <form action="{{ route('buku_induk.updateStatus', $item->id) }}" method="POST">
+                                            @csrf
+                                            @method('PATCH')
+                                            
+                                            <div class="modal-body">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Tanggal Keluar</label>
+                                                        <input type="date" name="tgl_keluar" class="form-control" 
+                                                            value="{{ $item->tgl_keluar ? \Carbon\Carbon::parse($item->tgl_keluar)->format('Y-m-d') : '' }}">
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Kategori Keluar</label>
+                                                        <select name="kategori_keluar" class="form-select">
+                                                            <option value="">-- Pilih Kategori --</option>
+                                                            @foreach($kategoriKeluarOptions as $kk)
+                                                                <option value="{{ $kk }}" 
+                                                                        {{ old('kategori_keluar', $item->kategori_keluar ?? '') == $kk ? 'selected' : '' }}>
+                                                                    {{ $kk }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-12">
+                                                        <label class="form-label">Alasan Keluar</label>
+                                                        <textarea name="alasan" class="form-control" rows="4" 
+                                                            placeholder="Masukkan alasan keluar...">{{ $item->alasan }}</textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                <button type="submit" class="btn btn-warning">Simpan Perubahan Status</button>
+                                            </div>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

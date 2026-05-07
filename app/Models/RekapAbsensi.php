@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Scopes\UnitScope;   // TAMBAHKAN INI
+use App\Models\Scopes\AktifScope;
 use App\Models\BukuInduk;
 use App\Models\Profile;
 
@@ -15,7 +16,7 @@ class RekapAbsensi extends Model
     protected $table = 'rekap_absensi';
 
     protected $fillable = [
-        'nik', 'nama_relawan', 'jabatan', 'departemen',
+        'nik', 'nama_relawan', 'jabatan', 'status_karyawan', 'departemen',
         'bimba_unit', 'no_cabang', 'jumlah_murid', 'jumlah_rombim', 'penyesuaian_rb',
         'srj_108', 'srj_109', 'srj_110',
         'srj_111', 'srj_112', 'srj_113', 'srj_114', 'srj_115', 'srj_116',
@@ -28,6 +29,7 @@ class RekapAbsensi extends Model
     protected static function booted()
     {
         static::addGlobalScope(new UnitScope);
+        static::addGlobalScope(new AktifScope());
     }
 
     public function syncFromBukuInduk()

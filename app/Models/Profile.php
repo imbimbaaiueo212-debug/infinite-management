@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use App\Models\BukuInduk;
 use App\Models\Scopes\UnitScope;
+use App\Models\Scopes\AktifScope;
 use App\Models\RekapAbsensi;
 use App\Models\PendapatanTunjangan;
 use App\Models\Skim;
@@ -330,5 +331,6 @@ public function histories()
     protected static function booted()
 {
     static::addGlobalScope(new UnitScope);
+
 }
 }

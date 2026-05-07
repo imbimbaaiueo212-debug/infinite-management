@@ -118,6 +118,12 @@ $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
     foreach ($bukuInduk as $item) {
         $item->info_jadwal = $this->hitungPertemuanTerlewatDiBulanMasuk($item);
     }
+    $kategoriKeluarOptions = [
+        'Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK/PAUD',
+        'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah',
+        'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain',
+        'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'
+    ];
         return view('buku_induk.index', compact(
             'bukuInduk',
             'perPage',
@@ -125,7 +131,8 @@ $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
             'totalAktif',
             'totalKeluar',
             'muridOptions',
-            'unitOptions'
+            'unitOptions',
+            'kategoriKeluarOptions'
         ));
     }
 
@@ -1406,6 +1413,29 @@ public function suratPindah($id)
         . ".pdf";
 
     return $pdf->stream($filename);
+}
+
+public function updateStatus(Request $request, $id)
+{
+    $request->validate([
+        'tgl_keluar'       => 'nullable|date',
+        'kategori_keluar'  => 'nullable|string|max:50',
+        'alasan'           => 'nullable|string',
+        'keterangan_optional' => 'nullable|string',
+    ]);
+
+    $buku = BukuInduk::findOrFail($id);
+    
+    $buku->update([
+        'tgl_keluar'         => $request->tgl_keluar,
+        'kategori_keluar'    => $request->kategori_keluar,
+        'alasan'             => $request->alasan,
+        'keterangan_optional'=> $request->keterangan_optional,
+        'status'             => $request->tgl_keluar ? 'Keluar' : $buku->status,
+    ]);
+
+    return redirect()->back()
+                     ->with('success', 'Status murid berhasil diperbarui.');
 }
 
 }
