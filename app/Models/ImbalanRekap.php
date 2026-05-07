@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\AktifScope;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use App\Models\Scopes\UnitScope;
@@ -58,6 +59,7 @@ class ImbalanRekap extends Model
     protected static function booted()
     {
         static::addGlobalScope(new UnitScope);
+        static::addGlobalScope(new AktifScope);
     }
 
     public function profile()

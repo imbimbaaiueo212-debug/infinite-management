@@ -812,8 +812,33 @@ if (array_key_exists('installment_id', $fields)) {
             ->runSyncFromAbsensi($bulanFormatYm);
     } catch (\Throwable $e) {}
 
-    $profiles = Profile::orderBy('nama')->get();
-    $ktrList  = Ktr::all();
+    // ==================== AMBIL PROFILE (LEBIH LONGGAR) ====================
+    $profiles = Profile::where(function ($q) {
+            $q->whereNull('status_karyawan')
+              ->orWhere('status_karyawan', '')
+              ->orWhere('status_karyawan', 'Aktif')
+              ->orWhere('status_karyawan', 'aktif')
+              ->orWhere('status_karyawan', 'Magang')
+              ->orWhere('status_karyawan', 'magang')
+              ->orWhere('status_karyawan', 'Kepala Unit')   // tambahan
+              ->orWhere('status_karyawan', 'Kepala');       // tambahan
+        })
+        ->orderBy('nama')
+        ->get();
+
+    // Debug: berapa profile yang diambil
+    Log::info("Generate Rekap {$labelBulan} - Jumlah Profile Aktif: " . $profiles->count());
+
+    if ($profiles->isEmpty()) {
+        return [
+            'created' => 0,
+            'updated' => 0,
+            'total'   => 0,
+            'errors'  => ['Tidak ada profile aktif ditemukan. Cek data status_karyawan di tabel profiles.']
+        ];
+    }
+
+    $ktrList = Ktr::all();
 
     $rbConfig = [
         60 => ['min_jam' => 220, 'jam_label' => 240],
@@ -832,8 +857,6 @@ if (array_key_exists('installment_id', $fields)) {
     ];
 
     foreach ($profiles as $p) {
-
-        
         try {
             $rekap = ImbalanRekap::firstOrNew([
                 'nama'  => $p->nama,
@@ -841,15 +864,14 @@ if (array_key_exists('installment_id', $fields)) {
             ]);
 
             $isNew = !$rekap->exists;
-            $isMagang = strtolower($p->status_karyawan ?? '') === 'magang';
+            $isMagang = strtolower(trim($p->status_karyawan ?? '')) === 'magang';
 
-            // RB dari Profile
-            $rbAwal = ($p->jabatan === 'Kepala Unit') ? 40 : 30;
+            // RB Awal
+            $rbAwal = ($p->jabatan === 'Kepala Unit' || str_contains(strtolower($p->jabatan ?? ''), 'kepala')) ? 40 : 30;
             $rbAwal = $extractRbNumber($p->rb ?? $p->rb_tambahan, $rbAwal);
 
             $ktrInput = trim($p->ktr ?? $p->ktr_tambahan ?? '');
 
-            // Durasi Full berdasarkan RB Awal
             $durasiFull = $rbConfig[$rbAwal]['jam_label'] ?? 140;
 
             // Potongan Absensi
@@ -867,7 +889,6 @@ if (array_key_exists('installment_id', $fields)) {
 
             $jamEfektif = max(0, $durasiFull - ($hariDipotong * 7));
 
-            // RB & Durasi yang tampil di Rekap (boleh turun)
             $rbFinal = $rbAwal;
             $durasiFinal = $durasiFull;
 
@@ -881,10 +902,8 @@ if (array_key_exists('installment_id', $fields)) {
                 }
             }
 
-            // ================= HITUNG POKOK BERDASARKAN RB FINAL =================
-            $imbalanPokokFull = 1050000; // default RB35
-
-            // Prioritas: Ambil dari tabel KTR berdasarkan RB yang tampil + KTR
+            // Imbalan Pokok
+            $imbalanPokokFull = 1050000;
             if ($ktrInput && $rbFinal) {
                 $targetRb = 'RB' . $rbFinal;
                 $ktrClean = $normalize($ktrInput);
@@ -900,60 +919,52 @@ if (array_key_exists('installment_id', $fields)) {
                     $imbalanPokokFull = (int) $ktr->jumlah;
                 }
             }
-            
 
-            // ================= SAVE =================
-$rekap->fill([
-    'nama'                => $p->nama,
-    'bulan'               => $labelBulan,
-    
-    // ================== DATA PROFILE ==================
-    'profile_id'          => $p->id,                    // ← PENTING
-    'posisi'              => $p->jabatan,               // ← dari jabatan
-    'status'              => $p->status_karyawan,       // ← dari status_karyawan
-    'departemen'          => $p->departemen,
-    'bimba_unit'          => $p->bimba_unit ?? $p->biMBA_unit,
-    'no_cabang'           => $p->no_cabang,
-    'masa_kerja'          => $p->masa_kerja,
-    
-    // Data RB & Durasi
-    'waktu_mgg'           => 'RB ' . $rbFinal,
-    'waktu_bln'           => $durasiFinal . ' Jam',
-    'durasi_kerja'        => $jamEfektif,
-    'persen'              => $durasiFull > 0 ? round(($jamEfektif / $durasiFull) * 100, 2) : 0,
-    
-    'ktr'                 => $ktrInput ?: null,
-    'imbalan_pokok'       => round($imbalanPokokFull),
-    
-    'tambahan_transport'  => max(0, 25 - $hariDipotong) * 24000,
-    'at_hari'             => max(0, 25 - $hariDipotong),
-    'imbalan_lainnya'     => $p->imbalan_lainnya_default ?? 0,
-    'insentif_mentor'     => $p->insentif_mentor ?? 0,
-    'cicilan'             => $p->cicilan_default ?? 0,
-    
-    // Field tambahan yang sering dibutuhkan
-    'nik'                 => $p->nik,
-    'jabatan'             => $p->jabatan,
-    'kategori'            => $p->kategori,
-    'status_karyawan'     => $p->status_karyawan,
-]);
+            // Fill Data
+            $rekap->fill([
+                'nama'                => $p->nama,
+                'bulan'               => $labelBulan,
+                'profile_id'          => $p->id,
+                'posisi'              => $p->jabatan,
+                'status'              => $p->status_karyawan,
+                'departemen'          => $p->departemen,
+                'bimba_unit'          => $p->bimba_unit ?? $p->biMBA_unit,
+                'no_cabang'           => $p->no_cabang,
+                'masa_kerja'          => $p->masa_kerja,
+                'nik'                 => $p->nik,
+                'jabatan'             => $p->jabatan,
+                'kategori'            => $p->kategori,
+                'status_karyawan'     => $p->status_karyawan,
 
-// Hitung ulang total
-$rekap->total_imbalan = 
-    ($rekap->imbalan_pokok ?? 0) + 
-    ($rekap->imbalan_lainnya ?? 0) + 
-    ($rekap->insentif_mentor ?? 0) + 
-    ($rekap->tambahan_transport ?? 0);
+                'waktu_mgg'           => 'RB ' . $rbFinal,
+                'waktu_bln'           => $durasiFinal . ' Jam',
+                'durasi_kerja'        => $jamEfektif,
+                'persen'              => $durasiFull > 0 ? round(($jamEfektif / $durasiFull) * 100, 2) : 0,
+                'ktr'                 => $ktrInput ?: null,
+                'imbalan_pokok'       => round($imbalanPokokFull),
 
-$rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
+                'tambahan_transport'  => max(0, 25 - $hariDipotong) * 24000,
+                'at_hari'             => max(0, 25 - $hariDipotong),
+                'imbalan_lainnya'     => $p->imbalan_lainnya_default ?? 0,
+                'insentif_mentor'     => $p->insentif_mentor ?? 0,
+                'cicilan'             => $p->cicilan_default ?? 0,
+            ]);
 
-if ($isMagang) {
-    $rekap->imbalan_pokok = 0;
-    $rekap->total_imbalan = 0;
-    $rekap->yang_dibayarkan = 0;
-}
+            $rekap->total_imbalan = 
+                ($rekap->imbalan_pokok ?? 0) + 
+                ($rekap->imbalan_lainnya ?? 0) + 
+                ($rekap->insentif_mentor ?? 0) + 
+                ($rekap->tambahan_transport ?? 0);
 
-$rekap->save();
+            $rekap->yang_dibayarkan = $rekap->total_imbalan - ($rekap->cicilan ?? 0);
+
+            if ($isMagang) {
+                $rekap->imbalan_pokok = 0;
+                $rekap->total_imbalan = 0;
+                $rekap->yang_dibayarkan = 0;
+            }
+
+            $rekap->save();
 
             $isNew ? $created++ : $updated++;
 

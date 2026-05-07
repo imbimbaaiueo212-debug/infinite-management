@@ -290,64 +290,89 @@
 
                                 <!-- LAINNYA -->
                                 <td class="text-end position-relative">
-                                    <div class="d-flex align-items-center justify-content-end gap-2">
-                                        <input type="text" class="form-control form-control-sm text-end inline-edit-input"
-                                            value="{{ ($r->imbalan_lainnya ?? 0) > 0 ? number_format($r->imbalan_lainnya, 0, ',', '.') : '' }}"
-                                            data-field="imbalan_lainnya" data-id="{{ $r->id }}"
-                                            style="width:100px;" placeholder="0">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center justify-content-end gap-2">
+            <input type="text" class="form-control form-control-sm text-end inline-edit-input"
+                value="{{ ($r->imbalan_lainnya ?? 0) > 0 ? number_format($r->imbalan_lainnya, 0, ',', '.') : '' }}"
+                data-field="imbalan_lainnya" data-id="{{ $r->id }}"
+                style="width:100px;" placeholder="0">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-end d-block">{{ ($r->imbalan_lainnya ?? 0) > 0 ? 'Rp ' . number_format($r->imbalan_lainnya, 0, ',', '.') : '-' }}</span>
+    @endif
+</td>
 
                                 <td class="text-end text-primary fw-bold bg-secondary-subtle" id="total_imbalan_{{ $r->id }}">
                                     {!! $formatRupiah($r->total_imbalan) !!}
                                 </td>
 
                                 <!-- Insentif Mentor -->
-                                <td class="text-end position-relative">
-                                    <div class="d-flex align-items-center justify-content-end gap-2">
-                                        <input type="text" class="form-control form-control-sm text-end inline-edit-input"
-                                            value="{{ ($r->insentif_mentor ?? 0) > 0 ? number_format($r->insentif_mentor, 0, ',', '.') : '' }}"
-                                            data-field="insentif_mentor" data-id="{{ $r->id }}"
-                                            style="width:100px;" placeholder="0">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
-                                <td class="position-relative">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input type="text" class="form-control form-control-sm inline-edit-input"
-                                            value="{{ $r->keterangan_insentif ?? '' }}" data-field="keterangan_insentif" data-id="{{ $r->id }}"
-                                            style="width:130px;">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+                                <!-- INSENTIF MENTOR -->
+<td class="text-end position-relative">
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center justify-content-end gap-2">
+            <input type="text" class="form-control form-control-sm text-end inline-edit-input"
+                value="{{ ($r->insentif_mentor ?? 0) > 0 ? number_format($r->insentif_mentor, 0, ',', '.') : '' }}"
+                data-field="insentif_mentor" data-id="{{ $r->id }}"
+                style="width:100px;" placeholder="0">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-end d-block">{{ ($r->insentif_mentor ?? 0) > 0 ? 'Rp ' . number_format($r->insentif_mentor, 0, ',', '.') : '-' }}</span>
+    @endif
+</td>
+
+<!-- KET. INSENTIF -->
+<td class="position-relative">
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center gap-2">
+            <input type="text" class="form-control form-control-sm inline-edit-input"
+                value="{{ $r->keterangan_insentif ?? '' }}" data-field="keterangan_insentif" data-id="{{ $r->id }}"
+                style="width:130px;">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-muted small">{{ Str::limit($r->keterangan_insentif ?? '-', 25) }}</span>
+    @endif
+</td>
 
                                 <td class="text-end text-warning"><strong>{!! $formatRupiah($r->tambahan_transport) !!}</strong></td>
 
-                                <td class="text-center position-relative">
-                                    <div class="d-flex align-items-center justify-content-center gap-2">
-                                        <input type="text" class="form-control form-control-sm text-center inline-edit-input"
-                                            value="{{ $r->at_hari ?? '' }}" data-field="at_hari" data-id="{{ $r->id }}"
-                                            style="width:70px;">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+                                <!-- @HARI -->
+<td class="text-center position-relative">
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center justify-content-center gap-2">
+            <input type="text" class="form-control form-control-sm text-center inline-edit-input"
+                value="{{ $r->at_hari ?? '' }}" data-field="at_hari" data-id="{{ $r->id }}"
+                style="width:70px;">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-center d-block">{{ $r->at_hari ?? '-' }}</span>
+    @endif
+</td>
 
                                 <!-- Kekurangan Imbalan -->
-                                <td class="text-end text-danger position-relative">
-                                    <div class="d-flex align-items-center justify-content-end gap-2">
-                                        <input type="text" class="form-control form-control-sm text-end inline-edit-input"
-                                            value="{{ ($r->kekurangan ?? 0) > 0 ? number_format($r->kekurangan, 0, ',', '.') : '' }}"
-                                            data-field="kekurangan" data-id="{{ $r->id }}"
-                                            style="width:100px;" placeholder="0">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+                                <!-- KEKURANGAN -->
+<td class="text-end text-danger position-relative">
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center justify-content-end gap-2">
+            <input type="text" class="form-control form-control-sm text-end inline-edit-input"
+                value="{{ ($r->kekurangan ?? 0) > 0 ? number_format($r->kekurangan, 0, ',', '.') : '' }}"
+                data-field="kekurangan" data-id="{{ $r->id }}"
+                style="width:100px;" placeholder="0">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-end d-block text-danger">{{ ($r->kekurangan ?? 0) > 0 ? 'Rp ' . number_format($r->kekurangan, 0, ',', '.') : '-' }}</span>
+    @endif
+</td>
                                 <td class="text-center">
                                     {{ $r->bulan_kekurangan_full ?? '-' }}
                                 </td>
@@ -360,17 +385,21 @@
                                     </div>
                                 </td>
 
-                                <!-- Kelebihan Imbalan -->
-                                <td class="text-end text-success position-relative">
-                                    <div class="d-flex align-items-center justify-content-end gap-2">
-                                        <input type="text" class="form-control form-control-sm text-end inline-edit-input"
-                                            value="{{ ($r->kelebihan ?? 0) > 0 ? number_format($r->kelebihan, 0, ',', '.') : '' }}"
-                                            data-field="kelebihan" data-id="{{ $r->id }}"
-                                            style="width:100px;" placeholder="0">
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+                               <!-- KELEBIHAN -->
+<td class="text-end text-success position-relative">
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <div class="d-flex align-items-center justify-content-end gap-2">
+            <input type="text" class="form-control form-control-sm text-end inline-edit-input"
+                value="{{ ($r->kelebihan ?? 0) > 0 ? number_format($r->kelebihan, 0, ',', '.') : '' }}"
+                data-field="kelebihan" data-id="{{ $r->id }}"
+                style="width:100px;" placeholder="0">
+            <i class="bi bi-pencil text-primary edit-icon" title="Edit"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+    @else
+        <span class="text-end d-block text-success">{{ ($r->kelebihan ?? 0) > 0 ? 'Rp ' . number_format($r->kelebihan, 0, ',', '.') : '-' }}</span>
+    @endif
+</td>
                                 <td class="text-center">
                                     {{ $r->bulan_kelebihan_full ?? '-' }}
                                 </td>
@@ -385,54 +414,73 @@
 
                                 <!-- Cicilan -->
                                 <td class="text-end text-warning position-relative">
-                                    <div class="d-flex align-items-center justify-content-end gap-2">
-                                        @php
-                                            $allInstallments = collect();
-                                            $currentInstallmentId = $r->installment_id;
+    @if(auth()->check() && (auth()->user()->is_admin ?? false))
+        <!-- Tampilan untuk ADMIN (bisa edit) -->
+        <div class="d-flex align-items-center justify-content-end gap-2">
+            @php
+                $allInstallments = collect();
+                $currentInstallmentId = $r->installment_id;
 
-                                            if ($r->profile && $r->profile->nama) {
-                                                $allInstallments = \App\Models\CashAdvanceInstallment::join('cash_advances as ca', 'cash_advance_installments.cash_advance_id', '=', 'ca.id')
-                                                    ->whereRaw('TRIM(UPPER(ca.nama)) = ?', [strtoupper(trim($r->profile->nama))])
-                                                    ->select('cash_advance_installments.*')
-                                                    ->orderBy('cash_advance_installments.cicilan_ke')
-                                                    ->get();
-                                            }
-                                        @endphp
+                if ($r->profile && $r->profile->nama) {
+                    $allInstallments = \App\Models\CashAdvanceInstallment::join('cash_advances as ca', 'cash_advance_installments.cash_advance_id', '=', 'ca.id')
+                        ->whereRaw('TRIM(UPPER(ca.nama)) = ?', [strtoupper(trim($r->profile->nama))])
+                        ->select('cash_advance_installments.*')
+                        ->orderBy('cash_advance_installments.cicilan_ke')
+                        ->get();
+                }
+            @endphp
 
-                                        @if($allInstallments->isNotEmpty() || $r->cicilan > 0)
-                                            <select class="form-select form-select-sm inline-edit-cicilan"
-                                                    data-id="{{ $r->id }}"
-                                                    style="width:220px;">
-                                                <option value="">-- Pilih Cicilan --</option>
-                                                @foreach($allInstallments as $inst)
-                                                    @php
-                                                        $nominalMurni = (int) $inst->nominal_angsuran;
-                                                        $ket = $inst->cicilan_ke;
-                                                        $optionValue = $inst->id . '|' . $nominalMurni . '|' . $ket;
+            @if($allInstallments->isNotEmpty() || $r->cicilan > 0)
+                <select class="form-select form-select-sm inline-edit-cicilan"
+                        data-id="{{ $r->id }}"
+                        style="width:220px;">
+                    <option value="">-- Pilih Cicilan --</option>
+                    @foreach($allInstallments as $inst)
+                        @php
+                            $nominalMurni = (int) $inst->nominal_angsuran;
+                            $ket = $inst->cicilan_ke;
+                            $optionValue = $inst->id . '|' . $nominalMurni . '|' . $ket;
 
-                                                        $isSelected = $currentInstallmentId && $currentInstallmentId == $inst->id;
-                                                        $isLunas    = $inst->sudah_dibayar == 1;
+                            $isSelected = $currentInstallmentId && $currentInstallmentId == $inst->id;
+                            $isLunas    = $inst->sudah_dibayar == 1;
 
-                                                        $disabled = ($isLunas && !$isSelected) ? 'disabled' : '';
-                                                        $lunasText = $isLunas ? ' (Lunas)' : '';
-                                                        $optionStyle = ($isLunas && !$isSelected) ? 'color: #6c757d; font-style: italic;' : '';
-                                                    @endphp
-                                                    <option value="{{ $optionValue }}"
-                                                            {{ $isSelected ? 'selected' : '' }}
-                                                            {{ $disabled }}
-                                                            style="{{ $optionStyle }}">
-                                                        Rp {{ number_format($nominalMurni, 0, ',', '.') }} → Ke-{{ $ket }}{{ $lunasText }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        @else
-                                            <span class="text-muted small">-</span>
-                                        @endif
+                            $disabled = ($isLunas && !$isSelected) ? 'disabled' : '';
+                            $lunasText = $isLunas ? ' (Lunas)' : '';
+                            $optionStyle = ($isLunas && !$isSelected) ? 'color: #6c757d; font-style: italic;' : '';
+                        @endphp
+                        <option value="{{ $optionValue }}"
+                                {{ $isSelected ? 'selected' : '' }}
+                                {{ $disabled }}
+                                style="{{ $optionStyle }}">
+                            Rp {{ number_format($nominalMurni, 0, ',', '.') }} → Ke-{{ $ket }}{{ $lunasText }}
+                        </option>
+                    @endforeach
+                </select>
+            @else
+                <span class="text-muted small">-</span>
+            @endif
 
-                                        <i class="bi bi-pencil text-primary edit-icon" title="Pilih cicilan"></i>
-                                        <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
-                                    </div>
-                                </td>
+            <i class="bi bi-pencil text-primary edit-icon" title="Pilih cicilan"></i>
+            <span class="saving text-primary" style="display:none; font-size:0.7rem;">Saving...</span>
+        </div>
+
+    @else
+        <!-- Tampilan untuk USER BIASA (readonly / hanya teks) -->
+        <span class="text-end d-block text-warning">
+            @if($r->installment && $r->installment->nominal_angsuran)
+                Rp {{ number_format($r->installment->nominal_angsuran, 0, ',', '.') }} 
+                → Ke-{{ $r->installment->cicilan_ke ?? '-' }}
+                @if($r->installment->sudah_dibayar == 1)
+                    <span class="text-muted">(Lunas)</span>
+                @endif
+            @elseif($r->cicilan > 0)
+                Rp {{ number_format($r->cicilan, 0, ',', '.') }}
+            @else
+                -
+            @endif
+        </span>
+    @endif
+</td>
 
                                 <td class="position-relative">
                                     <div class="d-flex align-items-center gap-2">
