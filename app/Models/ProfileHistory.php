@@ -14,7 +14,9 @@ class ProfileHistory extends Model
         'status_karyawan',
         'tgl_magang', 
         'tgl_non_aktif', 
-        'tgl_resign', 
+        'tgl_resign',
+        'tgl_keluar',
+        'keterangan_keluar', 
         'tgl_selesai_magang', 
         'tgl_masuk',
         'jumlah_murid_mba', 
@@ -36,6 +38,7 @@ class ProfileHistory extends Model
         'tgl_resign'         => 'date',
         'tgl_selesai_magang' => 'date',
         'tgl_masuk'          => 'date',
+        'tgl_keluar'         => 'date',
         'data_lengkap'       => 'array',
     ];
 

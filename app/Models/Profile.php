@@ -30,7 +30,7 @@ class Profile extends Model
     'tgl_lahir', 'usia', 'no_telp', 'email', 'no_rekening', 'bank', 'atas_nama',
     'mentor_magang', 'periode', 'tgl_selesai_magang', 'ukuran', 'status_lain',
     'keterangan', 'seragam', 'tgl_ambil_seragam', 'kaos_kuning_hitam',
-    'kaos_merah_kuning_biru', 'kemeja_kuning_hitam', 'blazer_merah', 'blazer_biru',
+    'kaos_merah_kuning_biru', 'kemeja_kuning_hitam', 'blazer_merah', 'blazer_biru', 'tgl_keluar', 'keterangan_keluar',
     
     // TAMBAHKAN INI
     'total_murid_bawahan',
@@ -38,6 +38,8 @@ class Profile extends Model
     'tgl_magang',
     'tgl_non_aktif',
     'tgl_resign',
+    'tempat_lahir',
+    
 ];
 
     protected $casts = [
@@ -50,6 +52,7 @@ class Profile extends Model
         'tgl_magang'     => 'date',
         'tgl_non_aktif'  => 'date',
         'tgl_resign'     => 'date',
+        'tgl_keluar'    => 'date',
     ];
 
     // Dispatch event saat created atau updated → agar rekap imbalan otomatis update

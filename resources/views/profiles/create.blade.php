@@ -204,6 +204,10 @@
         <!-- Tanggal Lahir & Usia -->
         <div class="row">
             <div class="col-md-4 mb-3">
+                <label class="form-label">Tempat Lahir</label>
+                <input type="text" name="tempat_lahir" id="tempat_lahir" class="form-control" value="{{ old('tempat_lahir') }}">
+            </div>
+            <div class="col-md-4 mb-3">
                 <label class="form-label">Tanggal Lahir</label>
                 <input type="date" name="tgl_lahir" id="tgl_lahir" class="form-control" value="{{ old('tgl_lahir') }}">
             </div>

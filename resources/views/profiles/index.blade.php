@@ -177,10 +177,12 @@
                                 $tglMutasi      = $formatDate($profile->tgl_mutasi_jabatan);
                                 $tglSelesaiMagang = $formatDate($profile->tgl_selesai_magang);   // ← ini yang hilang
                                 $tglAmbilSeragam  = $formatDate($profile->tgl_ambil_seragam);
+                                $tglKeluar         = $formatDate($profile->tgl_keluar);   // ← TAMBAHKAN INI
 
                                 $masaKerja = $profile->masa_kerja !== null
                                     ? intdiv($profile->masa_kerja, 12) . ' th ' . ($profile->masa_kerja % 12) . ' bl'
                                     : '-';
+                                $tempatLahir = $profile->tempat_lahir ?? '-';   // ← TAMBAHKAN INI
                             @endphp
 
                             <tr data-id="{{ $profile->id }}">
@@ -197,12 +199,15 @@
                                         data-nik="{{ $profile->nik }}"
                                         data-jabatan="{{ $profile->jabatan ?? '-' }}"
                                         data-status="{{ $profile->status_karyawan ?? '-' }}"
+                                        data-tgl-keluar="{{ $tglKeluar }}"
+                                        data-keterangan-keluar="{{ $profile->keterangan_keluar}}"
                                         data-departemen="{{ $profile->departemen ?? '-' }}"
                                         data-unit="{{ $profile->bimba_unit ?? '-' }}"
                                         data-cabang="{{ $profile->no_cabang ?? '-' }}"
                                         data-tgl-masuk="{{ $tglMasuk }}"
                                         data-tgl_selesai_magang="{{ $tglSelesaiMagang }}"
                                         data-masa-kerja="{{ $masaKerja }}"
+                                        data-tempat-lahir="{{ $tempatLahir }}"
                                         data-tgl-lahir="{{ $tglLahir }}"
                                         data-usia="{{ $profile->usia ?? '-' }}"
                                         data-telp="{{ $profile->no_telp ?? '-' }}"
@@ -648,6 +653,21 @@
                             <div id="modal-status" class="fw-semibold mt-1"></div>
                         </div>
                     </div>
+
+                    <div class="col-md-4">
+                        <div class="bg-light rounded-3 p-3 h-100">
+                            <small class="text-muted">Tanggal Keluar</small>
+                            <div id="modal-tgl-keluar" class="fw-semibold mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="bg-light rounded-3 p-3 h-100">
+                            <small class="text-muted">Keterangan Keluar</small>
+                            <div id="modal-keterangan-keluar" class="fw-semibold mt-1"></div>
+                        </div>
+                    </div>
+
                     <div class="col-md-4">
                         <div class="bg-light rounded-3 p-3 h-100">
                             <small class="text-muted">Departemen</small>
@@ -704,9 +724,15 @@
                 <h6 class="fw-bold text-muted mb-3">DATA PRIBADI</h6>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
+                        <small class="text-muted">Tempat Lahir</small>
+                        <div id="modal-tempat-lahir" class="fw-medium"></div>
+                    </div>
+
+                    <div class="col-md-6">
                         <small class="text-muted">Tanggal Lahir</small>
                         <div id="modal-tgl-lahir" class="fw-medium"></div>
                     </div>
+
                     <div class="col-md-6">
                         <small class="text-muted">Usia</small>
                         <div id="modal-usia" class="fw-medium"></div>
@@ -781,6 +807,8 @@
                                     <th>RB</th>
                                     <th>KTR</th>
                                     <th class="text-end">RP</th>
+                                    <th class="text-center">Tgl Keluar</th>           <!-- BARU -->
+                                    <th>Keterangan Keluar</th>                        <!-- BARU -->
                                     <th class="text-center">Diubah Oleh</th>
                                     <th class="text-center">Tanggal Ubah</th>
                                 </tr>
@@ -1038,12 +1066,15 @@ $('#infoModal').on('show.bs.modal', function (event) {
     $('#modal-nik').text(button.data('nik'));
     $('#modal-jabatan').text(button.data('jabatan'));
     $('#modal-status').text(button.data('status'));
+    $('#modal-tgl-keluar').text(button.data('tgl-keluar'));
+    $('#modal-keterangan-keluar').text(button.data('keterangan-keluar'));
     $('#modal-departemen').text(button.data('departemen'));
     $('#modal-unit').text(button.data('unit'));
     $('#modal-cabang').text(button.data('cabang'));
     $('#modal-tgl-masuk').text(button.data('tgl-masuk'));
     $('#modal-tgl_selesai_magang').text(button.data('tgl_selesai_magang'));
     $('#modal-masa-kerja').text(button.data('masa-kerja'));
+    $('#modal-tempat-lahir').text(button.data('tempat-lahir'));
     $('#modal-tgl-lahir').text(button.data('tgl-lahir'));
     $('#modal-usia').text(button.data('usia'));
     $('#modal-telp').text(button.data('telp'));
@@ -1080,42 +1111,64 @@ $(document).on('click', '.card-header', function() {
     $('.detail-toggle').not(`[data-id="${id}"]`).removeClass('fa-chevron-up').addClass('fa-chevron-down');
 });
     // ==================== SCRIPT HISTORI ====================
-    $(document).on('click', '.histori-btn', function () {
-        const id = $(this).data('id');
-        const nama = $(this).data('nama');
+$(document).on('click', '.histori-btn', function () {
+    const id = $(this).data('id');
+    const nama = $(this).data('nama');
 
-        $('#histori-nama').text(nama);
-        $('#historiBody').html('<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Memuat histori...</td></tr>');
+    $('#histori-nama').text(nama);
+    $('#historiBody').html('<tr><td colspan="10" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Memuat histori...</td></tr>');
 
-        fetch(`/profiles/${id}/histori`)
-            .then(response => response.json())
-            .then(data => {
-                let html = '';
-                if (data.length === 0) {
-                    html = `<tr><td colspan="8" class="text-center py-4 text-muted">Belum ada riwayat perubahan.</td></tr>`;
-                } else {
-                    data.forEach(item => {
-                        html += `
-                            <tr>
-                                <td class="text-center fw-bold">${item.periode}</td>
-                                <td><span class="badge ${item.status_karyawan === 'Aktif' ? 'bg-success' : 'bg-warning text-dark'}">${item.status_karyawan ?? '-'}</span></td>
-                                <td class="text-center">${item.jumlah_murid_jadwal ?? 0}</td>
-                                <td class="text-center">${item.rb ?? '-'}</td>
-                                <td class="text-center">${item.ktr ?? item.ktr_tambahan ?? '-'}</td>
-                                <td class="text-end fw-bold text-success">
-                                    ${item.rp ? 'Rp ' + new Intl.NumberFormat('id-ID').format(item.rp) : '-'}
-                                </td>
-                                <td class="text-center">${item.changed_by ?? 'Sistem'}</td>
-                                <td class="text-center small">${item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}</td>
-                            </tr>`;
-                    });
-                }
-                $('#historiBody').html(html);
-            })
-            .catch(() => {
-                $('#historiBody').html('<tr><td colspan="8" class="text-center text-danger py-4">Gagal memuat histori. Silakan coba lagi.</td></tr>');
-            });
-    });
+    fetch(`/profiles/${id}/histori`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            let html = '';
+            if (data.length === 0) {
+                html = `<tr><td colspan="10" class="text-center py-4 text-muted">Belum ada riwayat perubahan.</td></tr>`;
+            } else {
+                data.forEach(item => {
+                    const tglKeluarFormatted = item.tgl_keluar 
+                        ? new Date(item.tgl_keluar).toLocaleDateString('id-ID') 
+                        : '-';
+
+                    html += `
+                        <tr>
+                            <td class="text-center fw-bold">${item.periode ?? '-'}</td>
+                            <td>
+                                <span class="badge ${item.status_karyawan === 'Aktif' ? 'bg-success' : 'bg-danger text-white'}">
+                                    ${item.status_karyawan ?? '-'}
+                                </span>
+                            </td>
+                            <td class="text-center">${item.jumlah_murid_jadwal ?? 0}</td>
+                            <td class="text-center">${item.rb ?? '-'}</td>
+                            <td class="text-center">${item.ktr ?? item.ktr_tambahan ?? '-'}</td>
+                            <td class="text-end fw-bold text-success">
+                                ${item.rp ? 'Rp ' + new Intl.NumberFormat('id-ID').format(item.rp) : '-'}
+                            </td>
+                            <td class="text-center">${tglKeluarFormatted}</td>
+                            <td class="text-wrap" style="max-width: 200px;">${item.keterangan_keluar ?? '-'}</td>
+                            <td class="text-center">${item.changed_by ?? 'Sistem'}</td>
+                            <td class="text-center small">${item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-'}</td>
+                        </tr>`;
+                });
+            }
+            $('#historiBody').html(html);
+        })
+        .catch(err => {
+            console.error(err);
+            $('#historiBody').html(`
+                <tr>
+                    <td colspan="10" class="text-center text-danger py-4">
+                        Gagal memuat histori.<br>
+                        <small class="text-muted">Cek console (F12) atau hubungi admin</small>
+                    </td>
+                </tr>`);
+        });
+});
 </script>
 @endpush
 @endsection

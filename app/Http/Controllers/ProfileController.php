@@ -282,23 +282,47 @@ public function create()
 
     $this->autoActivateMagangInArray($validated);
 
+    // ==================== LOGIC STATUS KARYAWAN ====================
+    if (!empty($validated['tgl_keluar'])) {
+        // Ada tanggal keluar → status jadi Resign / Keluar
+        $validated['status_karyawan'] = 'Resign';
+    } else {
+        // Tanggal keluar dikosongkan → kembalikan ke Aktif
+        $validated['status_karyawan'] = 'Aktif';
+    }
+
     // Hanya hitung jika jabatan Guru dan ada perubahan jumlah murid
     if ($profile->jabatan === 'Guru' || ($validated['jabatan'] ?? null) === 'Guru') {
         $this->calculateGuruCounts($validated);
     }
 
-    // JANGAN panggil assignKtrAndRp() secara paksa
-    // Biarkan nilai manual dari form tetap (ktr, rb, rp)
+    // RB & KTR
     if (isset($validated['rb']) || isset($validated['ktr'])) {
-        // hanya assign jika ada perubahan manual
         $this->assignKtrAndRp($validated);
     }
 
     $validated['rp'] = $validated['rp'] ?? $profile->rp;
 
-    $profile->update($validated);
+    // Update ke database
+        $profile->update($validated);
+        $profile->histories()->updateOrCreate(
+            [
+                'periode' => now()->format('Y-m'),
+            ],
+            [
+                'status_karyawan'      => $profile->status_karyawan,
+                'jumlah_murid_jadwal'  => $profile->jumlah_murid_jadwal,
+                'rb'                   => $profile->rb,
+                'ktr'                  => $profile->ktr,
+                'ktr_tambahan'         => $profile->ktr_tambahan,
+                'rp'                   => $profile->rp,
+                'tgl_keluar'           => $profile->tgl_keluar,
+                'keterangan_keluar'    => $profile->keterangan_keluar,
+                'changed_by'           => Auth::user()->name,
+            ]
+        );
 
-    // REKALKULASI YANG AMAN
+    // Rekalkulasi
     $this->calculateAndSaveMasaKerja($profile);
     $this->calculateAndSaveMasaKerjaJabatan($profile);
 
@@ -528,10 +552,13 @@ public function inlineUpdateKtr(Request $request, Profile $profile)
         'no_cabang'         => 'nullable|string|max:20',         // Opsional, otomatis dari JS
 
         'tgl_masuk'         => 'nullable|date',
+        'tempat_lahir'      => 'nullable|string',
         'tgl_lahir'         => 'nullable|date',
         'tgl_magang'        => 'nullable|date',
         'tgl_non_aktif'     => 'nullable|date',
         'tgl_resign'        => 'nullable|date',
+        'tgl_keluar'        => 'nullable|date',
+        'keterangan_keluar' => 'nullable|string',
 
         // Field guru (hanya divalidasi jika jabatan Guru)
         'jumlah_murid_mba'  => 'nullable|integer|min:0',
@@ -1375,13 +1402,12 @@ public function getNextNikNoUrut(Request $request)
 }
 public function showHistori(Profile $profile)
 {
-    // Hanya admin yang boleh melihat histori
     if (!Auth::user()->is_admin) {
         abort(403);
     }
 
     $histori = $profile->histories()
-        ->orderBy('periode', 'desc')
+        ->orderBy('created_at', 'desc')   // lebih baik pakai created_at
         ->get([
             'periode',
             'status_karyawan',
@@ -1390,6 +1416,8 @@ public function showHistori(Profile $profile)
             'ktr',
             'ktr_tambahan',
             'rp',
+            'tgl_keluar',
+            'keterangan_keluar',
             'changed_by',
             'created_at'
         ]);

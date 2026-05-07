@@ -1291,64 +1291,121 @@ public function suratPindah($id)
 
     $unit = Unit::where('bimba_unit', $murid->bimba_unit)->first();
 
+    // ===============================
+    // PENANDATANGAN (FIX PRIORITAS)
+    // ===============================
     $penandatangan = Profile::where('bimba_unit', $murid->bimba_unit)
         ->whereIn('jabatan', ['Kepala Unit', 'Mitra', 'Kepala', 'Unit Head'])
+        ->whereIn('status_karyawan', ['aktif', 'magang']) // 🔥 buang non-aktif
+        ->orderByRaw("
+            CASE 
+                WHEN status_karyawan = 'aktif' THEN 1
+                WHEN status_karyawan = 'magang' THEN 2
+                ELSE 3
+            END
+        ")
         ->first();
 
+    // fallback jika tidak ada
     if (!$penandatangan) {
-        $penandatangan = (object) ['name_relawan' => 'Kepala Unit', 'jabatan' => 'Kepala Unit', 'no_telp' => ''];
+        $penandatangan = (object) [
+            'name_relawan' => 'Kepala Unit',
+            'nama' => 'Kepala Unit',
+            'jabatan' => 'Kepala Unit',
+            'no_telp' => ''
+        ];
     }
 
-    // === ALAMAT LENGKAP UNIT ===
+    // ===============================
+    // ALAMAT LENGKAP UNIT
+    // ===============================
     $alamatUnit = [];
+
     if ($unit) {
-        if ($unit->alamat_jalan) $alamatUnit[] = $unit->alamat_jalan;
-        if ($unit->alamat_rt_rw) $alamatUnit[] = $unit->alamat_rt_rw;
-        if ($unit->alamat_kel_des) $alamatUnit[] = $unit->alamat_kel_des;
-        if ($unit->alamat_kecamatan) $alamatUnit[] = 'Kec. ' . $unit->alamat_kecamatan;
-        if ($unit->alamat_kota_kab) $alamatUnit[] = $unit->alamat_kota_kab;
-        if ($unit->alamat_provinsi) $alamatUnit[] = $unit->alamat_provinsi;
+        if (!empty($unit->alamat_jalan)) {
+            $alamatUnit[] = $unit->alamat_jalan;
+        }
+        if (!empty($unit->alamat_rt_rw)) {
+            $alamatUnit[] = $unit->alamat_rt_rw;
+        }
+        if (!empty($unit->alamat_kel_des)) {
+            $alamatUnit[] = $unit->alamat_kel_des;
+        }
+        if (!empty($unit->alamat_kecamatan)) {
+            $alamatUnit[] = 'Kec. ' . $unit->alamat_kecamatan;
+        }
+        if (!empty($unit->alamat_kota_kab)) {
+            $alamatUnit[] = $unit->alamat_kota_kab;
+        }
+        if (!empty($unit->alamat_provinsi)) {
+            $alamatUnit[] = $unit->alamat_provinsi;
+        }
     }
+
     $alamat_lengkap = !empty($alamatUnit) ? implode(', ', $alamatUnit) : '-';
 
-    // === BERSIHKAN NAMA KOTA/KABUPATEN (LEBIH KUAT) ===
+    // ===============================
+    // NORMALISASI KOTA/KABUPATEN
+    // ===============================
     $alamat_kota_kab_raw = $unit->alamat_kota_kab ?? '-';
-    
+
     $kota_clean = strtoupper(trim($alamat_kota_kab_raw));
-    
-    // Hilangkan berbagai variasi Kabupaten / Kab. / Kota
+
     $kota_clean = preg_replace('/\b(KABUPATEN|KAB\.?|KOTA)\s*/i', '', $kota_clean);
-    
+
     $alamat_kota_kab = trim($kota_clean);
 
+    // ===============================
+    // DATA UNTUK PDF
+    // ===============================
     $data = [
-        'judul'              => 'SURAT KETERANGAN PINDAH MURID biMBA AIUEO',
-        
-        'nama_penandatangan' => $penandatangan->name_relawan ?? $penandatangan->nama ?? 'Kepala Unit',
-        'jabatan'            => $penandatangan->jabatan ?? 'Kepala Unit',
-        
-        'unit'               => $murid->bimba_unit ?? '',
-        'no_cabang'          => $murid->no_cabang ?? '',
-        'alamat_unit'        => $alamat_lengkap,
-        'alamat_kota_kab'    => $alamat_kota_kab,        // ← Contoh: "BEKASI", "BOGOR"
-        'no_telp'            => $unit->telp ?? $penandatangan->no_telp ?? '',
+        'judul' => 'SURAT KETERANGAN PINDAH MURID biMBA AIUEO',
 
-        'nama_murid'         => $murid->nama,
-        'nim'                => $murid->nim,
-        'alamat_murid'       => $murid->alamat_murid ?? '-',
-        'tgl_masuk'          => $murid->tgl_masuk ? Carbon::parse($murid->tgl_masuk)->format('d/m/Y') : '',
-        'tgl_terakhir'       => $murid->tgl_keluar ? Carbon::parse($murid->tgl_keluar)->format('d/m/Y') : now()->format('d/m/Y'),
-        'level'              => $murid->level ?? '1',
-        'modul_terakhir'     => $murid->modul_terakhir ?? '-',
+        'nama_penandatangan' => $penandatangan->name_relawan 
+            ?? $penandatangan->nama 
+            ?? 'Kepala Unit',
 
-        'tanggal_surat'      => now()->isoFormat('D MMMM Y'),
+        'jabatan' => $penandatangan->jabatan ?? 'Kepala Unit',
+
+        'unit' => $murid->bimba_unit ?? '',
+        'no_cabang' => $murid->no_cabang ?? '',
+        'alamat_unit' => $alamat_lengkap,
+        'alamat_kota_kab' => $alamat_kota_kab,
+
+        // prioritas no telp: unit → penandatangan
+        'no_telp' => $unit->telp 
+            ?? $penandatangan->no_telp 
+            ?? '',
+
+        'nama_murid' => $murid->nama,
+        'nim' => $murid->nim,
+        'alamat_murid' => $murid->alamat_murid ?? '-',
+
+        'tgl_masuk' => $murid->tgl_masuk
+            ? Carbon::parse($murid->tgl_masuk)->format('d/m/Y')
+            : '',
+
+        'tgl_terakhir' => $murid->tgl_keluar
+            ? Carbon::parse($murid->tgl_keluar)->format('d/m/Y')
+            : now()->format('d/m/Y'),
+
+        'level' => $murid->level ?? '1',
+        'modul_terakhir' => $murid->modul_terakhir ?? '-',
+
+        'tanggal_surat' => now()->isoFormat('D MMMM Y'),
     ];
 
+    // ===============================
+    // GENERATE PDF
+    // ===============================
     $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('buku_induk.surat_pindah', $data)
         ->setPaper('a4', 'portrait');
 
-    $filename = "Surat_Pindah_{$murid->nim}_" . str_replace([' ', '/'], '_', $murid->nama) . ".pdf";
+    $filename = "Surat_Pindah_{$murid->nim}_" 
+        . str_replace([' ', '/'], '_', $murid->nama) 
+        . ".pdf";
 
     return $pdf->stream($filename);
 }
+
 }
