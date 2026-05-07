@@ -30,7 +30,7 @@ class BukuIndukController extends Controller
         $currentYear = $now->year;
         $currentMonth = $now->month;
 
-        BukuInduk::where('status', 'baru')
+        BukuInduk::where('status', 'Baru')
         ->whereNotNull('tgl_masuk')
         ->whereDate('tgl_masuk', '<=', now()->subDays(30))
         ->update([
@@ -45,8 +45,8 @@ class BukuIndukController extends Controller
         $query = BukuInduk::query()
             ->orderByRaw("
             CASE 
-                WHEN status = 'aktif' THEN 0
-                WHEN status = 'baru' THEN 1
+                WHEN status = 'Aktif' THEN 0
+                WHEN status = 'Baru' THEN 1
                 ELSE 2
             END
         ")

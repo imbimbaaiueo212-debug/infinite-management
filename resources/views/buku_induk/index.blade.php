@@ -88,9 +88,9 @@
             <label for="statusFilter" class="form-label fw-bold">Status</label>
             <select name="status" id="statusFilter" class="form-select">
                 <option value="">— Semua —</option>
-                <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>Aktif</option>
-                <option value="baru" {{ request('status') == 'baru' ? 'selected' : '' }}>Baru</option>
-                <option value="keluar" {{ request('status') == 'keluar' ? 'selected' : '' }}>Keluar</option>
+                <option value="Aktif" {{ request('status') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
+                <option value="Baru" {{ request('status') == 'Baru' ? 'selected' : '' }}>Baru</option>
+                <option value="Keluar" {{ request('status') == 'Keluar' ? 'selected' : '' }}>Keluar</option>
             </select>
         </div>
 
@@ -132,8 +132,8 @@
                         </thead>
                         @forelse ($bukuInduk as $index => $item)
                             <tr @class([
-                                'table-danger' => $item->tgl_keluar && strtolower($item->status ?? '') === 'keluar',
-                                'table-primary' => strtolower($item->status ?? '') === 'baru', 'card-body',
+                                'table-danger' => $item->tgl_keluar && strtolower($item->status ?? '') === 'Keluar',
+                                'table-primary' => strtolower($item->status ?? '') === 'Baru', 'card-body',
                             ])>
 
                                 <!-- NIM -->
@@ -179,7 +179,7 @@
 
                                 <!-- KETERANGAN -->
                                 <td>
-                                    @if (strtolower($item->status ?? '') === 'keluar')
+                                    @if (strtolower($item->status ?? '') === 'Keluar')
                                         @if ($item->tgl_keluar)
                                             Keluar: {{ \Carbon\Carbon::parse($item->tgl_keluar)->format('d/m/Y') }}
                                             @if ($item->alasan || $item->keterangan)
@@ -191,7 +191,7 @@
                                         @endif
                                     @else
                                         @if ($item->tgl_masuk)
-                                            Masuk: {{ \Carbon\Carbon::parse($item->tgl_masuk)->format('d/m/Y') }}
+                                            Aktif: {{ \Carbon\Carbon::parse($item->tgl_masuk)->format('d/m/Y') }}
                                         @else
                                             belum ada tgl masuk
                                         @endif

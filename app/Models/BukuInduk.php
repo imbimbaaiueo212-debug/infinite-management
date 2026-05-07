@@ -148,9 +148,9 @@ class BukuInduk extends Model
             $tglMasuk = Carbon::parse($bukuInduk->tgl_masuk);
 
             if ($tglMasuk->lte(now()->subDays(30))) {
-                $bukuInduk->status = 'aktif';
+                $bukuInduk->status = 'Aktif';
             } else {
-                $bukuInduk->status = 'baru';
+                $bukuInduk->status = 'Baru';
             }
         }
     });
@@ -259,6 +259,6 @@ public function pengajuanGaransi()
 }
 public function scopeActive($q)
 {
-    return $q->where('status', 'aktif');
+    return $q->where('status', 'Aktif');
 }
 }
