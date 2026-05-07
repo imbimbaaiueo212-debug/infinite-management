@@ -631,11 +631,12 @@ public function inlineUpdateKtr(Request $request, Profile $profile)
 
    private function calculateKepalaUnitData(Profile $profile): void
 {
-    $totalMurid = BukuInduk::whereIn('guru', function ($q) use ($profile) {
-        $q->select('nama')->from('profiles')
+        $totalMurid = BukuInduk::whereIn('guru', function ($q) use ($profile) {
+        $q->select('nama')
+            ->from('profiles')
             ->where('biMBA_unit', $profile->biMBA_unit)
             ->where('jabatan', 'Guru')
-            ->where('status_karyawan', 'Aktif');
+            ->whereIn('status_karyawan', ['Aktif', 'Magang']);
     })
     ->whereIn('status', ['Aktif', 'Baru'])
     ->count();
@@ -1230,9 +1231,12 @@ public function export(Request $request)
 
 public function recalculateMuridDanKtr(Profile $profile): void
 {
-    if (!in_array($profile->jabatan, ['Guru', 'Kepala Unit'])) {
-        return;
-    }
+    if (
+    in_array($profile->jabatan, ['Guru', 'Kepala Unit']) &&
+    $profile->status_karyawan === 'Resign'
+) {
+    return;
+}
 
     if ($profile->jabatan === 'Guru') {
         $totalMurid = BukuInduk::where('guru', $profile->nama)
@@ -1261,7 +1265,7 @@ public function recalculateMuridDanKtr(Profile $profile): void
             $q->select('nama')->from('profiles')
                 ->where('biMBA_unit', $profile->biMBA_unit)
                 ->where('jabatan', 'Guru')
-                ->where('status_karyawan', 'Aktif');
+                ->whereIn('status_karyawan', ['Aktif', 'Magang']);
         })
         ->whereIn('status', ['Aktif', 'Baru'])
         ->count();
