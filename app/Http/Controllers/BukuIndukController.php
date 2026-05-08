@@ -24,117 +24,129 @@ use Illuminate\Support\Facades\Auth; // Tambahan untuk cek user login
 
 class BukuIndukController extends Controller
 {
-    public function index(Request $request)
-    {
-        $now = Carbon::now();
-        $currentYear = $now->year;
-        $currentMonth = $now->month;
 
-        BukuInduk::where('status', 'Baru')
+public function index(Request $request)
+{
+    $now = Carbon::now();
+
+    // ========================================================
+    // AUTO UPDATE STATUS BARU → AKTIF (30 hari)
+    // ========================================================
+    BukuInduk::where('status', 'Baru')
         ->whereNotNull('tgl_masuk')
-        ->whereDate('tgl_masuk', '<=', now()->subDays(30))
-        ->update([
-            'status' => 'Aktif'
-        ]);
+        ->whereDate('tgl_masuk', '<=', $now->subDays(30))
+        ->update(['status' => 'Aktif']);
 
-        // ========================================================
-        // PAGINATION & QUERY
-        // ========================================================
-        $perPage = $request->input('perPage', 50);
+    // ========================================================
+    // PAGINATION
+    // ========================================================
+    $perPage = $request->input('perPage', 50);
 
-        $query = BukuInduk::query()
-            ->orderByRaw("
+    // ========================================================
+    // QUERY UTAMA
+    // ========================================================
+    $query = BukuInduk::query()
+        ->orderByRaw("
             CASE 
                 WHEN status = 'Aktif' THEN 0
                 WHEN status = 'Baru' THEN 1
                 ELSE 2
             END
         ")
-            ->orderBy('nim', 'asc');
+        ->orderBy('nim', 'asc');
 
-        // ========================================================
-        // DROPDOWN OPTIONS — KEMBALI KE BENTUK COLLECTION (AMAN UNTUK BLADE LAMA)
-        // ========================================================
-        $muridOptionsQuery = BukuInduk::orderBy('nim', 'asc');
+    // ========================================================
+    // FILTERS
+    // ========================================================
+    if ($request->filled('unit')) {
+        $query->where('bimba_unit', $request->unit);
+    }
 
-if ($request->filled('unit')) {
-    $muridOptionsQuery->where('bimba_unit', $request->unit);
-}
+    if ($request->filled('murid')) {
+        $query->where('nim', $request->murid);
+    }
 
-$muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
+    if ($request->filled('status')) {
+        $status = ucfirst(strtolower(trim($request->status)));
+        $query->where('status', $status);
+    }
 
-        $unitOptions = DB::table('units')
-            ->whereNotNull('bimba_unit')
-            ->where('bimba_unit', '!=', '')
-            ->distinct()
-            ->orderBy('bimba_unit')
-            ->pluck('bimba_unit');
+    if ($request->filled('search')) {
+        $search = trim($request->search);
+        $query->where(function ($q) use ($search) {
+            $q->where('nim', 'like', "%{$search}%")
+              ->orWhere('nama', 'like', "%{$search}%");
+        });
+    }
 
-        // ========================================================
-        // FILTERS
-        // ========================================================
-        if ($request->filled('murid')) {
-            $query->where('nim', $request->murid);
-        }
+    if ($request->filled('start_date') && $request->filled('end_date')) {
+        $query->whereBetween('tgl_masuk', [$request->start_date, $request->end_date]);
+    }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nim', 'like', "%{$search}%")
-                    ->orWhere('nama', 'like', "%{$search}%");
-            });
-        }
+    // ========================================================
+    // DROPDOWN OPTIONS (Dynamic berdasarkan filter unit)
+    // ========================================================
+    $unitOptions = DB::table('units')
+        ->whereNotNull('bimba_unit')
+        ->where('bimba_unit', '!=', '')
+        ->distinct()
+        ->orderBy('bimba_unit')
+        ->pluck('bimba_unit');
 
-        if ($request->filled('status')) {
-            if ($request->status === 'baru') {
-                $query->where('status', 'baru');
-            } else {
-                $query->where('status', $request->status);
-            }
-        }
+    $muridOptionsQuery = BukuInduk::orderBy('nim', 'asc');
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('tgl_masuk', [$request->start_date, $request->end_date]);
-        }
+    if ($request->filled('unit')) {
+        $muridOptionsQuery->where('bimba_unit', $request->unit);
+    }
 
-        if ($request->filled('unit')) {
-            $query->where('bimba_unit', $request->unit);
-        }
+    $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
 
-        // ========================================================
-        // HITUNG TOTAL
-        // ========================================================
-        $filteredQuery = clone $query;
-        $totalBaru = (clone $filteredQuery)->where('status', 'Baru')->count();
-        $totalAktif = (clone $filteredQuery)->where('status', 'Aktif')->count();
-        $totalKeluar = (clone $filteredQuery)->where('status', 'Keluar')->count();
+    // ========================================================
+    // HITUNG TOTAL (Setelah semua filter diterapkan)
+    // ========================================================
+    $filteredQuery = clone $query;
 
-        // ========================================================
-        // PAGINATE & RETURN
-        // ========================================================
-        $bukuInduk = $query->paginate($perPage)->appends($request->all());
+    $totalBaru   = (clone $filteredQuery)->where('status', 'Baru')->count();
+    $totalAktif  = (clone $filteredQuery)->where('status', 'Aktif')->count();
+    $totalKeluar = (clone $filteredQuery)->where('status', 'Keluar')->count();
 
-        // Tambahkan info jadwal untuk setiap murid
+    // ========================================================
+    // PAGINATE
+    // ========================================================
+    $bukuInduk = $query->paginate($perPage)
+                       ->appends($request->all());   // Penting agar filter tidak hilang saat ganti halaman
+
+    // ========================================================
+    // TAMBAHKAN INFO JADWAL
+    // ========================================================
     foreach ($bukuInduk as $item) {
         $item->info_jadwal = $this->hitungPertemuanTerlewatDiBulanMasuk($item);
     }
+
+    // ========================================================
+    // KATEGORI KELUAR OPTIONS
+    // ========================================================
     $kategoriKeluarOptions = [
         'Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK/PAUD',
         'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah',
         'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain',
         'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'
     ];
-        return view('buku_induk.index', compact(
-            'bukuInduk',
-            'perPage',
-            'totalBaru',
-            'totalAktif',
-            'totalKeluar',
-            'muridOptions',
-            'unitOptions',
-            'kategoriKeluarOptions'
-        ));
-    }
+
+    // ========================================================
+    // RETURN VIEW
+    // ========================================================
+    return view('buku_induk.index', compact(
+        'bukuInduk',
+        'perPage',
+        'totalBaru',
+        'totalAktif',
+        'totalKeluar',
+        'muridOptions',
+        'unitOptions',
+        'kategoriKeluarOptions'
+    ));
+}
 
     public function create()
 {

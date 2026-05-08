@@ -49,72 +49,66 @@
                 </div>
 
                 {{-- FILTER FORM --}}
+                {{-- FILTER FORM --}}
                 <form method="GET" action="{{ route('buku_induk.index') }}" id="filterForm"
-      class="card card-body shadow-sm border-0 rounded-3 mb-4">
+                      class="card card-body shadow-sm border-0 rounded-3 mb-4">
 
-    <div class="row g-3 align-items-end">
+                    <div class="row g-3 align-items-end">
+                        @if (auth()->check() && (auth()->user()->is_admin ?? false))
+                            <div class="col-12 col-md-3">
+                                <label for="unitFilter" class="form-label fw-bold">Unit biMBA</label>
+                                <select name="unit" id="unitFilter" class="form-select">
+                                    <option value="">— Semua Unit —</option>
+                                    @foreach ($unitOptions as $unit)
+                                        <option value="{{ $unit }}" {{ request('unit') == $unit ? 'selected' : '' }}>
+                                            {{ $unit }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
-        <!-- Unit biMBA: paling kiri di md+ -->
-        @if (auth()->check() && (auth()->user()->is_admin ?? false))
-            <div class="col-12 col-md-3 order-md-1">
-                <label for="unitFilter" class="form-label fw-bold">Unit biMBA</label>
-                <select name="unit" id="unitFilter" class="form-select">
-                    <option value="">— Semua Unit —</option>
-                    @foreach ($unitOptions as $unit)
-                        <option value="{{ $unit }}" {{ request('unit') == $unit ? 'selected' : '' }}>
-                            {{ $unit }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        @endif
+                        <div class="col-12 col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '4' : '5' }}">
+                            <label for="muridFilter" class="form-label fw-bold">Filter NIM / Nama</label>
+                            <select name="murid" id="muridFilter" class="form-select">
+                                <option value="">— Ketik untuk cari NIM atau Nama —</option>
+                                @foreach ($muridOptions as $o)
+                                    @php $nimPad = str_pad($o->nim, 3, '0', STR_PAD_LEFT); @endphp
+                                    <option value="{{ $o->nim }}" {{ request('murid') == $o->nim ? 'selected' : '' }}>
+                                        {{ $nimPad }} | {{ $o->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-        <!-- NIM / Nama: kedua (lebar lebih besar karena select banyak opsi) -->
-        <div class="col-12 col-md-{{ auth()->check() && (auth()->user()->is_admin ?? false) ? '4' : '5' }} order-md-2">
-            <label for="muridFilter" class="form-label fw-bold">Filter NIM / Nama</label>
-            <select name="murid" id="muridFilter" class="form-select">
-                <option value="">— Ketik untuk cari NIM atau Nama —</option>
-                @foreach ($muridOptions as $o)
-                    @php $nimPad = str_pad($o->nim, 3, '0', STR_PAD_LEFT); @endphp
-                    <option value="{{ $o->nim }}" {{ request('murid') == $o->nim ? 'selected' : '' }}>
-                        {{ $nimPad }} | {{ $o->nama }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="statusFilter" class="form-label fw-bold">Status</label>
+                            <select name="status" id="statusFilter" class="form-select">
+                                <option value="">— Semua —</option>
+                                <option value="Aktif" {{ request('status') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
+                                <option value="Baru" {{ request('status') == 'Baru' ? 'selected' : '' }}>Baru</option>
+                                <option value="Keluar" {{ request('status') == 'Keluar' ? 'selected' : '' }}>Keluar</option>
+                            </select>
+                        </div>
 
-        <!-- Status: ketiga -->
-        <div class="col-12 col-md-2 order-md-3">
-            <label for="statusFilter" class="form-label fw-bold">Status</label>
-            <select name="status" id="statusFilter" class="form-select">
-                <option value="">— Semua —</option>
-                <option value="Aktif" {{ request('status') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
-                <option value="Baru" {{ request('status') == 'Baru' ? 'selected' : '' }}>Baru</option>
-                <option value="Keluar" {{ request('status') == 'Keluar' ? 'selected' : '' }}>Keluar</option>
-            </select>
-        </div>
+                        <div class="col-12 col-md-2">
+                            <label for="perPageFilter" class="form-label fw-bold">Per halaman</label>
+                            <select name="perPage" id="perPageFilter" class="form-select">
+                                @foreach ([25, 50, 100, 200] as $pp)
+                                    <option value="{{ $pp }}" {{ request('perPage', 50) == $pp ? 'selected' : '' }}>
+                                        {{ $pp }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-        <!-- Per halaman: keempat -->
-        <div class="col-12 col-md-2 order-md-4">
-            <label for="perPageFilter" class="form-label fw-bold">Per halaman</label>
-            <select name="perPage" id="perPageFilter" class="form-select">
-                @foreach ([25, 50, 100, 200] as $pp)
-                    <option value="{{ $pp }}" {{ request('perPage', 50) == $pp ? 'selected' : '' }}>
-                        {{ $pp }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Tombol Reset: paling kanan -->
-        <div class="col-12 col-md-1 order-md-5 d-flex align-items-end">
-            <a href="{{ route('buku_induk.index') }}" class="btn btn-outline-secondary w-100">
-                Reset
-            </a>
-        </div>
-
-    </div>
-</form>
+                        <div class="col-12 col-md-1 d-flex align-items-end">
+                            <a href="{{ route('buku_induk.index') }}" class="btn btn-outline-secondary w-100">
+                                Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
 
                 {{-- TABEL DATA --}}
                 <div class="table-sticky-wrapper table-responsive">
@@ -861,48 +855,34 @@
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#muridFilter').select2({
-                width: '100%',
-                placeholder: "— Ketik untuk cari NIM atau Nama —",
-                allowClear: true
-            });
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-            $('#unitFilter').select2({
-                width: '100%',
-                placeholder: "— Semua Unit —",
-                allowClear: true
-            });
+<script>
+$(document).ready(function () {
+    $('#muridFilter').select2({ width: '100%', placeholder: "— Ketik untuk cari NIM atau Nama —", allowClear: true });
+    $('#unitFilter').select2({ width: '100%', placeholder: "— Semua Unit —", allowClear: true });
 
-            $('#muridFilter, #unitFilter, #statusFilter, #perPageFilter').on('change', function () {
-                if (this.id === 'unitFilter') {
-                    $('#muridFilter').val(null).trigger('change');
-                }
-                $('#filterForm').submit();
-            });
-        });
-$(document).ready(function() {
+    $('#muridFilter, #unitFilter, #statusFilter, #perPageFilter').on('change', function () {
+        if (this.id === 'unitFilter') {
+            $('#muridFilter').val(null).trigger('change');
+        }
+        $('#filterForm').submit();
+    });
+
+    // Modal Status
     @foreach($bukuInduk as $item)
-        const select = $('#statusSelect{{ $item->id }}');
-        
-        select.on('change', function() {
-            // Sembunyikan semua field dulu
-            $('.status-fields').hide();
-
+        $('#statusSelect{{ $item->id }}').on('change', function() {
+            $('.status-fields{{ $item->id }}').hide();
             if (this.value === 'Keluar') {
                 $('#keluarFields{{ $item->id }}').show();
-            } 
-            else if (this.value === 'Cuti') {
+            } else if (this.value === 'Cuti') {
                 $('#cutiFields{{ $item->id }}').show();
-            } 
-            else if (this.value === 'Pindah Golongan') {
+            } else if (this.value === 'Pindah Golongan') {
                 $('#pindahFields{{ $item->id }}').show();
             }
         });
     @endforeach
 });
-    </script>
+</script>
 @endpush
