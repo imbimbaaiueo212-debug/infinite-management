@@ -9,57 +9,57 @@ use App\Models\Unit;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithStartRow;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
-class BukuIndukImport implements ToCollection, WithHeadingRow
+class BukuIndukImport implements ToCollection, WithHeadingRow, WithStartRow
 {
+    /**
+     * Skip 2 baris header (Group + Detail)
+     */
+    public function startRow(): int
+    {
+        return 3;
+    }
+
     public function collection(Collection $rows)
     {
-        foreach ($rows as $row) {
+         
+        Log::info('=== IMPORT DIMULAI ===', ['total_data_rows' => $rows->count()]);
+
+        
+        foreach ($rows as $index => $row) {
 
             /* =====================================================
-             * VALIDASI WAJIB
+             * VALIDASI WAJIB - NIM di kolom C (index 2)
              * ===================================================== */
-            $nim = trim((string) ($row['nim'] ?? ''));
+            $nim = trim((string) ($row[2] ?? $row['2'] ?? ''));
             if ($nim === '') {
                 continue;
             }
 
-            /* =====================================================
-             * NORMALISASI DASAR
-             * ===================================================== */
-            $bimbaUnit = $this->getHeaderValue($row, [
-                'unit','bimba_unit','bimba unit','nama unit','cabang','nama_cabang'
-            ]);
-
-            $kelas = $this->getHeaderValue($row, [
-                'kelas','kelas_belajar','kelas belajar','tingkat','level_kelas'
-            ]);
-
-            $guru = $this->getHeaderValue($row, [
-                'guru','nama guru','wali_kelas','pengajar'
-            ]);
+            Log::info("Memproses NIM: {$nim}");
 
             /* =====================================================
-             * KONVERSI TANGGAL ← TAMBAH tgl_daftar
+             * NORMALISASI (menggunakan numeric key)
              * ===================================================== */
-            $tglLahir    = $this->convertExcelDate($row['tgl_lahir'] ?? null);
-            $tglDaftar   = $this->convertExcelDate($row['tgl_daftar'] ?? null);  // ← NEW
-            $tglMasuk    = $this->convertExcelDate($row['tgl_masuk'] ?? null);
-            $tglKeluar   = $this->convertExcelDate($row['tgl_keluar'] ?? null);
-            $tglMulai    = $this->convertExcelDate($row['tgl_mulai'] ?? null);
-            $tglAkhir    = $this->convertExcelDate($row['tgl_akhir'] ?? null);
-            $tglBayar    = $this->convertExcelDate($row['tgl_bayar'] ?? null);
-            $tglSelesai  = $this->convertExcelDate($row['tgl_selesai'] ?? null);
-            $tglPindah   = $this->convertExcelDate($row['tanggal_pindah'] ?? null);
+            $bimbaUnit = trim($row[0] ?? '');
+            $kelas     = trim($row[15] ?? '');
+            $guru      = trim($row[20] ?? '');
 
-                // jangan di pake kocak
-                // if (!$tglDaftar) {
-                //     $tglDaftar = Carbon::today();
-                // }
+            /* =====================================================
+             * KONVERSI TANGGAL
+             * ===================================================== */
+            $tglLahir    = $this->convertExcelDate($row[5] ?? null);
+            $tglDaftar   = $this->convertExcelDate($row[10] ?? null);
+            $tglMasuk    = $this->convertExcelDate($row[11] ?? null);
+            $tglKeluar   = $this->convertExcelDate($row[22] ?? null);
+            $tglMulai    = $this->convertExcelDate($row[31] ?? null);   // sesuaikan jika perlu
+            $tglAkhir    = $this->convertExcelDate($row[32] ?? null);
+            $tglPindah   = $this->convertExcelDate($row[42] ?? null);
 
             $usia = $tglLahir ? $tglLahir->age : null;
             $lama_bljr = $tglMasuk
@@ -69,25 +69,15 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             /* =====================================================
              * OTOMATISASI STATUS
              * ===================================================== */
-            $statusInput = trim((string) ($row['status'] ?? ''));
-
+            $statusInput = trim((string) ($row[21] ?? ''));
             $status = $statusInput;
 
             if (empty($statusInput)) {
                 $today = Carbon::today();
-
                 if ($tglKeluar) {
-                    if ($tglKeluar->lessThanOrEqualTo($today)) {
-                        $status = 'Keluar';
-                    } else {
-                        $status = 'Aktif';
-                    }
+                    $status = $tglKeluar->lessThanOrEqualTo($today) ? 'Keluar' : 'Aktif';
                 } elseif ($tglMasuk) {
-                    if ($tglMasuk->lessThanOrEqualTo($today)) {
-                        $status = 'Aktif';
-                    } else {
-                        $status = 'Baru';
-                    }
+                    $status = $tglMasuk->lessThanOrEqualTo($today) ? 'Aktif' : 'Baru';
                 } else {
                     $status = 'Aktif';
                 }
@@ -99,24 +89,17 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             $spp = null;
             $spp_source = 'manual';
 
-            if (isset($row['spp']) && is_numeric($row['spp'])) {
-                $spp = (float) $row['spp'];
-                if ($spp > 0 && $spp < 1000) {
-                    $spp *= 1000;
-                }
+            if (isset($row[18]) && is_numeric($row[18])) {
+                $spp = (float) $row[18];
+                if ($spp > 0 && $spp < 1000) $spp *= 1000;
                 $spp_source = 'excel';
             }
 
             if ($spp === null) {
-                $gol = strtoupper(trim($row['gol'] ?? ''));
-                $kd  = strtoupper(trim($row['kd'] ?? ''));
-
+                $gol = strtoupper(trim($row[16] ?? ''));
+                $kd  = strtoupper(trim($row[17] ?? ''));
                 if ($gol && in_array($kd, ['A','B','C','D','E','F'])) {
-                    $harga = HargaSaptataruna::whereRaw(
-                        'UPPER(TRIM(kode)) = ?',
-                        [$gol]
-                    )->first();
-
+                    $harga = HargaSaptataruna::whereRaw('UPPER(TRIM(kode)) = ?', [$gol])->first();
                     if ($harga && !is_null($harga->{strtolower($kd)})) {
                         $spp = (float) $harga->{strtolower($kd)};
                         $spp_source = 'auto_harga_saptataruna';
@@ -127,73 +110,64 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             /* =====================================================
              * SINKRON UNIT ↔ CABANG
              * ===================================================== */
-            [$noCabang, $bimbaUnit] =
-                $this->syncCabangUnitFromDB($row, $bimbaUnit, $nim);
+            [$noCabang, $bimbaUnit] = $this->syncCabangUnitFromDB($row, $bimbaUnit, $nim);
 
             /* =====================================================
-             * DATA FINAL (FULL FIELD) ← TAMBAH tgl_daftar
+             * DATA FINAL
              * ===================================================== */
             $data = [
-                // ===== IDENTITAS =====
-                'nim'        => $nim,
-                'nama'       => trim($row['nama'] ?? ''),
-                'bimba_unit' => $bimbaUnit,
-                'no_cabang'  => $noCabang,
-                'kelas'      => $kelas,
-                'guru'       => $guru,
+                'nim'                  => $nim,
+                'nama'                 => trim($row[3] ?? ''),
+                'bimba_unit'           => $bimbaUnit,
+                'no_cabang'            => $noCabang,
+                'kelas'                => $kelas,
+                'guru'                 => $guru,
 
-                // ===== TANGGAL ← TAMBAH tgl_daftar
-                'tgl_daftar'     => $tglDaftar?->format('Y-m-d'),   // ← ini otomatis null jika $tglDaftar null
-                'tgl_masuk'      => $tglMasuk?->format('Y-m-d'),
-                'tgl_keluar'     => $tglKeluar?->format('Y-m-d'),
-                'tanggal_pindah' => $tglPindah?->format('Y-m-d'),
+                'tgl_daftar'           => $tglDaftar?->format('Y-m-d'),
+                'tgl_masuk'            => $tglMasuk?->format('Y-m-d'),
+                'tgl_keluar'           => $tglKeluar?->format('Y-m-d'),
+                'tanggal_pindah'       => $tglPindah?->format('Y-m-d'),
 
-                // ===== AKADEMIK & KEUANGAN =====
-                'gol'        => strtoupper(trim($row['gol'] ?? '')),
-                'kd'         => strtoupper(trim($row['kd'] ?? '')),
-                'spp'        => $spp,
+                'gol'                  => strtoupper(trim($row[16] ?? '')),
+                'kd'                   => strtoupper(trim($row[17] ?? '')),
+                'spp'                  => $spp,
 
-                // ===== STATUS =====
-                'status'         => $status,
+                'status'               => $status,
 
-                // ===== BIODATA =====
-                'tmpt_lahir' => trim($row['tmpt_lahir'] ?? ''),
-                'tgl_lahir'  => $tglLahir?->format('Y-m-d'),
-                'usia'       => $usia,
-                'lama_bljr'  => $lama_bljr,
+                'tmpt_lahir'           => trim($row[4] ?? ''),
+                'tgl_lahir'            => $tglLahir?->format('Y-m-d'),
+                'usia'                 => $usia,
+                'lama_bljr'            => $lama_bljr,
 
-                // ===== KONTAK =====
-                'orangtua'     => trim($row['orangtua'] ?? ''),
-                'no_telp_hp'   => trim($row['no_telp_hp'] ?? ''),
-                'alamat_murid' => trim($row['alamat_murid'] ?? ''),
+                'orangtua'             => trim($row[7] ?? ''),
+                'no_telp_hp'           => trim($row[8] ?? ''),
+                'alamat_murid'         => trim($row[9] ?? ''),
 
-                // ===== JADWAL & KBM =====
-                'tahap'       => trim($row['tahap'] ?? ''),
-                'level'       => trim($row['level'] ?? ''),
-                'jenis_kbm'   => trim($row['jenis_kbm'] ?? ''),
-                'kode_jadwal' => trim($row['kode_jadwal'] ?? ''),
-                'hari_jam'    => trim($row['hari_jam'] ?? ''),
-                'periode'     => trim($row['periode'] ?? ''),
+                'tahap'              => trim($row[13] ?? ''),
+                'tgl_tahapan'       =>trim($row[14] ?? ''),
+                'level'                => trim($row[26] ?? ''),
+                'tgl_level'            => trim($row[27] ?? ''),
+                'jenis_kbm'            => trim($row[28] ?? ''),
+                'kode_jadwal' => trim($row['jadwal'] ?? ''),
+                'hari_jam'             => trim($row[40] ?? ''),
+                'periode' => $this->normalizePeriode(
+                        $row['masa_aktif_dhuafa_bnf'] ?? ''
+                    ),
+                'tgl_mulai'  => $tglMulai?->format('Y-m-d'),
+                'tgl_akhir'  => $tglAkhir?->format('Y-m-d'),
+                'alert' => trim($row[33] ?? ''),
 
-                // ===== ADMINISTRATIF =====
-                'petugas_trial'       => trim($row['petugas_trial'] ?? ''),
-                'no_cab_merge'        => trim($row['no_cab_merge'] ?? ''),
-                'no_pembayaran_murid' => trim($row['no_pembayaran_murid'] ?? ''),
-                'asal_modul'          => trim($row['asal_modul'] ?? ''),
-                'ke_bimba_intervio'   => trim($row['ke_bimba_intervio'] ?? ''),
+                'petugas_trial'        => trim($row[19] ?? ''),
+                'no_cab_merge'         => trim($row[25] ?? ''),
+                'asal_modul' => trim($row['supply_modul'] ?? ''),
+                'ke_bimba_intervio'    => trim($row[43] ?? ''),
 
-                // ===== STATUS LANJUTAN =====
-                'kategori_keluar' => trim($row['kategori_keluar'] ?? ''),
-                'alasan'          => trim($row['alasan'] ?? ''),
-                'status_pindah'   => trim($row['status_pindah'] ?? ''),
+                'kategori_keluar'      => trim($row[23] ?? ''),
+                'alasan_keluar'        => trim($row[24] ?? ''),
+                'status_pindah'        => trim($row[41] ?? ''),
 
-                // ===== CATATAN =====
-                'note'                => trim($row['note'] ?? ''),
-                'note_garansi'        => trim($row['note_garansi'] ?? ''),
-                'keterangan_optional' => trim($row['keterangan_optional'] ?? ''),
-                'alert'               => trim($row['alert'] ?? ''),
-                'alert2'              => trim($row['alert2'] ?? ''),
-                'keterangan'          => trim($row['keterangan'] ?? ''),
+                'note_garansi'         => trim($row[45] ?? ''),
+                'info'                 => trim($row[29] ?? ''),
             ];
 
             /* =====================================================
@@ -203,80 +177,50 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
 
             if ($bukuInduk) {
                 $bukuInduk->update($data);
-
-                BukuIndukHistory::create([
-                    'buku_induk_id' => $bukuInduk->id,
-                    'action' => 'update_import',
-                    'user'   => Auth::user()?->name ?? 'import_system',
-                    'note'   => "Updated via import | tgl_daftar: {$data['tgl_daftar']} | Status: {$status} | SPP: {$spp_source}",
-                ]);
+                $action = 'update_import';
             } else {
                 $bukuInduk = BukuInduk::create($data);
-
-                BukuIndukHistory::create([
-                    'buku_induk_id' => $bukuInduk->id,
-                    'action' => 'import_create',
-                    'user'   => Auth::user()?->name ?? 'import_system',
-                    'note'   => "Created via import | tgl_daftar: {$data['tgl_daftar']} | Status: {$status} | SPP: {$spp_source}",
-                ]);
+                $action = 'import_create';
             }
+
+            BukuIndukHistory::create([
+                'buku_induk_id' => $bukuInduk->id,
+                'action' => $action,
+                'user'   => Auth::user()?->name ?? 'import_system',
+                'note'   => "Updated via import | SPP: {$spp_source}",
+            ]);
         }
     }
 
-    /* =====================================================
-     * SINKRON UNIT ↔ CABANG (TIDAK BERUBAH)
-     * ===================================================== */
-    private function syncCabangUnitFromDB(Collection $row, ?string $bimbaUnit, string $nim): array
-{
-    $noCabang = $this->getHeaderValue($row, [
-        'no cabang','no_cabang','nocabang','no_cab','cabang_id'
-    ]);
+    // ==================== HELPER METHODS (Tetap Sama) ====================
 
-    $unit = $bimbaUnit;
+    private function syncCabangUnitFromDB($row, ?string $bimbaUnit, string $nim): array
+    {
+        $noCabang = trim($row[1] ?? '');
 
-    // ===============================
-    // PRIORITAS 1: no_cabang (OVERRIDE TOTAL)
-    // ===============================
-    if ($noCabang) {
-        $found = Unit::withoutGlobalScopes()
-            ->where('no_cabang', $noCabang)
-            ->first();
+        $unit = $bimbaUnit;
 
-        if ($found) {
-            $unit = $found->biMBA_unit; // 🔥 paksa ikut cabang
-        } else {
-            Log::warning("IMPORT ERROR | NIM {$nim} | No Cabang tidak ditemukan: {$noCabang}");
+        if ($noCabang) {
+            $found = Unit::withoutGlobalScopes()->where('no_cabang', $noCabang)->first();
+            if ($found) {
+                $unit = $found->biMBA_unit;
+            }
+        } elseif ($unit) {
+            $found = Unit::withoutGlobalScopes()->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])->first();
+            if ($found) $noCabang = $found->no_cabang;
         }
+
+        return [$noCabang, $unit];
     }
 
-    // ===============================
-    // PRIORITAS 2: kalau tidak ada cabang → cari dari unit
-    // ===============================
-    elseif ($unit) {
-        $found = Unit::withoutGlobalScopes()
-            ->whereRaw('UPPER(bimba_unit) = ?', [strtoupper($unit)])
-            ->first();
-
-        if ($found) {
-            $noCabang = $found->no_cabang;
-        } else {
-            Log::warning("IMPORT ERROR | NIM {$nim} | Unit tidak ditemukan: {$unit}");
-        }
-    }
-
-    return [$noCabang, $unit];
-}
-
-    /* =====================================================
-     * HELPER (TIDAK BERUBAH)
-     * ===================================================== */
     private function getHeaderValue(Collection $row, array $possibleKeys): ?string
     {
+        // Backup jika butuh (meski kita pakai numeric key)
         foreach ($possibleKeys as $key) {
             $keyNorm = strtolower(str_replace([' ','_','-'], '', $key));
             foreach ($row as $header => $value) {
                 $headerNorm = strtolower(str_replace([' ','_','-'], '', $header));
-                if ($headerNorm === $keyNorm) {
+                if ($headerNorm === $keyNorm || str_contains($headerNorm, $keyNorm)) {
                     $val = trim((string) $value);
                     return $val !== '' ? $val : null;
                 }
@@ -293,7 +237,6 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
             try {
                 return Carbon::instance(Date::excelToDateTimeObject($value));
             } catch (\Exception $e) {
-                Log::warning("Gagal konversi tanggal Excel: {$value}");
                 return null;
             }
         }
@@ -301,8 +244,33 @@ class BukuIndukImport implements ToCollection, WithHeadingRow
         try {
             return Carbon::parse($value);
         } catch (\Exception $e) {
-            Log::warning("Gagal parse tanggal: {$value}");
             return null;
         }
     }
+    private function normalizePeriode($value): ?string
+{
+    $value = trim((string) $value);
+
+    if ($value === '') {
+        return null;
+    }
+
+    $value = strtolower(str_replace(' ', '', $value));
+
+    $mapping = [
+        'ke-1' => 'Ke-1',
+        'ke1'  => 'Ke-1',
+
+        'ke-2' => 'Ke-2',
+        'ke2'  => 'Ke-2',
+
+        'ke-3' => 'Ke-3',
+        'ke3'  => 'Ke-3',
+
+        'ke-4' => 'Ke-4',
+        'ke4'  => 'Ke-4',
+    ];
+
+    return $mapping[$value] ?? null;
+}
 }

@@ -7,10 +7,12 @@ use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Illuminate\Contracts\Database\Query\Builder;
 
-class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvents
+class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvents, WithColumnFormatting
 {
     protected $filters;
 
@@ -38,19 +40,16 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvent
         return $query->orderBy('nim', 'asc');
     }
 
-    /**
-     * 🔥 HEADER 2 BARIS (SUDAH FIX & SEIMBANG)
-     */
     public function headings(): array
     {
         return [
-            // ===== GROUP =====
+            // Group Header (Baris 1)
             [
-                'BUKU INDUK MURID biMBA AIUEO','','','','','','','','','','',
+                'BUKU INDUK MURID biMBA AIUEO','','','','','','','','','','','','','','','','','','','','','','','','','','','','','',
 
-                'MASA AKTIF (DHUAFA & BNF)','','',
+                'MASA AKTIF (DHUAFA & BNF)','','','',
 
-                'PAKET 72','','','',
+                'PAKET 72','','',
 
                 'SUPPLY MODUL','',
 
@@ -58,16 +57,20 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvent
 
                 'PINDAH','','',
 
-                'LAINNYA','','','','','','','','','','','','',''
+                'GARANSI 372','','',
             ],
 
-            // ===== DETAIL =====
+            // Detail Header (Baris 2)
             [
-                'NIM','TGL DAFTAR','NAMA','UNIT','NO CABANG','KELAS','GOL','KD','SPP','TGL MASUK','STATUS',
+                'BIMBA UNIT', 'NO CABANG', 'NIM', 'NAMA', 'TEMPAT LAHIR', 'TGL LAHIR', 'USIA', 
+                'ORANGTUA', 'NO TELP/HP', 'ALAMAT MURID', 'TGL DAFTAR', 'TGL MASUK', 
+                'LAMA BLJR', 'TAHAPAN', 'TGL TAHAPAN', 'KELAS', 'GOL', 'KD', 'SPP', 
+                'PETUGAS TRIAL', 'GURU', 'STATUS', 'TGL KELUAR', 'KATEGORI KELUAR', 
+                'ALASAN KELUAR', 'NO CAB MERGE', 'LEVEL', 'TGL LEVEL', 'JENIS KBM', 'INFO',
 
-                'PERIODE','TGL MULAI','TGL AKHIR',
+                'PERIODE','TGL MULAI','TGL AKHIR','ALERT',
 
-                'TGL BAYAR','TGL SELESAI','ALERT','ALERT 2',
+                'TGL BAYAR','TGL SELESAI','ALERT 2',
 
                 'ASAL MODUL','KETERANGAN',
 
@@ -75,39 +78,57 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvent
 
                 'STATUS PINDAH','TGL PINDAH','KE INTERVIO',
 
-                'GURU','ORANGTUA','NO HP','ALAMAT','LEVEL','JENIS KBM',
-                'NOTE','NOTE GARANSI','NO VA','NO CAB MERGE'
+                'TGL DIBERIKAN SURAT GARANSI','NOTE GARANSI',
             ]
         ];
     }
 
     /**
-     * 🔥 DATA
+     * 🔥 DATA - Format Tanggal Menjadi Y-m-d saja
      */
     public function map($item): array
     {
         $sppClean = $item->spp ? (int) str_replace(['.', 'Rp', ' '], '', $item->spp) : null;
 
         return [
-            $item->nim,
-            $item->tgl_daftar,
-            $item->nama,
             $item->bimba_unit,
             $item->no_cabang,
+            $item->nim,
+            $item->nama,
+            $item->tmpt_lahir,
+            $this->formatDate($item->tgl_lahir),
+            $item->usia,
+            $item->orangtua,
+            $item->no_telp_hp,
+            $item->alamat_murid,
+            $this->formatDate($item->tgl_daftar),
+            $this->formatDate($item->tgl_masuk),
+            $item->lama_bljr,
+            $item->tahap,
+            $this->formatDate($item->tgl_tahapan),
             $item->kelas,
             $item->gol,
             $item->kd,
             $sppClean,
-            $item->tgl_masuk,
+            $item->petugas_trial,
+            $item->guru,
             $item->status,
+            $this->formatDate($item->tgl_keluar),
+            $item->kategori_keluar,
+            $item->alasan_keluar,
+            $item->no_cab_merge,
+            $item->level,
+            $this->formatDate($item->tgl_level),
+            $item->jenis_kbm,
+            $item->info,
 
             $item->periode,
-            $item->tgl_mulai,
-            $item->tgl_akhir,
-
-            $item->tgl_bayar,
-            $item->tgl_selesai,
+            $this->formatDate($item->tgl_mulai),
+            $this->formatDate($item->tgl_akhir),
             $item->alert,
+
+            $this->formatDate($item->tgl_bayar),
+            $this->formatDate($item->tgl_selesai),
             $item->alert2,
 
             $item->asal_modul,
@@ -117,25 +138,47 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvent
             $item->hari_jam,
 
             $item->status_pindah,
-            $item->tanggal_pindah,
+            $this->formatDate($item->tanggal_pindah),
             $item->ke_bimba_intervio,
 
-            $item->guru,
-            $item->orangtua,
-            $item->no_telp_hp,
-            $item->alamat_murid,
-            $item->level,
-            $item->jenis_kbm,
-            $item->note,
+            $this->formatDate($item->tgl_pengajuan_garansi),
             $item->note_garansi,
-            $item->no_pembayaran_murid,
-            $item->no_cab_merge,
         ];
     }
 
     /**
-     * 🔥 STYLE + MERGE + RAPIIIN
+     * Format Tanggal menjadi Y-m-d (tanpa jam)
      */
+    private function formatDate($date): ?string
+    {
+        if (!$date) return null;
+        if ($date instanceof \Carbon\Carbon) {
+            return $date->format('Y-m-d');
+        }
+        return \Carbon\Carbon::parse($date)->format('Y-m-d');
+    }
+
+    /**
+     * Format Kolom Tanggal sebagai Date di Excel
+     */
+    public function columnFormats(): array
+    {
+        return [
+            'F'  => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL LAHIR
+            'K'  => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL DAFTAR
+            'L'  => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL MASUK
+            'O'  => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL TAHAPAN
+            'W'  => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL KELUAR
+            'AB' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL LEVEL
+            'AG' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL MULAI
+            'AH' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL AKHIR
+            'AJ' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL BAYAR
+            'AK' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL SELESAI
+            'AR' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL PINDAH
+            'AS' => NumberFormat::FORMAT_DATE_YYYYMMDD,     // TGL GARANSI
+        ];
+    }
+
     public function registerEvents(): array
     {
         return [
@@ -144,41 +187,59 @@ class BukuIndukExport implements FromQuery, WithHeadings, WithMapping, WithEvent
                 $sheet = $event->sheet->getDelegate();
 
                 // ===== MERGE HEADER =====
-                $sheet->mergeCells('A1:K1');   // Buku Induk
+                $sheet->mergeCells('A1:AD1');   // Buku Induk
 
-                $sheet->mergeCells('L1:N1');   // Masa Aktif ✅ FIX
+                $sheet->mergeCells('AE1:AH1');   // Masa Aktif ✅ FIX
 
-                $sheet->mergeCells('O1:R1');   // Paket 72
+                $sheet->mergeCells('AI1:AK1');   // Paket 72
 
-                $sheet->mergeCells('S1:T1');   // Supply
+                $sheet->mergeCells('AL1:AM1');   // Supply
 
-                $sheet->mergeCells('U1:V1');   // Jadwal
+                $sheet->mergeCells('AN1:AO1');   // Jadwal
 
-                $sheet->mergeCells('W1:Y1');   // Pindah
+                $sheet->mergeCells('AP1:AR1');   // Pindah
 
-                $sheet->mergeCells('Z1:AJ1');  // Lainnya
+                $sheet->mergeCells('AS1:AT1');   // Garansi
 
                 // ===== STYLE HEADER =====
-                $sheet->getStyle('A1:AJ2')->getFont()->setBold(true)->setSize(11);
+                $sheet->getStyle('A1:AT2')->getFont()->setBold(true)->setSize(11);
 
-                $sheet->getStyle('A1:AJ2')->getAlignment()
+                $sheet->getStyle('A1:AT2')->getAlignment()
                     ->setHorizontal('center')
                     ->setVertical('center');
 
                 // Background header
-                $sheet->getStyle('A1:AJ1')->getFill()
+                $sheet->getStyle('A1:AD1')->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()->setARGB('FFD9EAD3');
+                    $sheet->getStyle('AE1:AH1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('ff7539');
+                    $sheet->getStyle('AI1:AK1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('ff7539');
+                    $sheet->getStyle('AP1:AR1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('ff7539');
+                    $sheet->getStyle('AL1:AM1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFD9EAD3');
+                    $sheet->getStyle('AN1:AO1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFD9EAD3');
+                    $sheet->getStyle('AS1:AT1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('ff7539');
 
                 // Border header
-                $sheet->getStyle('A1:AJ2')->getBorders()->getAllBorders()
+                $sheet->getStyle('A1:AT2')->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
                 // Freeze
                 $sheet->freezePane('A3');
 
                 // Auto width
-                foreach (range('A', 'AJ') as $col) {
+                foreach (range('A', 'AR') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
 
