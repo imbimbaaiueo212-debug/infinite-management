@@ -44,18 +44,23 @@
             vertical-align: middle; 
             border: 1px solid #dee2e6; 
         }
-        .empty-cell { 
-            background-color: #f9fafb !important; 
-            color: #9ca3af; 
-            font-style: italic; 
-        }
         .murid-row {
-            display: block;
-            padding: 3px 4px;
-            border-bottom: 1px solid #e5e7eb;
-            white-space: nowrap;
-        }
-        .murid-row:last-child { border-bottom: none; }
+    display: block;
+    padding: 5px 6px;
+    border-bottom: 1px solid #e5e7eb;
+    min-height: 30px;
+    white-space: nowrap;
+}
+
+.murid-row:last-child { 
+    border-bottom: none; 
+}
+
+.empty-cell {
+    background-color: #f9fafb !important;
+    color: #9ca3af;
+    font-style: italic;
+}
         .murid-no   { font-weight: 600; min-width: 20px; display: inline-block; }
         .murid-name { font-weight: 500; }
         .murid-guru { 
@@ -180,128 +185,129 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @for($jam = $startJamKe; $jam <= $endJamKe; $jam++)
-                                <tr>
-                                    <td class="fw-bold">{{ $rowCounter++ }}</td>
-                                    <td class="fw-bold text-primary">
-                                        {{ str_pad($jamMulai + ($jam - 1), 2, '0', STR_PAD_LEFT) }}:00
-                                    </td>
+    @php 
+        $startJamKe = 1;
+        $endJamKe   = 9;
+        $jamMulai   = 8; 
+    @endphp
 
-                                    @foreach([
-                                        ['hari'=>'Senin', 'shift'=>'srj'],
-                                        ['hari'=>'Rabu',  'shift'=>'srj'],
-                                        ['hari'=>'Jumat', 'shift'=>'srj'],
-                                        ['hari'=>'Selasa','shift'=>'sks'],
-                                        ['hari'=>'Kamis', 'shift'=>'sks'],
-                                        ['hari'=>'Sabtu', 'shift'=>'sks'],
-                                        ['hari'=>'Senin', 'shift'=>'s6'],
-                                        ['hari'=>'Selasa','shift'=>'s6'],
-                                        ['hari'=>'Rabu',  'shift'=>'s6'],
-                                        ['hari'=>'Kamis', 'shift'=>'s6'],
-                                        ['hari'=>'Jumat', 'shift'=>'s6'],
-                                        ['hari'=>'Sabtu', 'shift'=>'s6'],
-                                    ] as $slot)
-                                        @php
-                                            $list = $jadwal[$jam] ?? collect();
-                                            $muridHari = $list->where('hari', $slot['hari']);
-                                            if ($slot['shift'] === 's6') {
-                                                $muridHari = $muridHari->filter(fn($j) => data_get($j->murid, 'jenis_kbm') === '6 hari');
-                                            }
+    @for($jam = $startJamKe; $jam <= $endJamKe; $jam++)
+        <tr>
+            <!-- NO (Baris) -->
+            <td class="fw-bold">{{ $jam }}</td>
+            
+            <!-- JAM -->
+            <td class="fw-bold text-primary">
+                {{ str_pad($jamMulai + ($jam - 1), 2, '0', STR_PAD_LEFT) }}:00
+            </td>
 
-                                            $unitColors = [
-                                                'GRIYA PESONA MADANI' => 'unit-griya',
-                                                'SAPTA TARUNA IV'     => 'unit-sapta',
-                                                'VILLA BEKASI INDAH 2'      => 'unit-villa',
-                                                'PESONA'              => 'unit-pesona',
-                                            ];
-                                        @endphp
+            @foreach([
+                ['hari'=>'Senin', 'shift'=>'srj'],
+                ['hari'=>'Rabu',  'shift'=>'srj'],
+                ['hari'=>'Jumat', 'shift'=>'srj'],
+                ['hari'=>'Selasa','shift'=>'sks'],
+                ['hari'=>'Kamis', 'shift'=>'sks'],
+                ['hari'=>'Sabtu', 'shift'=>'sks'],
+                ['hari'=>'Senin', 'shift'=>'s6'],
+                ['hari'=>'Selasa','shift'=>'s6'],
+                ['hari'=>'Rabu',  'shift'=>'s6'],
+                ['hari'=>'Kamis', 'shift'=>'s6'],
+                ['hari'=>'Jum\'at','shift'=>'s6'],
+                ['hari'=>'Sabtu', 'shift'=>'s6'],
+            ] as $slot)
+                
+                @php
+                    $list = $jadwal[$jam] ?? collect();
+                    $muridHari = $list->where('hari', $slot['hari']);
 
-                                        <!-- NO -->
-                                        <td>
-                                            @for($i = 1; $i <= 4; $i++)
-                                                @php
-                                                    $murid = $muridHari->skip($i-1)->first();
-                                                    $unit = $murid ? trim(strtoupper($murid->murid->bimba_unit ?? '')) : '';
-                                                    $rowClass = $murid ? ($unitColors[$unit] ?? 'unit-default') : '';
-                                                    $debug = $murid ? "Unit: " . ($unit ?: 'KOSONG') : '';
-                                                @endphp
+                    if ($slot['shift'] === 's6') {
+                        $muridHari = $muridHari->filter(fn($j) => 
+                            data_get($j->murid, 'jenis_kbm') === '6 hari'
+                        );
+                    }
 
-                                                <div class="murid-row {{ $rowClass }}">
-                                                    @if($murid)
-                                                        {{ $i }}
-                                                    @else
-                                                        <span class="text-muted">—</span>
-                                                    @endif
-                                                </div>
-                                            @endfor
-                                            <!-- Debug di baris pertama saja -->
-                                            
-                                        </td>
+                    $murids = $muridHari->values();
+                    $maxMurid = $murids->count();
 
-                                        <!-- NIM -->
-                                        <td>
-                                            @for($i = 1; $i <= 4; $i++)
-                                                @php
-                                                    $murid = $muridHari->skip($i-1)->first();
-                                                    $unit = $murid ? trim(strtoupper($murid->murid->bimba_unit ?? '')) : '';
-                                                    $rowClass = $murid ? ($unitColors[$unit] ?? 'unit-default') : '';
-                                                @endphp
+                    // === WARNA SHIFT ===
+                    $cellClass = match($slot['shift']) {
+                        'srj' => 'cell-srj',
+                        'sks' => 'cell-sks',
+                        's6'  => 'cell-s6',
+                        default => '',
+                    };
 
-                                                <div class="murid-row {{ $rowClass }}">
-                                                    @if($murid)
-                                                        {{ $murid->murid->nim ?? '-' }}
-                                                    @else
-                                                        —
-                                                    @endif
-                                                </div>
-                                            @endfor
-                                        </td>
+                    $unitColors = [
+                        'GRIYA PESONA MADANI' => 'unit-griya',
+                        'SAPTA TARUNA IV'     => 'unit-sapta',
+                        'VILLA BEKASI INDAH 2'=> 'unit-villa',
+                        'PESONA'              => 'unit-pesona',
+                    ];
+                @endphp
 
-                                        <!-- Nama Murid + Guru -->
-                                        <td class="text-start">
-                                            @for($i = 1; $i <= 4; $i++)
-                                                @php
-                                                    $murid = $muridHari->skip($i-1)->first();
-                                                    $unit = $murid ? trim(strtoupper($murid->murid->bimba_unit ?? '')) : '';
-                                                    $rowClass = $murid ? ($unitColors[$unit] ?? 'unit-default') : '';
-                                                @endphp
+                <!-- NO Urut Murid -->
+                <td class="{{ $cellClass }}">
+                    @foreach($murids as $item)
+                        @php
+                            $unit = trim(strtoupper($item->murid->bimba_unit ?? ''));
+                            $rowClass = $unitColors[$unit] ?? 'unit-default';
+                        @endphp
+                        <div class="murid-row {{ $rowClass }}">
+                            {{ $loop->iteration }}
+                        </div>
+                    @endforeach
+                    @if($maxMurid == 0)
+                        <div class="murid-row empty-cell">—</div>
+                    @endif
+                </td>
 
-                                                <div class="murid-row {{ $rowClass }}">
-                                                    @if($murid)
-                                                        @php $item = $murid; @endphp
-                                                        <span class="murid-name">{{ $item->murid->nama ?? 'N/A' }}</span>
-                                                        @if($guruNama === 'SEMUA' && $item->guru)
-                                                            <span class="murid-guru">({{ $item->guru }})</span>
-                                                        @endif
-                                                    @else
-                                                        —
-                                                    @endif
-                                                </div>
-                                            @endfor
-                                        </td>
+                <!-- NIM -->
+                <td class="{{ $cellClass }}">
+                    @foreach($murids as $item)
+                        @php 
+                            $unit = trim(strtoupper($item->murid->bimba_unit ?? '')); 
+                        @endphp
+                        <div class="murid-row {{ $unitColors[$unit] ?? 'unit-default' }}">
+                            {{ $item->murid->nim ?? '-' }}
+                        </div>
+                    @endforeach
+                    @if($maxMurid == 0)<div class="murid-row empty-cell">—</div>@endif
+                </td>
 
-                                        <!-- Kode Jadwal -->
-                                        <td>
-                                            @for($i = 1; $i <= 4; $i++)
-                                                @php
-                                                    $murid = $muridHari->skip($i-1)->first();
-                                                    $unit = $murid ? trim(strtoupper($murid->murid->bimba_unit ?? '')) : '';
-                                                    $rowClass = $murid ? ($unitColors[$unit] ?? 'unit-default') : '';
-                                                @endphp
+                <!-- Nama Murid + Guru -->
+                <td class="text-start {{ $cellClass }}">
+                    @foreach($murids as $item)
+                        @php 
+                            $unit = trim(strtoupper($item->murid->bimba_unit ?? ''));
+                            $rowClass = $unitColors[$unit] ?? 'unit-default';
+                        @endphp
+                        <div class="murid-row {{ $rowClass }}">
+                            <span class="murid-name">{{ $item->murid->nama ?? 'N/A' }}</span>
+                            @if($guruNama === 'SEMUA' && !empty($item->guru))
+                                <span class="murid-guru">({{ $item->guru }})</span>
+                            @endif
+                        </div>
+                    @endforeach
+                    @if($maxMurid == 0)<div class="murid-row empty-cell">—</div>@endif
+                </td>
 
-                                                <div class="murid-row {{ $rowClass }}">
-                                                    @if($murid)
-                                                        {{ $murid->murid->kode_jadwal ?? '-' }}
-                                                    @else
-                                                        —
-                                                    @endif
-                                                </div>
-                                            @endfor
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endfor
-                        </tbody>
+                <!-- Kode Jadwal -->
+                <td class="{{ $cellClass }}">
+                    @foreach($murids as $item)
+                        @php 
+                            $unit = trim(strtoupper($item->murid->bimba_unit ?? '')); 
+                        @endphp
+                        <div class="murid-row {{ $unitColors[$unit] ?? 'unit-default' }}">
+                            {{ $item->murid->kode_jadwal ?? '-' }}
+                        </div>
+                    @endforeach
+                    @if($maxMurid == 0)<div class="murid-row empty-cell">—</div>@endif
+                </td>
+
+            @endforeach
+        </tr>
+    @endfor
+</tbody>
                     </table>
                 </div>
 
