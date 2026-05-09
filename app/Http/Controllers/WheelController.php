@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\WheelWinner;
 use App\Models\Student;
 use App\Models\VoucherLama;
-use App\Models\BukuInduk;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -201,124 +200,77 @@ class WheelController extends Controller
         return response()->json(['data' => array_values($available)]);
     }
 
-            /**
-     * Lookup Wheel - Super Kuat (bisa cari nama murid & humas)
-     */
-        /**
-     * Lookup Wheel - VERSI PALING KUAT
+    /**
+     * Lookup data referrer + info voucher terakhir
      */
     public function lookup(Request $request)
     {
         $row = $request->query('row_hash');
-        $ref  = trim((string) $request->query('referrer'));
+        $ref  = $request->query('referrer');
 
-        Log::info('wheels.lookup called', ['row_hash' => $row, 'referrer' => $ref]);
+        Log::info('wheels.lookup called', ['row_hash' => $row, 'referrer' => $ref, 'ip' => $request->ip()]);
 
-        if (empty($ref) && empty($row)) {
-            return response()->json(['error' => 'Parameter kosong'], 422);
-        }
-
+        $all = $this->fetchAvailableFromStudents() ?? [];
         $normalize = fn($s) => mb_strtolower(trim((string)($s ?? '')));
-        $needle = $normalize($ref);
 
         $found = null;
-
-        // 1. Row Hash dulu
         if ($row) {
-            $all = $this->fetchAvailableFromStudents() ?? [];
-            $found = collect($all)->first(fn($x) => ($x['row_hash'] ?? '') === $row);
-        }
-
-        // 2. Pencarian Nama Murid / Humas (Sangat Longgar)
-        if (!$found && $ref !== '') {
-            // A. Dari fetchAvailable (humas + brought_name)
-            $all = $this->fetchAvailableFromStudents() ?? [];
-            $found = collect($all)->first(fn($x) => 
-                str_contains($normalize($x['referrer_name'] ?? ''), $needle) ||
-                str_contains($normalize($x['brought_name'] ?? ''), $needle) ||
-                $normalize($x['referrer_name'] ?? '') === $needle ||
-                $normalize($x['brought_name'] ?? '') === $needle
-            );
-
-            // B. Langsung cari di Student
-            if (!$found) {
-                $student = Student::where('nama', 'LIKE', "%{$ref}%")
-                    ->orWhereRaw('UPPER(nama) LIKE ?', ["%{$needle}%"])
-                    ->orWhereRaw('REPLACE(UPPER(nama), " ", "") LIKE ?', [str_replace(' ', '', $needle)])
-                    ->orWhereRaw('SOUNDEX(nama) = SOUNDEX(?)', [$ref])
-                    ->first();
-
-                if ($student) {
-                    $found = [
-                        'student_id'    => $student->id,
-                        'referrer_name' => $student->informasi_humas_nama ?? $student->nama,
-                        'brought_name'  => $student->nama,
-                        'name'          => $student->nama,
-                        'row_hash'      => md5('stu:' . $student->id),
-                        'is_new_student'=> true,
-                    ];
-                }
-            }
-
-            // C. Langsung cari di Buku Induk (paling krusial)
-            if (!$found) {
-                $bukuInduk = BukuInduk::where('nama', 'LIKE', "%{$ref}%")
-                    ->orWhereRaw('UPPER(nama) LIKE ?', ["%{$needle}%"])
-                    ->orWhereRaw('REPLACE(UPPER(nama), " ", "") LIKE ?', [str_replace(' ', '', $needle)])
-                    ->orWhereRaw('SOUNDEX(nama) = SOUNDEX(?)', [$ref])
-                    ->first();
-
-                if ($bukuInduk) {
-                    $found = [
-                        'student_id'    => null,
-                        'referrer_name' => $bukuInduk->nama,
-                        'brought_name'  => $bukuInduk->nama,
-                        'name'          => $bukuInduk->nama,
-                        'row_hash'      => md5('bi:' . ($bukuInduk->nim ?? 'unknown')),
-                        'is_new_student'=> true,
-                        'nim'           => $bukuInduk->nim,
-                    ];
-                }
+            $found = collect($all)->first(fn($x) => (($x['row_hash'] ?? '') === $row));
+        } elseif ($ref) {
+            $needle = $normalize($ref);
+            $found = collect($all)->first(fn($x) => $normalize($x['referrer_name'] ?? '') === $needle);
+            if (! $found) {
+                $found = collect($all)->first(fn($x) => mb_stripos($normalize($x['referrer_name'] ?? ''), $needle) !== false);
             }
         }
 
-        if (!$found) {
+        if (! $found) {
             Log::warning('wheels.lookup not found', ['row_hash' => $row, 'referrer' => $ref]);
-            return response()->json([
-                'error' => 'Tidak ditemukan',
-                'message' => "Data tidak ditemukan untuk <strong>" . htmlspecialchars($ref) . "</strong><br><small>Coba periksa ejaan atau gunakan nama lengkap.</small>"
-            ], 404);
+            return response()->json(['error' => 'Tidak ditemukan'], 404);
         }
 
-        // Ambil data lengkap
         $studentData = null;
         if (!empty($found['student_id'])) {
             $student = Student::find($found['student_id']);
             if ($student) {
                 $studentData = [
                     'student_id' => $student->id,
-                    'nim'        => $student->nim,
-                    'nama'       => $student->nama,
-                    'orangtua'   => $student->orangtua,
-                    'telp_hp'    => $student->no_telp ?? $student->hp_ayah ?? $student->hp_ibu,
-                    'bimba_unit' => $student->bimba_unit,
-                ];
-            }
-        } elseif (!empty($found['nim'])) {
-            $bi = BukuInduk::where('nim', $found['nim'])->first();
-            if ($bi) {
-                $studentData = [
-                    'nim'        => $bi->nim,
-                    'nama'       => $bi->nama,
-                    'orangtua'   => $bi->orangtua,
-                    'telp_hp'    => $bi->no_telp_hp ?? $bi->no_telp,
-                    'bimba_unit' => $bi->bimba_unit,
+                    'nim'        => $student->nim ?? null,
+                    'nama'       => $student->nama ?? ($student->name ?? null),
+                    'orangtua'   => $student->orangtua ?? ($student->parent_name ?? null),
+                    'telp_hp'    => $student->telp_hp ?? ($student->no_telp ?? $student->no_telp_hp ?? null),
                 ];
             }
         }
 
+        $lastVoucherAmount = null;
+        if (!empty($found['row_hash'])) {
+            $last = WheelWinner::where('row_hash', $found['row_hash'])->latest('won_at')->first();
+            if ($last) {
+                $lastVoucherAmount = $last->voucher_amount ?? $this->parseRpToInt($last->voucher ?? null);
+            }
+        }
+
+        if ($lastVoucherAmount === null && !empty($found['referrer_name'])) {
+            $needle = '%' . $normalize($found['referrer_name']) . '%';
+            $last = WheelWinner::whereRaw('LOWER(name) LIKE ?', [$needle])->latest('won_at')->first();
+            if ($last) {
+                $lastVoucherAmount = $last->voucher_amount ?? $this->parseRpToInt($last->voucher ?? null);
+            }
+        }
+
+        $voucher_count = null;
+        $suggested_voucher_numbers = null;
+        if (!empty($lastVoucherAmount) && is_numeric($lastVoucherAmount) && $lastVoucherAmount > 0) {
+            $voucher_count = max(1, (int) ceil((float) $lastVoucherAmount / 50000));
+            $suggested_voucher_numbers = $this->generateVoucherNumbers($voucher_count, 'WHEEL');
+        }
+
         $response = array_merge($found, [
             'student' => $studentData,
+            'last_voucher_amount' => $lastVoucherAmount,
+            'voucher_count' => $voucher_count,
+            'suggested_voucher_numbers' => $suggested_voucher_numbers,
         ]);
 
         return response()->json($response);
