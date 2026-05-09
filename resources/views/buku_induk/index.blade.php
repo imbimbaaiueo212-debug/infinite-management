@@ -1063,5 +1063,23 @@ $(document).ready(function () {
     @endforeach
 
 });
+$(document).ready(function () {
+
+    // =========================
+    // SELECT2 FILTER
+    // =========================
+    $('#unitFilter, #muridFilter').select2({
+        width: '100%',
+        allowClear: true
+    });
+
+    // =========================
+    // AUTO SUBMIT FILTER
+    // =========================
+    $('#unitFilter, #muridFilter, #statusFilter, #perPageFilter').on('change', function () {
+        $('#filterForm').submit();
+    });
+
+});
 </script>
 @endpush
