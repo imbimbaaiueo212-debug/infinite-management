@@ -19,75 +19,74 @@ use App\Models\Unit;
 
 class StudentController extends Controller
 {
-    /**
+           /**
      * Pemetaan header Google Form -> kolom tabel students
+     * Support header yang menempel / tidak rapi
      */
     protected array $FORM_HEADER_MAP = [
         'Timestamp' => 'form_timestamp',
         'Email Address' => 'email',
         'Sumber Pendaftaran' => 'sumber_pendaftaran',
-        'Nama Lengkap Murid' => 'nama',
+
+        'Nama Lengkap Peserta Anak biMBA' => 'nama',
+        'Nama Lengkap Peserta Anak biMB' => 'nama',
+        'Nama' => 'nama',
+
+        'Tanggal lahir' => 'tgl_lahir',
         'Tanggal Lahir' => 'tgl_lahir',
-        'Alamat' => 'alamat',
+        'Alamat Lengkap' => 'alamat',
         'Tempat Lahir' => 'tempat_lahir',
+        'Column 7' => 'tempat_lahir',
+
         'Jenis Kelamin' => 'jenis_kelamin',
         'Agama' => 'agama_murid',
+
         'Kode Pos' => 'kode_pos',
-        'No Rumah' => 'no_rumah',
-        'Rt.' => 'rt',
-        'Rw.' => 'rw',
+        'Nomor Rumah' => 'no_rumah',
+        'RT.' => 'rt',
+        'RW.' => 'rw',
         'Kelurahan' => 'kelurahan',
         'Kecamatan' => 'kecamatan',
         'Kodya / Kab' => 'kodya_kab',
         'Provinsi' => 'provinsi',
+
         'Nama Ayah' => 'nama_ayah',
-        'Agama (Ayah)' => 'agama_ayah',
-        'Pekerjaan (Ayah)' => 'pekerjaan_ayah',
-        'Alamat Kantor (Ayah)' => 'alamat_kantor_ayah',
-        'No. Telepon Kantor (Ayah)' => 'telepon_kantor_ayah',
-        'No. HP/WA (Ayah)' => 'hp_ayah',
+        'Agama Ayah' => 'agama_ayah',
+        'Pekerjaan Ayah' => 'pekerjaan_ayah',
+        'Alamat Kantor Ayah' => 'alamat_kantor_ayah',
+        'No Telp. Kantor Ayah' => 'telepon_kantor_ayah',
+        'No. HP/WA Ayah' => 'hp_ayah',
+
         'Nama Ibu' => 'nama_ibu',
-        'Agama (Ibu)' => 'agama_ibu',
-        'Pekerjaan (Ibu)' => 'pekerjaan_ibu',
-        'Alamat Kantor (Ibu)' => 'alamat_kantor_ibu',
-        'No. Telepon Kantor (Ibu)' => 'telepon_kantor_ibu',
-        'No. HP/WA (Ibu)' => 'hp_ibu',
+        'Agama Ibu' => 'agama_ibu',
+        'Pekerjaan Ibu' => 'pekerjaan_ibu',
+        'Alamat Kantor Ibu' => 'alamat_kantor_ibu',
+        'No. Telepon Kantor Ibu' => 'telepon_kantor_ibu',
+        'No. HP/WA Ibu' => 'hp_ibu',
+
+        'Tanggal Daftar' => 'tanggal_masuk',
         'Tanggal Masuk Sekolah' => 'tanggal_masuk',
-        'Biaya Pendaftaran' => 'biaya_pendaftaran',
-        'SPP bulanan' => 'spp_bulanan',
         'Informasi biMBA-AIUEO didapat dari' => 'informasi_bimba',
         'Hari' => 'hari',
         'Jam' => 'jam',
 
-        // === TAMBAHAN BARU: FOTO KK (semua kemungkinan header dari Google Form) ===
-        'Upload Foto KK'                  => 'foto_kk',
-        'Upload KK'                         => 'foto_kk',
-        'Kartu Keluarga'                  => 'foto_kk',
-        'Foto Kartu Keluarga'             => 'foto_kk',
-        'Upload Kartu Keluarga'           => 'foto_kk',
-        'KK'                              => 'foto_kk',
-        'File KK'                         => 'foto_kk',
-        'Upload File KK'                  => 'foto_kk',
-        'Dokumen KK'                      => 'foto_kk',
-        'Link Foto KK'                    => 'foto_kk',
-        'Link Kartu Keluarga'             => 'foto_kk',
-
-        // === FOTO MUTASI ===
-        'Upload Foto Mutasi'        => 'foto_mutasi',
-        'Foto Mutasi'               => 'foto_mutasi',
-        'Upload Mutasi'             => 'foto_mutasi',
-        'File Mutasi'               => 'foto_mutasi',
-        'Dokumen Mutasi'            => 'foto_mutasi',
-        'Link Foto Mutasi'          => 'foto_mutasi',
-        'Link Surat Mutasi'         => 'foto_mutasi',
-        'Surat Mutasi'              => 'foto_mutasi',
-
-        // TAMBAHAN UNTUK CABANG & UNIT
-        'Cabang' => 'no_cabang',
-        'No Cabang' => 'no_cabang',
+        'biMBA Unit' => 'bimba_unit',
         'Unit' => 'bimba_unit',
-        'Nama Unit' => 'bimba_unit',
-        'Unit biMBA' => 'bimba_unit',
+
+        'Upload KK (Kartu Keluarga)' => 'foto_kk',
+        'Upload KK' => 'foto_kk',
+        'Kartu Keluarga' => 'foto_kk',
+
+        'Upload Surat Mutasi' => 'foto_mutasi',
+        'Surat Mutasi' => 'foto_mutasi',
+
+        'Nama' => 'nama_pemberi_tahu',
+        
+
+        // Placeholder
+        'Column 39' => null,
+        'Column 38' => null,
+        'Masukan Column' => null,
     ];
 
     // -------------------------------------------------------------------------
@@ -1253,4 +1252,38 @@ public function reactivate(Student $student)
             ->with('success', "Murid {$student->nama} ({$student->nim}) berhasil diaktifkan kembali.");
     });
 }
+    /**
+     * Normalisasi header Google Form yang sering menempel
+     */
+    protected function normalizeFormHeader(string $header): string
+    {
+        $header = trim($header);
+
+        // Hapus emoji, karakter aneh, dan multiple spaces
+        $header = preg_replace('/[^\p{L}\p{N}\s\/\.\-\(\)\:]/u', ' ', $header);
+        $header = preg_replace('/\s+/', ' ', $header);
+        $header = trim($header);
+
+        // Beberapa perbaikan khusus untuk header yang sering menempel
+        $replacements = [
+            'Email AddressSumber'          => 'Email Address Sumber',
+            'biMBATanggal'                 => 'biMBA Tanggal',
+            'Kab Provinsi'                 => 'Kab Provinsi',
+            'Ayah Agama'                   => 'Ayah Agama',
+            'IbuAgama'                     => 'Ibu Agama',
+            'IbuTanggal'                   => 'Ibu Tanggal',
+            'Daftar Informasi'             => 'Daftar Informasi',
+            'dari:Hari'                    => 'dari: Hari',
+            'biMBA: biMBA Unit'            => 'biMBA Unit',
+            'Upload Surat MutasiMOHON'     => 'Upload Surat Mutasi',
+        ];
+
+        foreach ($replacements as $bad => $good) {
+            if (str_contains($header, $bad)) {
+                $header = str_replace($bad, $good, $header);
+            }
+        }
+
+        return $header;
+    }
 }

@@ -301,7 +301,7 @@
    data-bs-target="#collapseTerimaSpp"
    aria-expanded="{{ $isTerimaSppActive ? 'true' : 'false' }}"
    aria-controls="collapseTerimaSpp">
-    <i class="fas fa-receipt me-2"></i> Terima SPP | Atribut
+    <i class="fas fa-receipt me-2"></i> Data Penerimaan
     <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
 </a>
 
@@ -309,7 +309,7 @@
     <nav class="sb-sidenav-menu-nested nav">
         <a class="nav-link {{ request()->routeIs('penerimaan.index') ? 'active' : '' }}"
            href="{{ route('penerimaan.index') }}">
-            Data Penerimaan
+            Entry SPP | Atribut
         </a>
 
         <!-- FIX UTAMA: hapus .* di akhir untuk match route 'penerimaan.spp' -->

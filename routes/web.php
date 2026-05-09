@@ -76,6 +76,7 @@ use App\Http\Controllers\{
     CashAdvanceInstallmentController,
     BukuIndukStatistikController,
     AdminRekapPengeluaranController,
+    CutiMuridController,
     
 
 
@@ -195,6 +196,9 @@ Route::post('humas/import', [\App\Http\Controllers\HumaController::class, 'impor
 Route::post('humas/import/single', [\App\Http\Controllers\HumaController::class, 'importSingle'])->name('humas.import.single');
 Route::get('/export', [HumaController::class, 'export'])->name('huma.export');
 Route::post('humas/import', [HumaController::class, 'import'])->name('humas.import');
+
+Route::get('/cuti-murid', [CutiMuridController::class, 'index'])
+    ->name('cuti.index');
 // =========================================
 // USERS
 // =========================================

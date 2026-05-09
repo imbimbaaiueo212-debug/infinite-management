@@ -363,7 +363,7 @@ $sertifikatList = HargaSaptataruna::where('nama', 'LIKE', '%SERTIFIKAT%')
     })
     ->values();
 
-    // === AMBIL DATA TAS ===
+    // === AMBIL DATA STP ===
 $stpbList = HargaSaptataruna::where('nama', 'LIKE', '%STPB%')
     ->orWhere('kode', 'LIKE', '%STPB%')
     ->orderBy('nama')

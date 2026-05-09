@@ -228,84 +228,56 @@ class ImportStudentsFromForms extends Command
             'email address' => 'email',
             'sumber pendaftaran' => 'sumber_pendaftaran',
 
-            'nama lengkap murid' => 'nama',
+            'nama lengkap peserta anak bimba' => 'nama',
+            'nama lengkap peserta anak bimb' => 'nama',
+            'nama' => 'nama',
+
             'tanggal lahir' => 'tgl_lahir',
-            'alamat' => 'alamat',
             'tempat lahir' => 'tempat_lahir',
+            'alamat lengkap' => 'alamat',
+
             'jenis kelamin' => 'jenis_kelamin',
             'agama' => 'agama_murid',
 
             'kode pos' => 'kode_pos',
-            'no rumah' => 'no_rumah',
+            'nomor rumah' => 'no_rumah',
             'rt' => 'rt',
             'rw' => 'rw',
             'kelurahan' => 'kelurahan',
             'kecamatan' => 'kecamatan',
-            'kodya kab' => 'kodya_kab',
             'kodya / kab' => 'kodya_kab',
+            'kodya kab' => 'kodya_kab',
             'provinsi' => 'provinsi',
 
-            'tanggal masuk sekolah' => 'tanggal_masuk',
+            'nama ayah' => 'nama_ayah',
+            'agama ayah' => 'agama_ayah',
+            'pekerjaan ayah' => 'pekerjaan_ayah',
+            'alamat kantor ayah' => 'alamat_kantor_ayah',
+            'no telp kantor ayah' => 'telepon_kantor_ayah',
+            'no hp wa ayah' => 'hp_ayah',
+
+            'nama ibu' => 'nama_ibu',
+            'agama ibu' => 'agama_ibu',
+            'pekerjaan ibu' => 'pekerjaan_ibu',
+            'alamat kantor ibu' => 'alamat_kantor_ibu',
+            'no telepon kantor ibu' => 'telepon_kantor_ibu',
+            'no hp wa ibu' => 'hp_ibu',
+
             'tanggal daftar' => 'tanggal_masuk',
-            'tgl masuk' => 'tanggal_masuk',
-
-            'biaya pendaftaran' => 'biaya_pendaftaran',
-            'uang pendaftaran' => 'biaya_pendaftaran',
-            'biaya pendaftaran siswa' => 'biaya_pendaftaran',
-
-            'spp bulanan' => 'spp_bulanan',
-            'spp' => 'spp_bulanan',
+            'tanggal masuk sekolah' => 'tanggal_masuk',
 
             'informasi bimba aiueo didapat dari' => 'informasi_bimba',
-            'informasi bimba' => 'informasi_bimba',
-            'sumber informasi bimba' => 'informasi_bimba',
-            'informasi bimba didapat dari' => 'informasi_bimba',
-
-            'sebutkan nama murid yang memberi tahu tentang bimba' => 'informasi_humas_nama',
-            'sebutkan nama murid yang memberi tahu tentang bimba:' => 'informasi_humas_nama',
-
             'hari' => 'hari',
             'jam' => 'jam',
-            'kelas' => 'kelas',
-            'nomor telepon' => 'no_telp',
-            'nomor telepon kontak' => 'no_telp',
-            'guru wali' => 'guru_wali',
 
-            // Foto KK
-            'upload foto kk' => 'foto_kk',
+            'bimba unit' => 'bimba_unit',
+            'unit' => 'bimba_unit',
+
             'upload kk' => 'foto_kk',
             'kartu keluarga' => 'foto_kk',
-            'foto kartu keluarga' => 'foto_kk',
-            'upload kartu keluarga' => 'foto_kk',
-            'kk' => 'foto_kk',
-            'file kk' => 'foto_kk',
-            'upload file kk' => 'foto_kk',
-            'dokumen kk' => 'foto_kk',
-            'link foto kk' => 'foto_kk',
-
-            // Foto Mutasi
             'upload surat mutasi' => 'foto_mutasi',
-            'upload mutasi' => 'foto_mutasi',
-            'mutasi' => 'foto_mutasi',
-            'foto mutasi' => 'foto_mutasi',
-            'upload kartu mutasi' => 'foto_mutasi',
-            'kartu mutasi' => 'foto_mutasi',
-            'file mutasi' => 'foto_mutasi',
-            'upload file mutasi' => 'foto_mutasi',
-            'dokumen mutasi' => 'foto_mutasi',
 
-            // mapping untuk biMBA unit
-            'bimba unit' => 'bimba_unit',
-            'bimba-aiueo unit' => 'bimba_unit',
-            'bimba-aiueo' => 'bimba_unit',
-            'bi mba unit' => 'bimba_unit',
-            'bi mba-aiueo' => 'bimba_unit',
-            'bi mba' => 'bimba_unit',
-            'unit bimba' => 'bimba_unit',
-            'unit bimba aiueo' => 'bimba_unit',
-
-            // noise kolom dummy
-            'column 7' => null,
+            'nama' => 'informasi_humas_nama',
         ];
 
         $parseDate = fn($v) => $this->tryParseDate((string) $v)?->format('Y-m-d');

@@ -308,7 +308,8 @@
                                         @endpush
 
                                         <button type="button" class="btn btn-sm btn-outline-secondary ms-2 btn-open-wheel"
-                                            data-row-hash="{{ $rowHash }}" data-name="{{ $refName }}">
+                                            data-row-hash="{{ $rowHash }}" 
+                                            data-name="{{ $refName ?: $student->nama }}">
                                             Wheel (Admin)
                                         </button>
                                     </div>

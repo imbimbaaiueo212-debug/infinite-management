@@ -27,6 +27,7 @@ class PindahGolongan extends Model
         'tanggal_pindah_golongan',
         'keterangan',
         'alasan_pindah',
+        'source',           // ← TAMBAHKAN INI
     ];
 
     public function bukuInduk()

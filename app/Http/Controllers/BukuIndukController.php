@@ -9,6 +9,9 @@ use App\Models\HargaSaptataruna;
 use App\Models\Profile;
 use App\Models\LevelHistory;
 use App\Models\Paket72History;
+use Illuminate\Support\Facades\Schema;
+use App\Models\PindahGolongan;
+use App\Models\CutiMurid;
 use App\Models\GaransiBCA;
 use App\Models\Unit;
 use App\Models\PengajuanGaransi;
@@ -34,8 +37,33 @@ public function index(Request $request)
     // ========================================================
     BukuInduk::where('status', 'Baru')
         ->whereNotNull('tgl_masuk')
-        ->whereDate('tgl_masuk', '<=', $now->subDays(30))
-        ->update(['status' => 'Aktif']);
+        ->whereDate('tgl_masuk', '<=', $now->copy()->subDays(30))
+        ->update([
+            'status' => 'Aktif'
+        ]);
+
+    // ========================================================
+// AUTO UPDATE STATUS CUTI → AKTIF
+// ========================================================
+$cutiSelesai = \App\Models\CutiMurid::where('status', 'aktif')
+    ->whereNotNull('tanggal_selesai')
+    ->whereDate('tanggal_selesai', '<=', now())
+    ->get();
+
+foreach ($cutiSelesai as $cuti) {
+
+    // update buku induk
+    BukuInduk::where('id', $cuti->buku_induk_id)
+        ->where('status', 'Cuti')
+        ->update([
+            'status' => 'Aktif',
+        ]);
+
+    // update status cuti
+    $cuti->update([
+        'status' => 'selesai',
+    ]);
+}
 
     // ========================================================
     // PAGINATION
@@ -73,6 +101,7 @@ public function index(Request $request)
 
     if ($request->filled('search')) {
         $search = trim($request->search);
+
         $query->where(function ($q) use ($search) {
             $q->where('nim', 'like', "%{$search}%")
               ->orWhere('nama', 'like', "%{$search}%");
@@ -80,11 +109,14 @@ public function index(Request $request)
     }
 
     if ($request->filled('start_date') && $request->filled('end_date')) {
-        $query->whereBetween('tgl_masuk', [$request->start_date, $request->end_date]);
+        $query->whereBetween('tgl_masuk', [
+            $request->start_date,
+            $request->end_date
+        ]);
     }
 
     // ========================================================
-    // DROPDOWN OPTIONS (Dynamic berdasarkan filter unit)
+    // DROPDOWN OPTIONS (murid & unit)
     // ========================================================
     $unitOptions = DB::table('units')
         ->whereNotNull('bimba_unit')
@@ -102,35 +134,126 @@ public function index(Request $request)
     $muridOptions = $muridOptionsQuery->get(['nim', 'nama']);
 
     // ========================================================
-    // HITUNG TOTAL (Setelah semua filter diterapkan)
+    // DROPDOWN OPTIONS GOL & KD
+    // ========================================================
+    $HargaSaptataruna = HargaSaptataruna::all();
+
+    $excluded = [
+        'S1_MB', 'S1_MU', 'S3_MB', 'S3_MU',
+        'KA01', 'RBAS', 'TAS', 'STPB', 'STF', 'KPK', 'KA'
+    ];
+
+    $golOptions = $HargaSaptataruna
+        ->filter(function ($item) use ($excluded) {
+
+            $kode = strtoupper(trim($item->kode ?? ''));
+
+            return (
+                (
+                    str_starts_with($kode, 'S') ||
+                    str_starts_with($kode, 'P') ||
+                    str_starts_with($kode, 'K') ||
+                    str_starts_with($kode, 'D')
+                )
+                && !in_array($kode, $excluded)
+            );
+        })
+        ->unique('kode')
+        ->values();
+
+    // ========================================================
+    // KD OPTIONS
+    // ========================================================
+    $firstRow = $HargaSaptataruna->first();
+
+    $kdOptions = [];
+
+    if ($firstRow) {
+
+        foreach ($firstRow->getAttributes() as $key => $value) {
+
+            if (in_array(strtolower($key), [
+                'a', 'b', 'c', 'd', 'e', 'f'
+            ])) {
+
+                $kdOptions[] = strtoupper($key);
+            }
+        }
+    }
+
+    // ========================================================
+    // SPP MAPPING
+    // ========================================================
+    $sppMapping = [];
+
+    foreach ($HargaSaptataruna as $item) {
+
+        foreach ($kdOptions as $kd) {
+
+            $columnName = strtolower($kd);
+
+            $sppMapping[$item->kode][$kd]
+                = $item->$columnName ?? 0;
+        }
+    }
+
+    // ========================================================
+    // HITUNG TOTAL
     // ========================================================
     $filteredQuery = clone $query;
 
-    $totalBaru   = (clone $filteredQuery)->where('status', 'Baru')->count();
-    $totalAktif  = (clone $filteredQuery)->where('status', 'Aktif')->count();
-    $totalKeluar = (clone $filteredQuery)->where('status', 'Keluar')->count();
+    $totalBaru   = (clone $filteredQuery)
+        ->where('status', 'Baru')
+        ->count();
+
+    $totalAktif  = (clone $filteredQuery)
+        ->where('status', 'Aktif')
+        ->count();
+
+    $totalKeluar = (clone $filteredQuery)
+        ->where('status', 'Keluar')
+        ->count();
+
+    $totalCuti   = (clone $filteredQuery)
+        ->where('status', 'Cuti')
+        ->count();
 
     // ========================================================
     // PAGINATE
     // ========================================================
     $bukuInduk = $query->paginate($perPage)
-                       ->appends($request->all());   // Penting agar filter tidak hilang saat ganti halaman
+        ->appends($request->all());
 
     // ========================================================
-    // TAMBAHKAN INFO JADWAL
+    // INFO JADWAL
     // ========================================================
     foreach ($bukuInduk as $item) {
-        $item->info_jadwal = $this->hitungPertemuanTerlewatDiBulanMasuk($item);
+
+        $item->info_jadwal =
+            $this->hitungPertemuanTerlewatDiBulanMasuk($item);
     }
 
     // ========================================================
-    // KATEGORI KELUAR OPTIONS
+    // KATEGORI KELUAR
     // ========================================================
     $kategoriKeluarOptions = [
-        'Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK/PAUD',
-        'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah',
-        'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain',
-        'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'
+        'Belum bayar SPP',
+        'Belum kondusif',
+        'Ganti Golongan',
+        'Masuk SD',
+        'Masuk TK/PAUD',
+        'Sudah SD',
+        'Sudah TK',
+        'Perpanjang Bea',
+        'Pindah biMBA',
+        'Pindah rumah',
+        'Sakit/rehat',
+        'Tdk ada yg antar',
+        'Tidak ada kabar',
+        'Lain-lain',
+        'Order Sertifikat',
+        'Order STPB',
+        'Order Sertifikat & STPB'
     ];
 
     // ========================================================
@@ -142,9 +265,13 @@ public function index(Request $request)
         'totalBaru',
         'totalAktif',
         'totalKeluar',
+        'totalCuti',
         'muridOptions',
         'unitOptions',
-        'kategoriKeluarOptions'
+        'kategoriKeluarOptions',
+        'golOptions',
+        'kdOptions',
+        'sppMapping'
     ));
 }
 
@@ -223,7 +350,7 @@ $golOptions = $HargaSaptataruna
 
     // Options
     $tahapanOptions = ['Persiapan', 'Lanjutan'];
-    $kategoriKeluarOptions = ['Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK', 'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah', 'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain', 'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'];
+    $kategoriKeluarOptions = ['Belum bayar SPP', 'Belum kondusif', 'Ganti Golongan', 'Masuk SD', 'Masuk TK/PAUD', 'Sudah SD', 'Sudah TK', 'Perpanjang Bea', 'Pindah biMBA', 'Pindah rumah', 'Sakit/rehat', 'Tdk ada yg antar', 'Tidak ada kabar', 'Lain-lain', 'Order Sertifikat', 'Order STPB', 'Order Sertifikat & STPB'];
     $kelasOptions = ['biMBA-AIUEO', 'English biMBA'];
     $noteOptions = ['Aktif Kembali', 'Cuti', 'Ganti Gol', 'Pindahan', 'Belum Bayar SPP', 'Murid Mutasi Masuk', 'Murid Mutasi Keluar', 'Garansi'];
     $noteGaransiOptions = ['Berkebutuhan Khusus', 'Tidak Memenuhi Syarat'];
@@ -234,7 +361,7 @@ $golOptions = $HargaSaptataruna
     $kodeJadwalOptions = ['108','109','110','111','112','113','114','115','116','208','209','210','211','308','309','310','311'];
     $statusPindahOptions = ['1'];
     $keBimbaIntervioOptions = ['biMba Intervio'];
-    $statusOptions = ['Aktif', 'Keluar', 'Baru'];
+    $statusOptions = ['Aktif', 'Keluar', 'Baru', 'Cuti'];
     $infoOptions = ['Brosur', 'Event', 'Humas', 'Internet', 'Spanduk', 'Lainnya'];
 
     // ==================== AUTO NIM ====================
@@ -505,7 +632,7 @@ $golOptions = $HargaSaptataruna
     // Dropdown options
     $tahapanOptions = ['Persiapan', 'Lanjutan'];
     $kategoriKeluarOptions = [
-        'Belum bayar SPP','Belum kondusif','Ganti Golongan','Masuk SD','Masuk TK',
+        'Belum bayar SPP','Belum kondusif','Ganti Golongan','Masuk SD','Masuk TK/PAUD',
         'Sudah SD','Sudah TK','Perpanjang Bea','Pindah biMBA','Pindah rumah',
         'Sakit/rehat','Tdk ada yg antar','Tidak ada kabar','Lain-lain',
         'Order Sertifikat','Order STPB','Order Sertifikat & STPB'
@@ -810,6 +937,8 @@ if (!empty($data['tgl_pengajuan_garansi'])) {
 }
 
     $bukuInduk->update($data);
+    // === PINDAH GOLONGAN OTOMATIS DARI BUKU INDUK ===
+    $this->createPindahGolonganFromBukuInduk($bukuInduk, $oldData, 'manual');
 
     $this->syncBukuIndukToBeasiswa($bukuInduk);
     
@@ -1318,8 +1447,9 @@ public function suratPindah($id)
         ->whereIn('status_karyawan', ['aktif', 'magang']) // 🔥 buang non-aktif
         ->orderByRaw("
             CASE 
-                WHEN status_karyawan = 'aktif' THEN 1
-                WHEN status_karyawan = 'magang' THEN 2
+                WHEN status = 'Aktif' THEN 0
+                WHEN status = 'Baru' THEN 1
+                WHEN status = 'Cuti' THEN 2
                 ELSE 3
             END
         ")
@@ -1429,25 +1559,234 @@ public function suratPindah($id)
 
 public function updateStatus(Request $request, $id)
 {
+    $bukuInduk = BukuInduk::findOrFail($id);
+
     $request->validate([
-        'tgl_keluar'       => 'nullable|date',
-        'kategori_keluar'  => 'nullable|string|max:50',
-        'alasan'           => 'nullable|string',
-        'keterangan_optional' => 'nullable|string',
+        'status' => 'required|in:Keluar,Pindah Golongan,Cuti,Aktif',
+
+        // Keluar
+        'tgl_keluar' => 'required_if:status,Keluar|nullable|date',
+        'kategori_keluar' => 'nullable|string',
+        'alasan' => 'nullable|string',
+
+        // Pindah Golongan
+        'gol_baru' => 'required_if:status,Pindah Golongan|nullable|string',
+        'kd_baru' => 'required_if:status,Pindah Golongan|nullable|string',
+        'spp_baru' => 'required_if:status,Pindah Golongan|nullable|numeric|min:0',
+        'kelas_baru' => 'nullable|string',
+        'tanggal_pindah_golongan' => 'nullable|date',
+        'alasan_pindah' => 'nullable|string',
+
+        // Cuti
+        'tgl_selesai_cuti' => 'nullable|date',
+        'jenis_cuti' => 'nullable|string',
+        'alasan_cuti' => 'nullable|string',
     ]);
 
-    $buku = BukuInduk::findOrFail($id);
-    
-    $buku->update([
-        'tgl_keluar'         => $request->tgl_keluar,
-        'kategori_keluar'    => $request->kategori_keluar,
-        'alasan'             => $request->alasan,
-        'keterangan_optional'=> $request->keterangan_optional,
-        'status'             => $request->tgl_keluar ? 'Keluar' : $buku->status,
+    // =========================================
+    // STATUS KELUAR
+    // =========================================
+    if ($request->status === 'Keluar') {
+
+        $bukuInduk->update([
+            'status' => 'Keluar',
+            'tgl_keluar' => $request->tgl_keluar,
+            'kategori_keluar' => $request->kategori_keluar,
+            'alasan_keluar' => $request->alasan,
+        ]);
+    }
+
+    // =========================================
+// STATUS CUTI
+// =========================================
+elseif ($request->status === 'Cuti') {
+
+    $data = [
+        'status'             => 'Cuti',
+        'tanggal_mulai'           => $request->tanggal_mulai,
+        'tanggal_selesai_cuti'   => $request->tgl_selesai_cuti,
+        'jenis_cuti'         => $request->jenis_cuti,
+        'alasan_cuti'        => $request->alasan_cuti,
+    ];
+
+    // Upload surat dokter
+    if ($request->hasFile('surat_dokter')) {
+
+        $file = $request->file('surat_dokter');
+
+        $path = $file->store('surat_dokter', 'public');
+
+        $data['surat_dokter'] = $path;
+    }
+
+    // =========================
+    // UPDATE BUKU INDUK
+    // =========================
+    $bukuInduk->update($data);
+
+    // =========================
+    // SIMPAN KE TABEL CUTI
+    // =========================
+    \App\Models\CutiMurid::create([
+
+        'buku_induk_id'   => $bukuInduk->id,
+        'tanggal_mulai'   => $request->tanggal_mulai,
+        'tanggal_selesai' => $request->tgl_selesai_cuti,
+        'jenis_cuti'      => $request->jenis_cuti,
+        'alasan'          => $request->alasan_cuti,
+        'surat_dokter'    => $data['surat_dokter'] ?? null,
+        'status'          => 'aktif',
+    ]);
+}
+elseif ($request->status === 'Aktif') {
+
+    // hanya jika sebelumnya cuti
+    if ($bukuInduk->status !== 'Cuti') {
+
+        return redirect()->back()->with(
+            'error',
+            'Murid tidak sedang cuti.'
+        );
+    }
+
+    // =========================
+    // UPDATE STATUS MURID
+    // =========================
+    $bukuInduk->update([
+        'status' => 'Aktif',
     ]);
 
-    return redirect()->back()
-                     ->with('success', 'Status murid berhasil diperbarui.');
+    // =========================
+    // AMBIL CUTI TERAKHIR
+    // =========================
+    $cuti = \App\Models\CutiMurid::where('buku_induk_id', $bukuInduk->id)
+        ->where('status', 'aktif')
+        ->latest()
+        ->first();
+
+    // =========================
+    // SELESAIKAN CUTI
+    // =========================
+    if ($cuti) {
+
+        $cuti->update([
+            'status' => 'selesai',
+            'tanggal_selesai' => now(),
+        ]);
+    }
+
+    // =========================
+    // HISTORY
+    // =========================
+    BukuIndukHistory::create([
+        'buku_induk_id' => $bukuInduk->id,
+        'action' => 'aktif_kembali',
+        'user' => Auth::user()?->name ?? 'system',
+
+        'old_data' => json_encode([
+            'status' => 'Cuti',
+        ]),
+
+        'new_data' => json_encode([
+            'status' => 'Aktif',
+        ]),
+    ]);
 }
 
+    // =========================================
+    // PINDAH GOLONGAN
+    // =========================================
+    elseif ($request->status === 'Pindah Golongan') {
+
+        $oldData = $bukuInduk->toArray();
+
+        $data = [
+            'gol'            => $request->gol_baru,
+            'kd'             => $request->kd_baru,
+            'spp'            => $request->spp_baru,
+            'kelas'          => $request->kelas_baru ?? $bukuInduk->kelas,
+            'tanggal_pindah' => $request->tanggal_pindah_golongan ?: now(),
+            'keterangan'     => $request->alasan_pindah,
+            'status_pindah'  => 'pindah',
+        ];
+
+        $bukuInduk->update($data);
+
+        // Simpan history pindah golongan
+        $this->createPindahGolonganFromBukuInduk(
+            $bukuInduk,
+            $oldData,
+            'manual'
+        );
+    }
+
+    return redirect()->back()->with(
+        'success',
+        'Status murid berhasil diubah menjadi ' . $request->status
+    );
+}
+
+/**
+ * Buat record Pindah Golongan otomatis ketika gol/kd/spp diubah dari Buku Induk
+ */
+private function createPindahGolonganFromBukuInduk(BukuInduk $bukuInduk, array $oldData, string $source = 'manual')
+{
+    $oldGol = $oldData['gol'] ?? null;
+    $oldKd  = $oldData['kd']  ?? null;
+    $oldSpp = $oldData['spp'] ?? null;
+
+    $newGol = $bukuInduk->gol;
+    $newKd  = $bukuInduk->kd;
+    $newSpp = $bukuInduk->spp;
+
+    // Cek apakah ada perubahan
+    if ($oldGol === $newGol && $oldKd === $newKd && $oldSpp == $newSpp) {
+        return; // tidak ada perubahan
+    }
+
+    $pindahPayload = [
+        'nim'                     => $bukuInduk->nim,
+        'nama'                    => $bukuInduk->nama,
+        'guru'                    => $bukuInduk->guru,
+        'bimba_unit'              => $bukuInduk->bimba_unit ?? null,
+        'no_cabang'               => $bukuInduk->no_cabang ?? null,
+
+        // Data Lama
+        'gol'                     => $oldGol,
+        'kd'                      => $oldKd,
+        'spp'                     => $oldSpp,
+
+        // Data Baru
+        'gol_baru'                => $newGol,
+        'kd_baru'                 => $newKd,
+        'spp_baru'                => $newSpp,
+
+        'tanggal_pindah_golongan' => $bukuInduk->tanggal_pindah ?? now(),
+        'alasan_pindah'           => $bukuInduk->keterangan ?? 'Perubahan manual dari Update Status',
+        'keterangan'              => $bukuInduk->keterangan ?? null,
+        
+        'status'                  => 'approved',
+        'source'                  => $source,                    // 'manual'
+        'created_by'              => Auth::user()?->name ?? 'system',
+    ];
+
+    PindahGolongan::create($pindahPayload);
+
+    // Optional: Simpan history Buku Induk
+    BukuIndukHistory::create([
+        'buku_induk_id' => $bukuInduk->id,
+        'action'        => 'pindah_golongan_manual',
+        'user'          => Auth::user()?->name ?? 'system',
+        'old_data'      => [
+            'gol' => $oldGol,
+            'kd'  => $oldKd,
+            'spp' => $oldSpp,
+        ],
+        'new_data'      => [
+            'gol' => $newGol,
+            'kd'  => $newKd,
+            'spp' => $newSpp,
+        ],
+    ]);
+}
 }

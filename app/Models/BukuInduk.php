@@ -137,23 +137,36 @@ class BukuInduk extends Model
     // SAVE (INI YANG PALING PENTING)
     static::saving(function ($bukuInduk) {
 
-        // PRIORITAS 1: kalau keluar
-        if (!empty($bukuInduk->tgl_keluar)) {
-            $bukuInduk->status = 'keluar';
-            return;
-        }
+    // =====================================
+    // PRIORITAS STATUS MANUAL
+    // =====================================
 
-        // PRIORITAS 2: auto aktif setelah 30 hari
-        if ($bukuInduk->tgl_masuk) {
-            $tglMasuk = Carbon::parse($bukuInduk->tgl_masuk);
+    // Jika CUTI → jangan override
+    if ($bukuInduk->status === 'Cuti') {
+        return;
+    }
 
-            if ($tglMasuk->lte(now()->subDays(30))) {
-                $bukuInduk->status = 'Aktif';
-            } else {
-                $bukuInduk->status = 'Baru';
-            }
+    // Jika KELUAR → jangan override
+    if (!empty($bukuInduk->tgl_keluar)) {
+        $bukuInduk->status = 'Keluar';
+        return;
+    }
+
+    // =====================================
+    // AUTO STATUS BARU / AKTIF
+    // =====================================
+
+    if ($bukuInduk->tgl_masuk) {
+
+        $tglMasuk = Carbon::parse($bukuInduk->tgl_masuk);
+
+        if ($tglMasuk->lte(now()->subDays(30))) {
+            $bukuInduk->status = 'Aktif';
+        } else {
+            $bukuInduk->status = 'Baru';
         }
-    });
+    }
+        });
 
     // AFTER SAVE
     static::saved(function ($bukuInduk) {
@@ -260,5 +273,48 @@ public function pengajuanGaransi()
 public function scopeActive($q)
 {
     return $q->where('status', 'Aktif');
+}
+public function handlePindahGolongan()
+{
+    $original = $this->getOriginal();
+
+    $oldGol = $original['gol'] ?? null;
+    $oldKd  = $original['kd']  ?? null;
+    $oldSpp = $original['spp'] ?? null;
+
+    $newGol = $this->gol;
+    $newKd  = $this->kd;
+    $newSpp = $this->spp;
+
+    if ($oldGol === $newGol && $oldKd === $newKd && (int)$oldSpp === (int)$newSpp) {
+        return;
+    }
+
+    $payload = [
+        'nim'                     => $this->nim,
+        'nama'                    => $this->nama,
+        'guru'                    => $this->guru,
+        'bimba_unit'              => $this->bimba_unit,
+        'no_cabang'               => $this->no_cabang,
+
+        'gol'                     => $oldGol,
+        'kd'                      => $oldKd,
+        'spp'                     => $oldSpp,
+
+        'gol_baru'                => $newGol,
+        'kd_baru'                 => $newKd,
+        'spp_baru'                => $newSpp,
+
+        'tanggal_pindah_golongan' => now(),
+        'keterangan'              => 'Diubah langsung dari Buku Induk',
+        'alasan_pindah'           => 'Perubahan golongan/kd/spp manual',
+        'source'                  => 'buku_induk',     // ← PENTING
+    ];
+
+    PindahGolongan::create($payload);
+}
+public function cutiMurid()
+{
+    return $this->hasMany(CutiMurid::class);
 }
 }

@@ -125,10 +125,16 @@
                             </tr>
                         </thead>
                         @forelse ($bukuInduk as $index => $item)
-                            <tr @class([
-                                'table-danger' => $item->tgl_keluar && strtolower($item->status ?? '') === 'keluar',
-                                'table-primary' => strtolower($item->status ?? '') === 'Baru', 'card-body',
-                            ])>
+                            <tr 
+                            @class([
+    'table-danger'  => $item->tgl_keluar && strtolower($item->status ?? '') === 'keluar',
+
+    'table-primary' => strtolower($item->status ?? '') === 'baru',
+
+    'table-warning' => strtolower($item->status ?? '') === 'cuti',
+
+    'card-body',
+])>
 
                                 <!-- NIM -->
                                 <td>{{ $item->nim ?? '-' }}</td>
@@ -680,82 +686,216 @@
                                     </div>
                                 </div>
                             </div>
-                            {{-- ====================== MODAL UBAH STATUS ====================== --}}
-<div class="modal fade" id="statusModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Ubah Status - {{ $item->nama }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            
-            <form id="statusForm{{ $item->id }}" action="{{ route('buku_induk.updateStatus', $item->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                @method('PATCH')
-                
-                <div class="modal-body">
+                           {{-- ====================== MODAL UBAH STATUS ====================== --}}
+                            <div class="modal fade" id="statusModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-info text-white">
+                                            <h5 class="modal-title">Ubah Status - {{ $item->nama }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        
+                                        <form id="statusForm{{ $item->id }}" action="{{ route('buku_induk.updateStatus', $item->id) }}" method="POST" enctype="multipart/form-data">
+                                            @csrf
+                                            @method('PATCH')
+                                            
+                                            <div class="modal-body">
+                                                <div class="row g-3">
+                                                    
+                        <!-- PILIH STATUS -->
+                                                <div class="col-12">
+                                                    <label class="form-label fw-bold">Pilih Status Baru</label>
+                                                    <select name="status" id="statusSelect{{ $item->id }}" class="form-select form-select-lg" required>
+                                                        <option value="">-- Pilih Status --</option>
+                                                        <option value="Keluar">Keluar</option>
+                                                        <option value="Pindah Golongan">Pindah Golongan</option>
+                                                        <option value="Cuti">Cuti</option>
+                                                    </select>
+                                                </div>
+
+                       <!-- FIELD KELUAR -->
+                                                <div id="keluarFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Tanggal Keluar <span class="text-danger">*</span></label>
+                                                            <input type="date" name="tgl_keluar" id="tgl_keluar{{ $item->id }}" 
+                                                                class="form-control" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Kategori Keluar</label>
+                                                            <select name="kategori_keluar" class="form-select">
+                                                                <option value="">-- Pilih Kategori --</option>
+                                                                @foreach($kategoriKeluarOptions as $kk)
+                                                                    <option value="{{ $kk }}">{{ $kk }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <label class="form-label">Alasan Keluar</label>
+                                                            <textarea name="alasan" class="form-control" rows="3" placeholder="Masukkan alasan..."></textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                       <!-- FIELD CUTI -->
+<div id="cutiFields{{ $item->id }}" 
+     class="status-fields col-12"
+     style="display:none;">
+
+    <div class="row g-3">
+
+        <!-- Tanggal Mulai -->
+        <div class="col-md-6">
+            <label class="form-label">
+                Tanggal Mulai Cuti
+            </label>
+
+            <input type="date"
+                   name="data[{{ $item->id }}][tanggal_mulai]"
+                   class="form-control"
+                   value="{{ old('data.'.$item->id.'.tanggal_mulai', $item->tanggal_mulai) }}">
+        </div>
+
+        <!-- Jenis Cuti -->
+        <div class="col-md-6">
+            <label class="form-label">
+                Jenis Cuti
+            </label>
+
+            <select name="data[{{ $item->id }}][jenis_cuti]"
+                    class="form-select">
+
+                <option value="">-- Pilih --</option>
+
+                <option value="Sakit"
+                    {{ old('data.'.$item->id.'.jenis_cuti', $item->jenis_cuti) == 'Sakit' ? 'selected' : '' }}>
+                    Sakit
+                </option>
+            </select>
+        </div>
+
+        <!-- Upload -->
+        <div class="col-md-6">
+            <label class="form-label">
+                Upload Surat Dokter
+            </label>
+
+            <input type="file"
+                   name="data[{{ $item->id }}][surat_dokter]"
+                   class="form-control"
+                   accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+
+        <!-- Tanggal Selesai -->
+        @if(strtolower($item->status ?? '') === 'cuti')
+
+        <div class="col-md-6">
+            <label class="form-label">
+                Tanggal Selesai Cuti
+            </label>
+
+            <input type="date"
+                   name="data[{{ $item->id }}][tgl_selesai_cuti]"
+                   class="form-control"
+                   value="{{ old('data.'.$item->id.'.tgl_selesai_cuti', $item->tgl_selesai_cuti) }}">
+        </div>
+
+        @endif
+
+        <!-- Alasan -->
+        <div class="col-12">
+            <label class="form-label">
+                Alasan Cuti
+            </label>
+
+            <textarea name="data[{{ $item->id }}][alasan_cuti]"
+                      class="form-control"
+                      rows="3">{{ old('data.'.$item->id.'.alasan_cuti', $item->alasan_cuti) }}</textarea>
+        </div>
+
+    </div>
+</div>
+
+                        <!-- FIELD PINDAH GOLONGAN -->
+                <div id="pindahFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
                     <div class="row g-3">
                         
-                        <!-- PILIH STATUS -->
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Pilih Status Baru</label>
-                            <select name="status" id="statusSelect{{ $item->id }}" class="form-select form-select-lg" required>
-                                <option value="">-- Pilih Status --</option>
-                                <option value="Keluar">Keluar</option>
-                                <option value="Pindah Golongan">Pindah Golongan</option>
-                                <option value="Cuti">Cuti</option>
+                        <!-- Golongan Lama -->
+                        <div class="col-md-6">
+                            <label class="form-label">Golongan Lama</label>
+                            <input type="text" class="form-control bg-light" value="{{ $item->gol ?? '-' }}" readonly>
+                            <input type="hidden" name="gol_lama" value="{{ $item->gol }}">
+                        </div>
+
+                        <!-- Gol Baru -->
+                        <div class="col-md-6">
+                            <label class="form-label">Gol Baru <span class="text-danger">*</span></label>
+                            <select name="gol_baru" id="gol_baru{{ $item->id }}" class="form-select" required>
+                                <option value="">-- Pilih Gol Baru --</option>
+                                @foreach($golOptions as $g)
+                                    <option value="{{ $g->kode }}">{{ $g->kode }}</option>
+                                @endforeach
                             </select>
                         </div>
 
-                        <!-- FIELD KELUAR (default disembunyikan) -->
-                        <div id="keluarFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Tanggal Keluar</label>
-                                    <input type="date" name="tgl_keluar" class="form-control">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Kategori Keluar</label>
-                                    <select name="kategori_keluar" class="form-select">
-                                        <option value="">-- Pilih Kategori --</option>
-                                        @foreach($kategoriKeluarOptions as $kk)
-                                            <option value="{{ $kk }}">{{ $kk }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Alasan Keluar</label>
-                                    <textarea name="alasan" class="form-control" rows="3" placeholder="Masukkan alasan..."></textarea>
-                                </div>
-                            </div>
+                        <!-- KD Lama -->
+                        <div class="col-md-6">
+                            <label class="form-label">KD Lama</label>
+                            <input type="text" class="form-control bg-light" value="{{ $item->kd ?? '-' }}" readonly>
+                            <input type="hidden" name="kd_lama" value="{{ $item->kd }}">
                         </div>
 
-                        <!-- FIELD CUTI -->
-                        <div id="cutiFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Tanggal Mulai Cuti</label>
-                                    <input type="date" name="tgl_cuti" class="form-control">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Upload Surat Dokter <span class="text-danger">*</span></label>
-                                    <input type="file" name="surat_dokter" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
-                                </div>
-                            </div>
+                        <!-- KD Baru -->
+                        <div class="col-md-6">
+                            <label class="form-label">KD Baru <span class="text-danger">*</span></label>
+                            <select name="kd_baru" id="kd_baru{{ $item->id }}" class="form-select" required>
+                                <option value="">-- Pilih KD Baru --</option>
+                                @foreach($kdOptions as $k)
+                                    <option value="{{ $k }}">{{ $k }}</option>
+                                @endforeach
+                            </select>
                         </div>
 
-                        <!-- FIELD PINDAH GOLONGAN -->
-                        <div id="pindahFields{{ $item->id }}" class="status-fields col-12" style="display: none;">
-                            <div class="alert alert-info">
-                                <strong>Pindah Golongan</strong><br>
-                                Klik tombol di bawah untuk membuat data pindah golongan baru.
-                            </div>
-                            <a href="{{ route('pindah-golongan.create', ['nim' => $item->nim]) }}" 
-                               target="_blank" class="btn btn-primary">
-                                <i class="fas fa-external-link-alt"></i> Buat Pindah Golongan
-                            </a>
+                        <!-- SPP Lama -->
+                        <div class="col-md-6">
+                            <label class="form-label">SPP Lama</label>
+                            <input type="text" class="form-control bg-light" 
+                                value="Rp {{ number_format($item->spp ?? 0) }}" readonly>
+                            <input type="hidden" name="spp_lama" value="{{ $item->spp }}">
                         </div>
 
+                        <!-- SPP Baru -->
+                        <div class="col-md-6">
+                            <label class="form-label">SPP Baru <span class="text-danger">*</span></label>
+                            <input type="number" name="spp_baru" id="spp_baru{{ $item->id }}" 
+                                class="form-control" min="0" required>
+                        </div>
+
+                        <!-- Kelas Baru -->
+                        <div class="col-md-6">
+                            <label class="form-label">Kelas Baru</label>
+                            <select name="kelas_baru" class="form-select">
+                                <option value="">-- Pilih Kelas --</option>
+                                <option value="biMBA-AIUEO" {{ $item->kelas == 'biMBA-AIUEO' ? 'selected' : '' }}>biMBA-AIUEO</option>
+                                <option value="English biMBA" {{ $item->kelas == 'English biMBA' ? 'selected' : '' }}>English biMBA</option>
+                            </select>
+                        </div>
+
+                        <!-- Tanggal Pindah -->
+                        <div class="col-md-6">
+                            <label class="form-label">Tanggal Pindah</label>
+                            <input type="date" name="tanggal_pindah_golongan" class="form-control" 
+                                value="{{ now()->format('Y-m-d') }}">
+                        </div>
+
+                        <!-- Alasan -->
+                        <div class="col-12">
+                            <label class="form-label">Alasan Pindah Golongan</label>
+                            <textarea name="alasan_pindah" class="form-control" rows="3" 
+                                placeholder="Contoh: Naik level, permintaan orang tua, dll..."></textarea>
+                        </div>
+
+                        <input type="hidden" name="source" value="manual">
                     </div>
                 </div>
 
@@ -855,34 +995,95 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
 $(document).ready(function () {
-    $('#muridFilter').select2({ width: '100%', placeholder: "— Ketik untuk cari NIM atau Nama —", allowClear: true });
-    $('#unitFilter').select2({ width: '100%', placeholder: "— Semua Unit —", allowClear: true });
 
-    $('#muridFilter, #unitFilter, #statusFilter, #perPageFilter').on('change', function () {
-        if (this.id === 'unitFilter') {
-            $('#muridFilter').val(null).trigger('change');
-        }
-        $('#filterForm').submit();
-    });
+    const sppMapping = @json($sppMapping ?? []);
 
-    // Modal Status
     @foreach($bukuInduk as $item)
-        $('#statusSelect{{ $item->id }}').on('change', function() {
-            $('.status-fields{{ $item->id }}').hide();
+
+        const statusSelect{{ $item->id }} = $('#statusSelect{{ $item->id }}');
+
+        // FIELD GROUP
+        const keluarFields{{ $item->id }} = $('#keluarFields{{ $item->id }}');
+        const cutiFields{{ $item->id }}   = $('#cutiFields{{ $item->id }}');
+        const pindahFields{{ $item->id }} = $('#pindahFields{{ $item->id }}');
+
+        // INPUT FIELD
+        const tglKeluar{{ $item->id }} = $('#tgl_keluar{{ $item->id }}');
+
+        const golBaru{{ $item->id }} = $('#gol_baru{{ $item->id }}');
+        const kdBaru{{ $item->id }}  = $('#kd_baru{{ $item->id }}');
+        const sppBaru{{ $item->id }} = $('#spp_baru{{ $item->id }}');
+
+        // RESET REQUIRED
+        function resetValidation{{ $item->id }}() {
+
+            // Keluar
+            tglKeluar{{ $item->id }}.prop('required', false);
+
+            // Pindah
+            golBaru{{ $item->id }}.prop('required', false);
+            kdBaru{{ $item->id }}.prop('required', false);
+            sppBaru{{ $item->id }}.prop('required', false);
+
+            // Hide semua
+            keluarFields{{ $item->id }}.hide();
+            cutiFields{{ $item->id }}.hide();
+            pindahFields{{ $item->id }}.hide();
+        }
+
+        // STATUS CHANGE
+        statusSelect{{ $item->id }}.on('change', function () {
+
+            resetValidation{{ $item->id }}();
+
             if (this.value === 'Keluar') {
-                $('#keluarFields{{ $item->id }}').show();
+
+                keluarFields{{ $item->id }}.show();
+
+                tglKeluar{{ $item->id }}.prop('required', true);
+
             } else if (this.value === 'Cuti') {
-                $('#cutiFields{{ $item->id }}').show();
+
+                cutiFields{{ $item->id }}.show();
+
             } else if (this.value === 'Pindah Golongan') {
-                $('#pindahFields{{ $item->id }}').show();
+
+                pindahFields{{ $item->id }}.show();
+
+                golBaru{{ $item->id }}.prop('required', true);
+                kdBaru{{ $item->id }}.prop('required', true);
+                sppBaru{{ $item->id }}.prop('required', true);
             }
         });
+
+        // ===============================
+        // AUTO FILL SPP
+        // ===============================
+        function updateSPP{{ $item->id }}() {
+
+            const gol = golBaru{{ $item->id }}.val();
+            const kd  = kdBaru{{ $item->id }}.val();
+
+            if (
+                gol &&
+                kd &&
+                sppMapping[gol] &&
+                sppMapping[gol][kd] !== undefined
+            ) {
+                let nilai = Math.round(parseFloat(sppMapping[gol][kd]));
+                sppBaru{{ $item->id }}.val(nilai);
+            } else {
+                sppBaru{{ $item->id }}.val('');
+            }
+        }
+
+        golBaru{{ $item->id }}.on('change', updateSPP{{ $item->id }});
+        kdBaru{{ $item->id }}.on('change', updateSPP{{ $item->id }});
+
     @endforeach
+
 });
 </script>
 @endpush
