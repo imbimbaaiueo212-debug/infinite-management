@@ -62,34 +62,45 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label>Duafa</label>
-                <input type="number" step="0.01" min="0" name="duafa" class="form-control" value="{{ $harga->duafa }}">
+                <input type="text" name="duafa"
+                    class="form-control"
+                    value="{{ number_format($harga->duafa, 0, ',', '.') }}">
             </div>
+
             <div class="col-md-4 mb-3">
-                <label>Promo 2019</label>
-                <input type="number" step="0.01" min="0" name="promo_2019" class="form-control" value="{{ $harga->promo_2019 }}">
+                <label>Promo Khusus</label>
+                <input type="text" name="promo_2019"
+                    class="form-control"
+                    value="{{ number_format($harga->promo_2019, 0, ',', '.') }}">
             </div>
             <div class="col-md-4 mb-3">
                 <label>Daftar Ulang</label>
-                <input type="number" step="0.01" min="0" name="daftar_ulang" class="form-control" value="{{ $harga->daftar_ulang }}">
+                <input type="text" name="daftar_ulang"
+                    class="form-control"
+                    value="{{ number_format($harga->daftar_ulang, 0, ',', '.') }}">
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-3 mb-3">
                 <label>Spesial</label>
-                <input type="number" step="0.01" min="0" name="spesial" class="form-control" value="{{ $harga->spesial }}">
+                <input type="text" name="spesial"
+                    class="form-control"
+                    value="{{ number_format($harga->spesial, 0, ',', '.') }}">
             </div>
             <div class="col-md-3 mb-3">
                 <label>Umum 1</label>
-                <input type="number" step="0.01" min="0" name="umum1" class="form-control" value="{{ $harga->umum1 }}">
+                <input type="text" name="umum1"
+                    class="form-control"
+                    value="{{ number_format($harga->umum1, 0, ',', '.') }}">
             </div>
             <div class="col-md-3 mb-3">
-                <label>Umum 2</label>
+                <label>Promo Gratis</label>
                 <input type="number" step="0.01" min="0" name="umum2" class="form-control" value="{{ $harga->umum2 }}">
             </div>
             <div class="col-md-3 mb-3">
                 <label>Harga</label>
-                <input type="number" step="0.01" min="0" name="harga" class="form-control" value="{{ $harga->harga }}">
+                <input type="text" name="harga" class="form-control" value="{{ number_format($harga->harga, 0, ',', '.') }}">
             </div>
         </div>
 

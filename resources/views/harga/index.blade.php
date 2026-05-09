@@ -29,12 +29,13 @@
                         <tr>
                             <th>Kode</th>
                             <th>Nama</th>
-                            <th>Duafa</th>
-                            <th>Promo 2019</th>
-                            <th>Daftar Ulang</th>
+                            <th>Promo Gratis</th>
+                            <th>Promo Khusus</th>
                             <th>Spesial</th>
                             <th>Umum1</th>
-                            <th>Umum2</th>
+                            <th>Duafa</th>                         
+                            <th>Daftar Ulang</th>                           
+                            
                             <th style="width: 150px;">Aksi</th>
                         </tr>
                     </thead>
@@ -43,12 +44,12 @@
                         <tr>
                             <td>{{ $item->kode }}</td>
                             <td>{{ $item->nama }}</td>
-                            <td>Rp {{ number_format($item->duafa ?? 0, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($item->umum2 ?? 0, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($item->promo_2019 ?? 0, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($item->daftar_ulang ?? 0, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($item->spesial ?? 0, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($item->umum1 ?? 0, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($item->umum2 ?? 0, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($item->daftar_ulang ?? 0, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($item->duafa ?? 0, 0, ',', '.') }}</td>
                             <td>
     <a href="{{ route('harga.edit', $item->id) }}" class="btn btn-sm btn-warning">Edit</a>
 

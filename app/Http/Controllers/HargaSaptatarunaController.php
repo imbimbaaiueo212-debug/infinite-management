@@ -70,42 +70,66 @@ class HargaSaptatarunaController extends Controller
 
     // ================= UPDATE =================
     public function update(Request $request, HargaSaptataruna $harga)
-    {
-        $data = $request->validate([
-            'kategori'      => 'nullable|string|max:255',
-            'sub_kategori'  => 'nullable|string|max:255',
-            'kode'          => 'nullable|string|max:50',
-            'nama'          => 'nullable|string|max:255',
-            'duafa'         => 'nullable|numeric',
-            'promo_2019'    => 'nullable|numeric',
-            'daftar_ulang'  => 'nullable|numeric',
-            'spesial'       => 'nullable|numeric',
-            'umum1'         => 'nullable|numeric',
-            'umum2'         => 'nullable|numeric',
-            'harga'         => 'nullable|numeric',
-            'a'             => 'nullable|numeric',
-            'b'             => 'nullable|numeric',
-            'c'             => 'nullable|numeric',
-            'd'             => 'nullable|numeric',
-            'e'             => 'nullable|numeric',
-            'f'             => 'nullable|numeric',
-        ]);
+{
+    $numericFields = [
+        'duafa',
+        'promo_2019',
+        'daftar_ulang',
+        'spesial',
+        'umum1',
+        'umum2',
+        'harga',
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f'
+    ];
 
-        // 🔥 FIX yang sama untuk update
-        $numericFields = ['duafa', 'promo_2019', 'daftar_ulang', 'spesial', 'umum1', 'umum2', 'harga', 'a', 'b', 'c', 'd', 'e', 'f'];
+    // Format angka Indonesia
+    foreach ($numericFields as $field) {
 
-        foreach ($numericFields as $field) {
-            if (isset($data[$field]) && $data[$field] === '') {
-                $data[$field] = null;
-            }
+        // jika kosong → null
+        if ($request->$field === null || $request->$field === '') {
+            $request[$field] = null;
+        } else {
+
+            // hapus titik ribuan
+            $request[$field] = str_replace('.', '', $request[$field]);
+
+            // ganti koma jadi titik desimal jika ada
+            $request[$field] = str_replace(',', '.', $request[$field]);
         }
-
-        $harga->update($data);
-
-        return redirect()->route('harga.index')
-                         ->with('success', 'Data berhasil diupdate.');
     }
 
+    $data = $request->validate([
+        'kategori'      => 'nullable|string|max:255',
+        'sub_kategori'  => 'nullable|string|max:255',
+        'kode'          => 'nullable|string|max:50',
+        'nama'          => 'nullable|string|max:255',
+
+        'duafa'         => 'nullable|numeric',
+        'promo_2019'    => 'nullable|numeric',
+        'daftar_ulang'  => 'nullable|numeric',
+        'spesial'       => 'nullable|numeric',
+        'umum1'         => 'nullable|numeric',
+        'umum2'         => 'nullable|numeric',
+        'harga'         => 'nullable|numeric',
+
+        'a'             => 'nullable|numeric',
+        'b'             => 'nullable|numeric',
+        'c'             => 'nullable|numeric',
+        'd'             => 'nullable|numeric',
+        'e'             => 'nullable|numeric',
+        'f'             => 'nullable|numeric',
+    ]);
+
+    $harga->update($data);
+
+    return redirect()->route('harga.index')
+        ->with('success', 'Data berhasil diupdate.');
+}
     public function destroy($id)
     {
         $item = HargaSaptataruna::findOrFail($id);

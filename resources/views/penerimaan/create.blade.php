@@ -141,7 +141,7 @@
                     <option value="" disabled selected>-- Pilih --</option>
                     <option value="cash">Cash</option>
                     <option value="transfer">Transfer</option>
-                    <option value="edc">EDC / VA</option>
+                   
                 </select>
             </div>
 
@@ -152,14 +152,9 @@
         </div>
 
         <div class="row g-3 mt-3">
-            <div class="col-md-6">
-                <label class="form-label">Tanggal Penyerahan Produk (opsional)</label>
-                <input type="date" name="tanggal_penyerahan" class="form-control">
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Bukti Transfer (opsional)</label>
-                <input type="file" name="bukti_transfer" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+            <div class="col-md-6" id="bukti_transfer_container">
+                <label class="form-label">Bukti Transfer <span class="text-danger">*</span></label>
+                <input type="file" name="bukti_transfer" id="bukti_transfer" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
                 <small class="text-muted">Maks. 5 MB</small>
             </div>
         </div>
@@ -228,10 +223,10 @@
                 <select name="daftar_tipe_harga" id="daftar_tipe_harga" class="form-select form-select-sm mb-2">
                     <option value="harga_daftar">Daftar Ulang</option>
                     <option value="harga_duafa">Dhuafa</option>
-                    <option value="harga_promo">Promo 2019</option>
+                    <option value="harga_promo">Promo Khusus</option>
                     <option value="harga_spesial">Spesial</option>
                     <option value="harga_umum1">Umum 1</option>
-                    <option value="harga_umum2">Umum 2</option>
+                    <option value="harga_umum2">Promo Gratis</option>
                 </select>
 
                 <input type="number" id="daftar_qty" class="form-control text-center" value="0" min="0" style="width:80px; display:inline-block;">
@@ -463,21 +458,69 @@ $(document).ready(function() {
         return `KW${currentNimLast3}${yy}${mm}${dd}`;
     }
 
+        // ================================================
+        // HANDLE SHOW/HIDE BUKTI TRANSFER
+        // ================================================
+        function toggleBuktiTransfer() {
+            const via = $('#via').val();
+            
+            if (via === 'transfer') {
+                $('#bukti_transfer_container').slideDown(250);
+            } else {
+                $('#bukti_transfer_container').slideUp(250);
+                $('#bukti_transfer').val(''); // reset file input
+            }
+        }
+
+        // Event Listener Via Pembayaran
+        $('#via').on('change', toggleBuktiTransfer);
+
     // ================================================
-    // UPDATE KWITANSI PREVIEW
+    // UPDATE KWITANSI PREVIEW (VERSI BARU - SUDAH DIGABUNG)
     // ================================================
     function updateKwitansiPreview() {
         const jumlahBulan = $('.bulan-row').length;
+        const sppValue = parseInt($('#spp_dropdown').val()) || 0;
         
         const totalPendek  = unformatRupiah($('#kaos_pendek_hidden').val());
         const totalPanjang = unformatRupiah($('#kaos_panjang_hidden').val());
         
-        const adaBiayaLain = $('.biaya-lain').toArray().some(el => unformatRupiah($(el).val()) > 0);
+        // Cek apakah ada biaya lain (daftar, kaos, kpk, tas, dll)
+        let adaBiayaLain = false;
+        
+        // Biaya yang bisa digabung
+        if (unformatRupiah($('#daftar_hidden').val()) > 0) adaBiayaLain = true;
+        if (totalPendek > 0) adaBiayaLain = true;
+        if (totalPanjang > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#kpk_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#tas_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#sertifikat_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#stpb_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#rbas_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#bcabs01_hidden').val()) > 0) adaBiayaLain = true;
+        if (unformatRupiah($('#bcabs02_hidden').val()) > 0) adaBiayaLain = true;
+        
+        // Event & Lain-lain
+        $('.biaya-lain').each(function() {
+            if (unformatRupiah($(this).val()) > 0) adaBiayaLain = true;
+        });
 
         let totalItem = jumlahBulan;
-        if (adaBiayaLain) totalItem++;
-        if (totalPendek > 0) totalItem++;
-        if (totalPanjang > 0) totalItem++;
+
+        // LOGIKA BARU: Jika hanya 1 bulan SPP + ada biaya lain → jadi 1 kwitansi
+        if (jumlahBulan === 1 && sppValue > 0 && adaBiayaLain) {
+            totalItem = 1;
+        } 
+        // Jika SPP lebih dari 1 bulan → tetap pisah per bulan
+        else if (jumlahBulan > 1) {
+            totalItem = jumlahBulan; 
+            // Biaya lain tetap terpisah jika ada
+            if (adaBiayaLain) totalItem++;
+        } 
+        // Hanya biaya lain (tanpa SPP)
+        else if (adaBiayaLain) {
+            totalItem = 1;
+        }
 
         let teks = '';
 
@@ -485,116 +528,113 @@ $(document).ready(function() {
             const manualBase = $('#kwitansi_base_manual').val().trim();
             if (!manualBase) {
                 teks = 'Masukkan base kwitansi manual';
-                $('#kwitansi-preview').removeClass('text-primary').addClass('text-muted');
             } else {
-                if (totalItem === 0) teks = manualBase + ' (belum ada item)';
-                else if (totalItem === 1) teks = manualBase;
-                else {
+                if (totalItem <= 1) {
+                    teks = manualBase;
+                } else {
                     const prefix = manualBase.endsWith('-') ? '' : '-';
                     teks = manualBase + prefix + '01 s/d ' + manualBase + prefix + String(totalItem).padStart(2, '0');
                 }
-                $('#kwitansi-preview').removeClass('text-muted').addClass('text-primary');
             }
         } else {
             const base = generateKwitansiBase();
             if (!base) {
                 teks = 'Pilih NIM terlebih dahulu';
-                $('#kwitansi-preview').removeClass('text-primary').addClass('text-muted');
             } else {
-                if (totalItem === 0) teks = base + ' (belum ada item)';
-                else if (totalItem === 1) teks = base + '01';
-                else {
+                if (totalItem <= 1) {
+                    teks = base + '01';
+                } else {
                     teks = base + '01 s/d ' + base + String(totalItem).padStart(2, '0');
                 }
-                $('#kwitansi-preview').removeClass('text-muted').addClass('text-primary');
             }
         }
 
         $('#kwitansi-preview').text(teks);
+        $('#kwitansi-preview').removeClass('text-muted').addClass('text-primary');
     }
 
-    // ================================================
-    // KWITANSI MANUAL
-    // ================================================
-    $('#manual_kwitansi_toggle').on('change', function() {
-        isManualMode = this.checked;
-        if (isManualMode) {
-            $('#manual_kwitansi_input').slideDown(200);
-            $('#kwitansi_base_manual').focus();
-        } else {
-            $('#manual_kwitansi_input').slideUp(200);
-            $('#kwitansi_base_manual').val('');
-        }
+        // ================================================
+        // KWITANSI MANUAL
+        // ================================================
+        $('#manual_kwitansi_toggle').on('change', function() {
+            isManualMode = this.checked;
+            if (isManualMode) {
+                $('#manual_kwitansi_input').slideDown(200);
+                $('#kwitansi_base_manual').focus();
+            } else {
+                $('#manual_kwitansi_input').slideUp(200);
+                $('#kwitansi_base_manual').val('');
+            }
+            updateKwitansiPreview();
+        });
+
+        $('#kwitansi_base_manual').on('input', updateKwitansiPreview);
+
+        // ================================================
+        // SELECT2
+        // ================================================
+        $('#voucher').select2({
+            placeholder: "-- Pilih --",
+            allowClear: true,
+            width: '100%',
+            multiple: true
+        });
+
+        // ================================================
+        // HANDLE MULTIPLE KAOS (BISA BERBEDA UKURAN)
+        // ================================================
+        function hitungTotalKaos() {
+        let totalPendek = 0;
+        let totalPanjang = 0;
+
+        // Kaos Pendek
+        $('.kaos-pendek-row').each(function() {
+            const $row = $(this);
+            const $select = $row.find('.kaos-pendek-select');
+            const $qty = $row.find('.kaos-pendek-qty');
+
+            const harga = parseFloat($select.find('option:selected').data('harga')) || 0;
+            let qty = parseInt($qty.val()) || 0;
+
+            // AUTO SET QTY = 1 saat memilih, dan 0 saat di-clear
+            if (harga > 0 && qty === 0) {
+                qty = 1;
+                $qty.val(1);
+            } else if (harga === 0) {
+                qty = 0;
+                $qty.val(0);
+            }
+
+            totalPendek += harga * qty;
+        });
+
+        // Kaos Panjang
+        $('.kaos-panjang-row').each(function() {
+            const $row = $(this);
+            const $select = $row.find('.kaos-panjang-select');
+            const $qty = $row.find('.kaos-panjang-qty');
+
+            const harga = parseFloat($select.find('option:selected').data('harga')) || 0;
+            let qty = parseInt($qty.val()) || 0;
+
+            if (harga > 0 && qty === 0) {
+                qty = 1;
+                $qty.val(1);
+            } else if (harga === 0) {
+                qty = 0;
+                $qty.val(0);
+            }
+
+            totalPanjang += harga * qty;
+        });
+
+        $('#kaos_pendek_hidden').val(totalPendek);
+        $('#kaos_panjang_hidden').val(totalPanjang);
+
+        updateKaosInfo();
+        hitungTotal();
         updateKwitansiPreview();
-    });
-
-    $('#kwitansi_base_manual').on('input', updateKwitansiPreview);
-
-    // ================================================
-    // SELECT2
-    // ================================================
-    $('#voucher').select2({
-        placeholder: "-- Pilih --",
-        allowClear: true,
-        width: '100%',
-        multiple: true
-    });
-
-    // ================================================
-    // HANDLE MULTIPLE KAOS (BISA BERBEDA UKURAN)
-    // ================================================
-    function hitungTotalKaos() {
-    let totalPendek = 0;
-    let totalPanjang = 0;
-
-    // Kaos Pendek
-    $('.kaos-pendek-row').each(function() {
-        const $row = $(this);
-        const $select = $row.find('.kaos-pendek-select');
-        const $qty = $row.find('.kaos-pendek-qty');
-
-        const harga = parseFloat($select.find('option:selected').data('harga')) || 0;
-        let qty = parseInt($qty.val()) || 0;
-
-        // AUTO SET QTY = 1 saat memilih, dan 0 saat di-clear
-        if (harga > 0 && qty === 0) {
-            qty = 1;
-            $qty.val(1);
-        } else if (harga === 0) {
-            qty = 0;
-            $qty.val(0);
-        }
-
-        totalPendek += harga * qty;
-    });
-
-    // Kaos Panjang
-    $('.kaos-panjang-row').each(function() {
-        const $row = $(this);
-        const $select = $row.find('.kaos-panjang-select');
-        const $qty = $row.find('.kaos-panjang-qty');
-
-        const harga = parseFloat($select.find('option:selected').data('harga')) || 0;
-        let qty = parseInt($qty.val()) || 0;
-
-        if (harga > 0 && qty === 0) {
-            qty = 1;
-            $qty.val(1);
-        } else if (harga === 0) {
-            qty = 0;
-            $qty.val(0);
-        }
-
-        totalPanjang += harga * qty;
-    });
-
-    $('#kaos_pendek_hidden').val(totalPendek);
-    $('#kaos_panjang_hidden').val(totalPanjang);
-
-    updateKaosInfo();
-    hitungTotal();
-    updateKwitansiPreview();
-}
+    }
 
     function updateKaosInfo() {
         // Info Kaos Pendek
@@ -1136,6 +1176,7 @@ function hitungDaftar() {
     updateKwitansiPreview();
     updateInfoBulan();
     hitungTotal();
+    toggleBuktiTransfer();        // ← Tambahkan ini
 
     // Restore jika ada error validasi
     @if(old('nim'))

@@ -48,7 +48,7 @@
                 <input type="number" step="0.01" min="0" name="duafa" class="form-control" value="{{ old('duafa') }}">
             </div>
             <div class="col-md-4 mb-3">
-                <label>Promo 2019</label>
+                <label>Promo Khusus</label>
                 <input type="number" step="0.01" min="0" name="promo_2019" class="form-control" value="{{ old('promo_2019') }}">
             </div>
             <div class="col-md-4 mb-3">
@@ -67,7 +67,7 @@
                 <input type="number" step="0.01" min="0" name="umum1" class="form-control" value="{{ old('umum1') }}">
             </div>
             <div class="col-md-3 mb-3">
-                <label>Umum 2</label>
+                <label>Promo Gratis</label>
                 <input type="number" step="0.01" min="0" name="umum2" class="form-control" value="{{ old('umum2') }}">
             </div>
             <div class="col-md-3 mb-3">
