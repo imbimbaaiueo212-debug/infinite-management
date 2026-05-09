@@ -217,23 +217,23 @@
                                     $buktiExt = $cleanBukti ? strtolower(pathinfo($cleanBukti, PATHINFO_EXTENSION)) : null;
                                 @endphp
                                 <tr>
-                                    <td>{{ $item->kwitansi ?? '-' }}</td>
-                                    <td>{{ ucfirst($item->via ?? '-') }}</td>
-                                    <td>{{ $item->bulan ?? '-' }}</td>
-                                    <td>{{ $item->tahun ?? '-' }}</td>
-                                    <td>{{ $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->format('d-m-Y') : '-' }}</td>
-                                    <td>{{ $item->nim }}</td>
+                                    <td class="text-start">{{ $item->kwitansi ?? '-' }}</td>
+                                    <td class="text-start">{{ ucfirst($item->via ?? '-') }}</td>
+                                    <td class="text-start">{{ $item->bulan ?? '-' }}</td>
+                                    <td class="text-start">{{ $item->tahun ?? '-' }}</td>
+                                    <td class="text-start">{{ $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->format('d-m-Y') : '-' }}</td>
+                                    <td class="text-start">{{ $item->nim }}</td>
                                     <td class="text-start">{{ $item->nama_murid }}</td>
-                                    <td>{{ $item->kelas ?? '-' }}</td>
-                                    <td>{{ $item->gol ?? '-' }}</td>
-                                    <td>{{ $item->kd ?? '-' }}</td>
-                                    <td>{{ ucfirst($item->status ?? '-') }}</td>
-                                    <td>{{ $item->guru ?? '-' }}</td>
+                                    <td class="text-start">{{ $item->kelas ?? '-' }}</td>
+                                    <td class="text-start">{{ $item->gol ?? '-' }}</td>
+                                    <td class="text-start">{{ $item->kd ?? '-' }}</td>
+                                    <td class="text-start">{{ ucfirst($item->status ?? '-') }}</td>
+                                    <td class="text-start">{{ $item->guru ?? '-' }}</td>
 
                                     {{-- KOLOM BIMBA UNIT & NO CABANG – HANYA ADMIN --}}
                                     @if (auth()->check() && (auth()->user()->is_admin ?? false))
-                                        <td>{{ $item->bimba_unit ?? '-' }}</td>
-                                        <td>{{ $item->no_cabang ?? '-' }}</td>
+                                        <td class="text-start">{{ $item->bimba_unit ?? '-' }}</td>
+                                        <td class="text-start">{{ $item->no_cabang ?? '-' }}</td>
                                     @endif
 
                                     <td>{{ number_format($item->daftar ?? 0, 0, ',', '.') }}</td>
