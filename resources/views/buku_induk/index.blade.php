@@ -707,6 +707,7 @@
                                                     <label class="form-label fw-bold">Pilih Status Baru</label>
                                                     <select name="status" id="statusSelect{{ $item->id }}" class="form-select form-select-lg" required>
                                                         <option value="">-- Pilih Status --</option>
+                                                        <option value="Aktif">Aktif Kembali</option>
                                                         <option value="Keluar">Keluar</option>
                                                         <option value="Pindah Golongan">Pindah Golongan</option>
                                                         <option value="Cuti">Cuti</option>
@@ -740,16 +741,13 @@
                                        <!-- FIELD CUTI -->
 <div id="cutiFields{{ $item->id }}" 
      class="status-fields col-12"
-     style="display:none;">
+     style="display: none;">
 
     <div class="row g-3">
 
         <!-- Tanggal Mulai -->
         <div class="col-md-6">
-            <label class="form-label">
-                Tanggal Mulai Cuti
-            </label>
-
+            <label class="form-label">Tanggal Mulai Cuti</label>
             <input type="date"
                    name="data[{{ $item->id }}][tanggal_mulai]"
                    class="form-control"
@@ -758,28 +756,19 @@
 
         <!-- Jenis Cuti -->
         <div class="col-md-6">
-            <label class="form-label">
-                Jenis Cuti
-            </label>
-
-            <select name="data[{{ $item->id }}][jenis_cuti]"
-                    class="form-select">
-
+            <label class="form-label">Jenis Cuti</label>
+            <select name="data[{{ $item->id }}][jenis_cuti]" class="form-select">
                 <option value="">-- Pilih --</option>
-
-                <option value="Sakit"
+                <option value="Sakit" 
                     {{ old('data.'.$item->id.'.jenis_cuti', $item->jenis_cuti) == 'Sakit' ? 'selected' : '' }}>
                     Sakit
                 </option>
             </select>
         </div>
 
-        <!-- Upload -->
+        <!-- Upload Surat (opsional saat mengakhiri cuti) -->
         <div class="col-md-6">
-            <label class="form-label">
-                Upload Surat Dokter
-            </label>
-
+            <label class="form-label">Upload Surat Dokter (opsional)</label>
             <input type="file"
                    name="data[{{ $item->id }}][surat_dokter]"
                    class="form-control"
@@ -787,27 +776,20 @@
         </div>
 
         <!-- Tanggal Selesai -->
-        @if(strtolower($item->status ?? '') === 'cuti')
-
         <div class="col-md-6">
-            <label class="form-label">
-                Tanggal Selesai Cuti
+            <label class="form-label text-danger">
+                Tanggal Selesai Cuti <span class="text-danger">*</span>
             </label>
-
             <input type="date"
                    name="data[{{ $item->id }}][tgl_selesai_cuti]"
                    class="form-control"
-                   value="{{ old('data.'.$item->id.'.tgl_selesai_cuti', $item->tgl_selesai_cuti) }}">
+                   value="{{ old('data.'.$item->id.'.tgl_selesai_cuti', $item->tgl_selesai_cuti) }}"
+                   required>
         </div>
-
-        @endif
 
         <!-- Alasan -->
         <div class="col-12">
-            <label class="form-label">
-                Alasan Cuti
-            </label>
-
+            <label class="form-label">Alasan Cuti</label>
             <textarea name="data[{{ $item->id }}][alasan_cuti]"
                       class="form-control"
                       rows="3">{{ old('data.'.$item->id.'.alasan_cuti', $item->alasan_cuti) }}</textarea>
@@ -1001,9 +983,8 @@ $(document).ready(function () {
     const sppMapping = @json($sppMapping ?? []);
 
     @foreach($bukuInduk as $item)
-
         const statusSelect{{ $item->id }} = $('#statusSelect{{ $item->id }}');
-
+        
         // FIELD GROUP
         const keluarFields{{ $item->id }} = $('#keluarFields{{ $item->id }}');
         const cutiFields{{ $item->id }}   = $('#cutiFields{{ $item->id }}');
@@ -1016,62 +997,59 @@ $(document).ready(function () {
         const kdBaru{{ $item->id }}  = $('#kd_baru{{ $item->id }}');
         const sppBaru{{ $item->id }} = $('#spp_baru{{ $item->id }}');
 
-        // RESET REQUIRED
-        function resetValidation{{ $item->id }}() {
+        const currentStatus{{ $item->id }} = '{{ strtolower($item->status ?? "") }}';
 
-            // Keluar
-            tglKeluar{{ $item->id }}.prop('required', false);
-
-            // Pindah
-            golBaru{{ $item->id }}.prop('required', false);
-            kdBaru{{ $item->id }}.prop('required', false);
-            sppBaru{{ $item->id }}.prop('required', false);
-
-            // Hide semua
+        // RESET SEMUA FIELD
+        function resetAllFields{{ $item->id }}() {
             keluarFields{{ $item->id }}.hide();
             cutiFields{{ $item->id }}.hide();
             pindahFields{{ $item->id }}.hide();
+
+            tglKeluar{{ $item->id }}.prop('required', false);
+            golBaru{{ $item->id }}.prop('required', false);
+            kdBaru{{ $item->id }}.prop('required', false);
+            sppBaru{{ $item->id }}.prop('required', false);
         }
 
-        // STATUS CHANGE
+        // Saat modal terbuka
+        $('#statusModal{{ $item->id }}').on('shown.bs.modal', function () {
+            resetAllFields{{ $item->id }}();
+
+            if (currentStatus{{ $item->id }} === 'cuti') {
+                // Jika murid sedang cuti → default ke Aktif Kembali
+                statusSelect{{ $item->id }}.val('Aktif');
+                cutiFields{{ $item->id }}.show();
+            }
+        });
+
+        // Saat pilihan status berubah
         statusSelect{{ $item->id }}.on('change', function () {
+            resetAllFields{{ $item->id }}();
 
-            resetValidation{{ $item->id }}();
+            const selected = this.value;
 
-            if (this.value === 'Keluar') {
-
+            if (selected === 'Keluar') {
                 keluarFields{{ $item->id }}.show();
-
                 tglKeluar{{ $item->id }}.prop('required', true);
 
-            } else if (this.value === 'Cuti') {
-
+            } else if (selected === 'Cuti' || selected === 'Aktif') {
+                // Tampilkan field cuti baik untuk perpanjang cuti maupun mengakhiri cuti
                 cutiFields{{ $item->id }}.show();
 
-            } else if (this.value === 'Pindah Golongan') {
-
+            } else if (selected === 'Pindah Golongan') {
                 pindahFields{{ $item->id }}.show();
-
                 golBaru{{ $item->id }}.prop('required', true);
                 kdBaru{{ $item->id }}.prop('required', true);
                 sppBaru{{ $item->id }}.prop('required', true);
             }
         });
 
-        // ===============================
-        // AUTO FILL SPP
-        // ===============================
+        // AUTO FILL SPP (Pindah Golongan)
         function updateSPP{{ $item->id }}() {
-
             const gol = golBaru{{ $item->id }}.val();
             const kd  = kdBaru{{ $item->id }}.val();
 
-            if (
-                gol &&
-                kd &&
-                sppMapping[gol] &&
-                sppMapping[gol][kd] !== undefined
-            ) {
+            if (gol && kd && sppMapping[gol] && sppMapping[gol][kd] !== undefined) {
                 let nilai = Math.round(parseFloat(sppMapping[gol][kd]));
                 sppBaru{{ $item->id }}.val(nilai);
             } else {

@@ -1601,41 +1601,49 @@ public function updateStatus(Request $request, $id)
 // =========================================
 elseif ($request->status === 'Cuti') {
 
-    $data = [
-        'status'             => 'Cuti',
-        'tanggal_mulai'           => $request->tanggal_mulai,
-        'tanggal_selesai_cuti'   => $request->tgl_selesai_cuti,
-        'jenis_cuti'         => $request->jenis_cuti,
-        'alasan_cuti'        => $request->alasan_cuti,
+    $id = $bukuInduk->id;
+
+    // Ambil data dari nested array
+    $cutiData = $request->input("data.{$id}", []);
+
+    $dataForBukuInduk = [
+        'status'                => 'Cuti',
+        'tanggal_mulai'         => $cutiData['tanggal_mulai'] ?? null,
+        'tgl_selesai_cuti'      => $cutiData['tgl_selesai_cuti'] ?? null,
+        'jenis_cuti'            => $cutiData['jenis_cuti'] ?? null,
+        'alasan_cuti'           => $cutiData['alasan_cuti'] ?? null,
     ];
 
-    // Upload surat dokter
-    if ($request->hasFile('surat_dokter')) {
+    // Update Buku Induk
+    $bukuInduk->update($dataForBukuInduk);
 
-        $file = $request->file('surat_dokter');
-
-        $path = $file->store('surat_dokter', 'public');
-
-        $data['surat_dokter'] = $path;
+    // ========================
+    // SIMPAN KE TABEL cuti_murid
+    // ========================
+    $filePath = null;
+    if ($request->hasFile("data.{$id}.surat_dokter")) {
+        $file = $request->file("data.{$id}.surat_dokter");
+        $filePath = $file->store('surat_dokter', 'public');
     }
 
-    // =========================
-    // UPDATE BUKU INDUK
-    // =========================
-    $bukuInduk->update($data);
-
-    // =========================
-    // SIMPAN KE TABEL CUTI
-    // =========================
     \App\Models\CutiMurid::create([
-
         'buku_induk_id'   => $bukuInduk->id,
-        'tanggal_mulai'   => $request->tanggal_mulai,
-        'tanggal_selesai' => $request->tgl_selesai_cuti,
-        'jenis_cuti'      => $request->jenis_cuti,
-        'alasan'          => $request->alasan_cuti,
-        'surat_dokter'    => $data['surat_dokter'] ?? null,
+        'tanggal_mulai'   => $cutiData['tanggal_mulai'] ?? null,
+        'tanggal_selesai' => $cutiData['tgl_selesai_cuti'] ?? null,
+        'jenis_cuti'      => $cutiData['jenis_cuti'] ?? null,
+        'alasan'          => $cutiData['alasan_cuti'] ?? null,
+        'surat_dokter'    => $filePath,
         'status'          => 'aktif',
+        'dibuat_oleh'     => Auth::user()?->name ?? 'system',
+    ]);
+
+    // Optional: History
+    BukuIndukHistory::create([
+        'buku_induk_id' => $bukuInduk->id,
+        'action'        => 'cuti',
+        'user'          => Auth::user()?->name ?? 'system',
+        'old_data'      => ['status' => $bukuInduk->getOriginal('status')],
+        'new_data'      => ['status' => 'Cuti'],
     ]);
 }
 elseif ($request->status === 'Aktif') {
