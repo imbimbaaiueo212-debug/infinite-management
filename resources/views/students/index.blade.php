@@ -331,7 +331,7 @@
                             <!-- FOTO KK -->
                             <td class="text-center">
                                 @if($student->foto_kk)
-                                    <a href="{{ asset('storage/' . $student->foto_kk) }}" 
+                                    <a href="{{ asset('public/storage/' . $student->foto_kk) }}" 
                                     target="_blank" 
                                     class="btn btn-sm btn-success mb-2"
                                     title="Lihat Foto KK">
@@ -339,7 +339,7 @@
                                     </a>
                                     
                                     <div>
-                                        <img src="{{ asset('storage/' . $student->foto_kk) }}" 
+                                        <img src="{{ asset('public/storage/' . $student->foto_kk) }}" 
                                             alt="Foto KK {{ $student->nama }}"
                                             class="img-thumbnail shadow-sm"
                                             style="max-width: 140px; max-height: 160px; object-fit: cover; border: 2px solid #ddd;"
@@ -356,7 +356,7 @@
                             <!-- FOTO MUTASI -->
                             <td class="text-center">
                                 @if($student->foto_mutasi)
-                                    <a href="{{ asset('storage/' . $student->foto_mutasi) }}" 
+                                    <a href="{{ asset('public/storage/' . $student->foto_mutasi) }}" 
                                     target="_blank" 
                                     class="btn btn-sm btn-warning mb-2"
                                     title="Lihat Surat Mutasi">
@@ -367,7 +367,7 @@
                                         <p class="text-muted small mb-0">📄 PDF File</p>
                                     @else
                                         <div>
-                                            <img src="{{ asset('storage/' . $student->foto_mutasi) }}" 
+                                            <img src="{{ asset('public/storage/' . $student->foto_mutasi) }}" 
                                                 alt="Foto Mutasi {{ $student->nama }}"
                                                 class="img-thumbnail shadow-sm"
                                                 style="max-width: 140px; max-height: 160px; object-fit: cover;"

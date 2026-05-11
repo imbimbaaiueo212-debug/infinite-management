@@ -47,35 +47,33 @@ class Student extends Model
 
         $user = Auth::user();
 
-        // Admin & Superadmin boleh lihat semua
+        // Admin & Superadmin → lihat semua
         if ($user->is_admin ?? false || in_array($user->role ?? '', ['admin', 'superadmin'])) {
             return;
         }
 
-        // User biasa
-        if (empty($user->bimba_unit) && empty($user->no_cabang)) {
-            $builder->whereRaw('1 = 0');
-            return;
-        }
+        $userUnit     = trim($user->bimba_unit ?? '');
+        $userNoCabang = trim($user->no_cabang ?? '');
 
-        $unitName = trim($user->bimba_unit ?? '');
-        $noCabang = trim($user->no_cabang ?? '');
-
-        $builder->where(function ($q) use ($unitName, $noCabang) {
-            // Matching utama berdasarkan data user
-            if ($unitName) {
-                $q->where('bimba_unit', 'LIKE', "%{$unitName}%");
+        $builder->where(function ($q) use ($userUnit, $userNoCabang) {
+            // Filter berdasarkan unit user yang login
+            if ($userUnit) {
+                $q->where('bimba_unit', 'LIKE', "%{$userUnit}%");
             }
-            if ($noCabang) {
-                $q->orWhere('no_cabang', $noCabang);
+            if ($userNoCabang) {
+                $q->orWhere('no_cabang', $userNoCabang);
             }
 
-            // Unit khusus yang sudah diketahui
+            // === DAFTAR UNIT YANG DIIZINKAN ===
             $q->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
               ->orWhere('no_cabang', '00340')
+
               ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
               ->orWhere('no_cabang', '05141')
-              ->orWhere('bimba_unit', 'LIKE', '%05141%');
+
+              ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA IV%')
+              ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA 4%')
+              ->orWhere('no_cabang', '01045');
         });
     });
 }

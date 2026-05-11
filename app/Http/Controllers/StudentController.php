@@ -211,7 +211,7 @@ class StudentController extends Controller
 // FILTER UNIT
 // =========================
 if (!$isAdmin) {
-    $userUnit = trim($user->bimba_unit ?? '');
+    $userUnit     = trim($user->bimba_unit ?? '');
     $userNoCabang = trim($user->no_cabang ?? '');
 
     $query->where(function ($qry) use ($userUnit, $userNoCabang) {
@@ -222,11 +222,14 @@ if (!$isAdmin) {
             $qry->orWhere('no_cabang', $userNoCabang);
         }
 
-        // Support multiple units
+        // Semua unit yang diizinkan
         $qry->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
             ->orWhere('no_cabang', '00340')
             ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
-            ->orWhere('no_cabang', '05141');
+            ->orWhere('no_cabang', '05141')
+            ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA IV%')
+            ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA 4%')
+            ->orWhere('no_cabang', '01045');
     });
 }
 
