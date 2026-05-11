@@ -156,22 +156,6 @@
                     value="{{ old('tgl_tahapan') }}" required>
                 </div>
 
-            {{-- Sumber Informasi --}}
-            <div class="col-md-6 mb-3 fw-bold">
-                <label for="info">Sumber Informasi <span class="text-danger">*</span></label>
-                <select name="info" id="info" class="form-control @error('info') is-invalid @enderror" required>
-                    <option value="">-- Pilih --</option>
-                    @foreach($infoOptions as $opt)
-                        <option value="{{ $opt }}" {{ old('info') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                    @endforeach
-                </select>
-                @error('info') <div class="invalid-feedback">{{ $message }}</div> @enderror
-            </div>
-
-            <div class="col-md-6 mb-3 fw-bold" id="keterangan_info_wrapper" style="display: none;">
-                <label for="keterangan_info">Keterangan Info</label>
-                <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
-            </div>
             <!-- Kelas -->
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="kelas">Kelas <span class="text-danger">*</span></label>
@@ -324,6 +308,36 @@
             <div class="col-md-6 mb-3 fw-bold">
                 <label for="keterangan_level">Keterangan Level</label>
                 <textarea name="keterangan_level" id="keterangan_level" class="form-control" rows="1">{{ old('keterangan_level') }}</textarea>
+            </div>
+
+            {{-- Sumber Informasi --}}
+           {{-- SUMBER INFORMASI + HUMAS (BAGIAN PENTING) --}}
+            <div class="col-md-6 mb-3 fw-bold">
+                <label for="info_select">Sumber Informasi <span class="text-danger">*</span></label>
+                <select name="info" id="info_select" class="form-control" required>
+                    <option value="">-- Pilih --</option>
+                    @foreach($infoOptions as $opt)
+                        <option value="{{ $opt }}" {{ old('info') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-6 mb-3 fw-bold" id="keterangan_info_wrapper" style="display: none;">
+                <label for="keterangan_info">Keterangan Info</label>
+                <textarea name="keterangan_info" id="keterangan_info" class="form-control" rows="2">{{ old('keterangan_info') }}</textarea>
+            </div>
+
+            <!-- NAMA HUMAS (Murid) -->
+            <div class="col-md-6 mt-2" id="nama_humas_wrapper" style="display: none;">
+                <label class="form-label text-success fw-bold">Nama Humas (Murid) <span class="text-danger">*</span></label>
+                <select name="nama_humas" id="nama_humas_select" class="form-select">
+                    <option value="">-- Pilih Murid sebagai Humas --</option>
+                    @foreach($muridOptions as $murid)
+                        <option value="{{ $murid->nama }}" {{ old('nama_humas') == $murid->nama ? 'selected' : '' }}>
+                            {{ $murid->nama }} @if($murid->nim) ({{ $murid->nim }}) @endif
+                        </option>
+                    @endforeach
+                </select>
             </div>
 
             <!-- Separator -->
@@ -770,6 +784,35 @@
             placeholder: '-- Pilih --',
             allowClear: true
         });
+        // ==================== HUMAS LOGIC (SAMA DENGAN EDIT) ====================
+        const infoSelect       = document.getElementById('info_select');
+        const keteranganWrapper = document.getElementById('keterangan_info_wrapper');
+        const humasWrapper      = document.getElementById('nama_humas_wrapper');
+
+        function handleInfoChange() {
+            if (!infoSelect) return;
+            
+            const value = (infoSelect.value || '').trim().toLowerCase();
+
+            // Keterangan Info
+            if (['humas', 'referral', 'lainnya'].includes(value)) {
+                keteranganWrapper.style.display = 'block';
+            } else {
+                keteranganWrapper.style.display = 'none';
+            }
+
+            // Nama Humas (Murid)
+            if (value === 'humas') {
+                humasWrapper.style.display = 'block';
+            } else {
+                humasWrapper.style.display = 'none';
+            }
+        }
+
+        if (infoSelect) {
+            $(infoSelect).on('change', handleInfoChange);
+            setTimeout(handleInfoChange, 400); // untuk old value / edit-like behavior
+        }
 
         // ==================== JADWAL ====================
         const kodeJadwal = document.getElementById('kode_jadwal');
@@ -1191,5 +1234,6 @@ function bindDate(input) {
         if (iso) this.value = iso;
     });
 }
+
 </script>
 @endsection

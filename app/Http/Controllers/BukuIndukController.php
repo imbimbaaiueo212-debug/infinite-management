@@ -396,6 +396,11 @@ $golOptions = $HargaSaptataruna
     }
     // =====================================================
 
+        $muridOptions = BukuInduk::where('status', 'Aktif')
+                    ->orWhere('status', 'Baru')
+                    ->orderBy('nama')
+                    ->get(['nama', 'nim']);
+
     return view('buku_induk.create', compact(
         'HargaSaptataruna',
         'golOptions', // 🔥 INI PENTING
@@ -423,7 +428,9 @@ $golOptions = $HargaSaptataruna
         'userNoCabang',
         'autoNim',
         'autoNimSuffix',
-        'guruByUnit'
+        'guruByUnit',
+        'muridOptions'
+
     ));
 }
 
@@ -518,6 +525,7 @@ $golOptions = $HargaSaptataruna
             'tgl_surat_garansi' => 'nullable|date',
             'tgl_tahapan'   => 'required|date',
             'tgl_daftar'    => 'required|date',
+            'nama_humas' => 'nullable|string',
         ]);
 
         // ← TAMBAHKAN INI setelah $data = $request->validate([...])
@@ -661,6 +669,10 @@ $golOptions = $HargaSaptataruna
     ];
 
     $infoOptions = ['Brosur','Event','Humas','Internet','Spanduk','Lainnya'];
+    $muridOptions = BukuInduk::where('status', 'Aktif')
+                    ->orWhere('status', 'Baru')
+                    ->orderBy('nama')
+                    ->get(['nama', 'nim']);
 
     return view('buku_induk.edit', compact(
         'bukuInduk',
@@ -680,7 +692,8 @@ $golOptions = $HargaSaptataruna
         'kodeJadwalOptions',
         'units',
         'infoOptions',
-        'asalModulOptions'
+        'asalModulOptions',
+        'muridOptions'
         
     ));
 }
@@ -775,6 +788,7 @@ $golOptions = $HargaSaptataruna
         'alasan_garansi' => 'nullable|string',
         'jumlah_beasiswa' => 'nullable|numeric|min:0',
         'modul_terakhir'    => 'nullable|string',
+        'nama_humas' => 'nullable|string',
     ]);
 
     // ← TAMBAHKAN INI

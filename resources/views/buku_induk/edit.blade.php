@@ -388,6 +388,25 @@
                                     </textarea>
                             </div>
 
+                            <!-- NAMA HUMAS (Murid) -->
+                            <div class="col-md-3 mt-2" id="nama_humas_wrapper" style="display: none;">
+                                <label class="form-label text-success fw-bold">Nama Humas (Murid) <span class="text-danger">*</span></label>
+                                <select name="nama_humas" id="nama_humas_select" class="form-select @error('nama_humas') is-invalid @enderror">
+                                    <option value="">-- Pilih Murid sebagai Humas --</option>
+                                    
+                                    @foreach($muridOptions as $murid)  {{-- $muridOptions akan kita passing dari controller --}}
+                                        <option value="{{ $murid->nama }}"
+                                            {{ old('nama_humas', $bukuInduk->nama_humas) == $murid->nama ? 'selected' : '' }}>
+                                            {{ $murid->nama }} 
+                                            @if($murid->nim) ({{ $murid->nim }}) @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('nama_humas')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
                             <div class="col-md-3">
                                 <label class="form-label">No Pembayaran Murid / VA</label>
                                 <input type="text" 
@@ -1029,6 +1048,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 });
+// ==================== INFO → SHOW NAMA HUMAS ====================
+const infoSelect = document.getElementById('info_select');
+const keteranganWrapper = document.getElementById('keterangan_info_wrapper');
+const humasWrapper = document.getElementById('nama_humas_wrapper');
+
+function handleInfoChange() {
+    const value = (infoSelect?.value || '').trim().toLowerCase();
+
+    // Keterangan Info
+    if (['humas', 'referral', 'lainnya'].includes(value)) {
+        keteranganWrapper.style.display = 'block';
+    } else {
+        keteranganWrapper.style.display = 'none';
+    }
+
+    // Nama Humas (Murid)
+    if (value === 'humas') {
+        humasWrapper.style.display = 'block';
+    } else {
+        humasWrapper.style.display = 'none';
+    }
+}
+
+if (infoSelect) {
+    $(infoSelect).on('change', handleInfoChange);
+    setTimeout(handleInfoChange, 400); // untuk edit mode
+}
 </script>
 
 <style>

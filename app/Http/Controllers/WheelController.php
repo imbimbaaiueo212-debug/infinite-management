@@ -326,7 +326,8 @@ class WheelController extends Controller
     $humasCol = 'informasi_humas_nama';
     $studentNameCol = 'nama';
 
-    $rows = DB::table('students')
+    // ==================== 1. Dari Tabel Students (yang lama) ====================
+    $fromStudents = DB::table('students')
         ->join('registrations', function($join) {
             $join->on('registrations.student_id', '=', 'students.id')
                  ->where('registrations.status', '=', 'accepted');
@@ -337,13 +338,32 @@ class WheelController extends Controller
             'students.id as student_id',
             DB::raw("TRIM({$humasCol}) as humas_name_raw"),
             DB::raw("TRIM({$studentNameCol}) as student_name"),
-            'registrations.bimba_unit as bimba_unit',   // ⬅️ tambahkan ini
-            'registrations.no_cabang as no_cabang',     // ⬅️ dan ini
+            'registrations.bimba_unit',
+            'registrations.no_cabang',
+            DB::raw("'student' as source")   // penanda
         ])
         ->orderBy('humas_name_raw')
-        ->limit(5000)
         ->get();
 
+    // ==================== 2. Dari Tabel Buku Induk (yang baru) ====================
+    $fromBukuInduk = DB::table('buku_induk')
+        ->where('info', 'humas')
+        ->whereNotNull('nama_humas')
+        ->whereRaw("TRIM(nama_humas) <> ''")
+        ->select([
+            DB::raw('NULL as student_id'),
+            'nama_humas as humas_name_raw',
+            'nama as student_name',           // nama murid
+            'bimba_unit',
+            'no_cabang',
+            DB::raw("'buku_induk' as source") // penanda
+        ])
+        ->get();
+
+    // Gabungkan kedua sumber
+    $rows = $fromStudents->merge($fromBukuInduk);
+
+    // ==================== Filter yang sudah pernah menang ====================
     $usedHashes = WheelWinner::pluck('row_hash')->filter()->map(fn($v) => (string) $v)->toArray();
     $usedNamesLower = WheelWinner::pluck('name')
         ->filter()
@@ -356,8 +376,16 @@ class WheelController extends Controller
         if ($referrerRaw === '') continue;
 
         $refLower = mb_strtolower($referrerRaw);
-        $rowHash = md5('stu:' . $r->student_id);
 
+        // Buat row_hash yang unik
+        if ($r->student_id) {
+            $rowHash = md5('stu:' . $r->student_id);
+        } else {
+            // Untuk data dari buku_induk
+            $rowHash = md5('buku:' . $referrerRaw . ($r->student_name ?? ''));
+        }
+
+        // Skip jika sudah pernah menang
         if (in_array($rowHash, $usedHashes, true)) continue;
         if (in_array($refLower, $usedNamesLower, true)) continue;
 
@@ -368,10 +396,14 @@ class WheelController extends Controller
             'name'          => $referrerRaw,
             'row_hash'      => $rowHash,
             'is_new_student'=> false,
-            'bimba_unit'    => $r->bimba_unit ?? null,   // ⬅️ simpan ke array $chosen
-            'no_cabang'     => $r->no_cabang ?? null,    // ⬅️ simpan ke array $chosen
+            'bimba_unit'    => $r->bimba_unit ?? null,
+            'no_cabang'     => $r->no_cabang ?? null,
+            'source'        => $r->source,   // tambahan untuk debug
         ];
     }
+
+    // Optional: sort by nama humas
+    usort($out, fn($a, $b) => strcasecmp($a['referrer_name'], $b['referrer_name']));
 
     return $out;
 }

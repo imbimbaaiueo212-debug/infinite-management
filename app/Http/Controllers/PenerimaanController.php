@@ -66,6 +66,8 @@ class PenerimaanController extends Controller
                         ->paginate($perPage)
                         ->withQueryString();
 
+                        
+
     // Total Ringkasan
     $totalVoucher     = $queryForSum->sum('voucher');
     $totalSpp         = $queryForSum->sum('spp');
