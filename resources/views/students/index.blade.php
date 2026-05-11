@@ -328,27 +328,27 @@
                             <td>{{ optional($student->created_at)->format('d M Y') }}</td>
 
                             <!-- FOTO KK -->
+                            <!-- FOTO KK -->
 <td class="text-center">
     @if($student->foto_kk)
-        @php
-            $fotoUrl = $student->foto_kk;
-            // Konversi Google Drive link ke direct view
-            if (str_contains($fotoUrl, 'drive.google.com')) {
-                preg_match('/[\/=]([a-zA-Z0-9_-]{25,})/', $fotoUrl, $matches);
-                $fileId = $matches[1] ?? '';
-                if ($fileId) {
-                    $fotoUrl = "https://drive.google.com/uc?id={$fileId}&export=view";
-                }
-            }
-        @endphp
-        
-        <a href="{{ $fotoUrl }}" target="_blank" rel="noopener noreferrer" 
-           class="btn btn-sm btn-success" title="Lihat Foto KK">
-            <i class="bi bi-file-image"></i> Lihat
+        <a href="{{ asset('storage/' . $student->foto_kk) }}" 
+           target="_blank" 
+           class="btn btn-sm btn-success mb-2"
+           title="Lihat Foto KK">
+            <i class="bi bi-file-image"></i> Lihat KK
         </a>
+        
+        <div>
+            <img src="{{ asset('storage/' . $student->foto_kk) }}" 
+                 alt="Foto KK {{ $student->nama }}"
+                 class="img-thumbnail shadow-sm"
+                 style="max-width: 140px; max-height: 160px; object-fit: cover; border: 2px solid #ddd;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
+        </div>
     @else
-        <span class="text-danger small" title="Belum ada foto KK">
-            <i class="bi bi-x-circle"></i> Belum
+        <span class="text-muted small">
+            <i class="bi bi-x-circle"></i> Belum ada KK
         </span>
     @endif
 </td>
@@ -356,24 +356,28 @@
 <!-- FOTO MUTASI -->
 <td class="text-center">
     @if($student->foto_mutasi)
-        @php
-            $fotoUrl = $student->foto_mutasi;
-            if (str_contains($fotoUrl, 'drive.google.com')) {
-                preg_match('/[\/=]([a-zA-Z0-9_-]{25,})/', $fotoUrl, $matches);
-                $fileId = $matches[1] ?? '';
-                if ($fileId) {
-                    $fotoUrl = "https://drive.google.com/uc?id={$fileId}&export=view";
-                }
-            }
-        @endphp
-        
-        <a href="{{ $fotoUrl }}" target="_blank" rel="noopener noreferrer" 
-           class="btn btn-sm btn-success" title="Lihat Foto Mutasi">
-            <i class="bi bi-file-image"></i> Lihat
+        <a href="{{ asset('storage/' . $student->foto_mutasi) }}" 
+           target="_blank" 
+           class="btn btn-sm btn-warning mb-2"
+           title="Lihat Surat Mutasi">
+            <i class="bi bi-file-earmark-text"></i> Lihat Mutasi
         </a>
+        
+        @if(str_contains($student->foto_mutasi, '.pdf'))
+            <p class="text-muted small mb-0">📄 PDF File</p>
+        @else
+            <div>
+                <img src="{{ asset('storage/' . $student->foto_mutasi) }}" 
+                     alt="Foto Mutasi {{ $student->nama }}"
+                     class="img-thumbnail shadow-sm"
+                     style="max-width: 140px; max-height: 160px; object-fit: cover;"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
+            </div>
+        @endif
     @else
-        <span class="text-danger small" title="Belum ada foto Mutasi">
-            <i class="bi bi-x-circle"></i> Belum
+        <span class="text-muted small">
+            <i class="bi bi-x-circle"></i> Belum ada Mutasi
         </span>
     @endif
 </td>
