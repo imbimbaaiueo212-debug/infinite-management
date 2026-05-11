@@ -329,58 +329,58 @@
 
                             <!-- FOTO KK -->
                             <!-- FOTO KK -->
-<td class="text-center">
-    @if($student->foto_kk)
-        <a href="{{ asset('storage/' . $student->foto_kk) }}" 
-           target="_blank" 
-           class="btn btn-sm btn-success mb-2"
-           title="Lihat Foto KK">
-            <i class="bi bi-file-image"></i> Lihat KK
-        </a>
-        
-        <div>
-            <img src="{{ asset('storage/' . $student->foto_kk) }}" 
-                 alt="Foto KK {{ $student->nama }}"
-                 class="img-thumbnail shadow-sm"
-                 style="max-width: 140px; max-height: 160px; object-fit: cover; border: 2px solid #ddd;"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
-        </div>
-    @else
-        <span class="text-muted small">
-            <i class="bi bi-x-circle"></i> Belum ada KK
-        </span>
-    @endif
-</td>
+                            <td class="text-center">
+                                @if($student->foto_kk)
+                                    <a href="{{ asset('storage/' . $student->foto_kk) }}" 
+                                    target="_blank" 
+                                    class="btn btn-sm btn-success mb-2"
+                                    title="Lihat Foto KK">
+                                        <i class="bi bi-file-image"></i> Lihat KK
+                                    </a>
+                                    
+                                    <div>
+                                        <img src="{{ asset('storage/' . $student->foto_kk) }}" 
+                                            alt="Foto KK {{ $student->nama }}"
+                                            class="img-thumbnail shadow-sm"
+                                            style="max-width: 140px; max-height: 160px; object-fit: cover; border: 2px solid #ddd;"
+                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
+                                    </div>
+                                @else
+                                    <span class="text-muted small">
+                                        <i class="bi bi-x-circle"></i> Belum ada KK
+                                    </span>
+                                @endif
+                            </td>
 
-<!-- FOTO MUTASI -->
-<td class="text-center">
-    @if($student->foto_mutasi)
-        <a href="{{ asset('storage/' . $student->foto_mutasi) }}" 
-           target="_blank" 
-           class="btn btn-sm btn-warning mb-2"
-           title="Lihat Surat Mutasi">
-            <i class="bi bi-file-earmark-text"></i> Lihat Mutasi
-        </a>
-        
-        @if(str_contains($student->foto_mutasi, '.pdf'))
-            <p class="text-muted small mb-0">📄 PDF File</p>
-        @else
-            <div>
-                <img src="{{ asset('storage/' . $student->foto_mutasi) }}" 
-                     alt="Foto Mutasi {{ $student->nama }}"
-                     class="img-thumbnail shadow-sm"
-                     style="max-width: 140px; max-height: 160px; object-fit: cover;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
-            </div>
-        @endif
-    @else
-        <span class="text-muted small">
-            <i class="bi bi-x-circle"></i> Belum ada Mutasi
-        </span>
-    @endif
-</td>
+                            <!-- FOTO MUTASI -->
+                            <td class="text-center">
+                                @if($student->foto_mutasi)
+                                    <a href="{{ asset('storage/' . $student->foto_mutasi) }}" 
+                                    target="_blank" 
+                                    class="btn btn-sm btn-warning mb-2"
+                                    title="Lihat Surat Mutasi">
+                                        <i class="bi bi-file-earmark-text"></i> Lihat Mutasi
+                                    </a>
+                                    
+                                    @if(str_contains($student->foto_mutasi, '.pdf'))
+                                        <p class="text-muted small mb-0">📄 PDF File</p>
+                                    @else
+                                        <div>
+                                            <img src="{{ asset('storage/' . $student->foto_mutasi) }}" 
+                                                alt="Foto Mutasi {{ $student->nama }}"
+                                                class="img-thumbnail shadow-sm"
+                                                style="max-width: 140px; max-height: 160px; object-fit: cover;"
+                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                            <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
+                                        </div>
+                                    @endif
+                                @else
+                                    <span class="text-muted small">
+                                        <i class="bi bi-x-circle"></i> Belum ada Mutasi
+                                    </span>
+                                @endif
+                            </td>
 
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-info text-white me-1 btn-show-history"

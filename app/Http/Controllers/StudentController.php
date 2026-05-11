@@ -208,21 +208,27 @@ class StudentController extends Controller
     }
 
     // =========================
-    // FILTER UNIT
-    // =========================
-    if (!$isAdmin) {
-        $query->where(function ($qry) {
-            $qry->where('no_cabang', '05141')
-                ->orWhere('bimba_unit', 'LIKE', '%05141%')
-                ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
-                ->orWhere('bimba_unit', 'LIKE', '%PESONA MADANI%');
-        });
-    } elseif ($unitId) {
-        $unit = Unit::find($unitId);
-        if ($unit) {
-            $query->where('no_cabang', $unit->no_cabang);
+// FILTER UNIT
+// =========================
+if (!$isAdmin) {
+    $userUnit = trim($user->bimba_unit ?? '');
+    $userNoCabang = trim($user->no_cabang ?? '');
+
+    $query->where(function ($qry) use ($userUnit, $userNoCabang) {
+        if ($userUnit) {
+            $qry->where('bimba_unit', 'LIKE', "%{$userUnit}%");
         }
-    }
+        if ($userNoCabang) {
+            $qry->orWhere('no_cabang', $userNoCabang);
+        }
+
+        // Support multiple units
+        $qry->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+            ->orWhere('no_cabang', '00340')
+            ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+            ->orWhere('no_cabang', '05141');
+    });
+}
 
     $students = $query->paginate(20)->withQueryString();
 

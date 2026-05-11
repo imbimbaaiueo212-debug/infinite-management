@@ -38,31 +38,45 @@ class Student extends Model
     // ===================================================================
     // GLOBAL SCOPE: FILTER OTOMATIS BERDASARKAN UNIT USER YANG LOGIN
     // ===================================================================
-    protected static function booted()
+   protected static function booted()
 {
     static::addGlobalScope('unit', function (Builder $builder) {
-        if (Auth::check()) {
-            $user = Auth::user();
-
-            // Admin / Superadmin → lihat semua data
-            if ($user->is_admin ?? false) {
-                return;
-            }
-
-            // User biasa → filter unit dengan fleksibel
-            if (!empty($user->bimba_unit)) {
-                $unitName = trim($user->bimba_unit);
-
-                $builder->where(function ($q) use ($unitName) {
-                    $q->where('no_cabang', '05141')
-                      ->orWhere('bimba_unit', 'LIKE', "%{$unitName}%")
-                      ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
-                      ->orWhere('bimba_unit', 'LIKE', '%05141%');
-                });
-            } else {
-                $builder->whereRaw('1 = 0'); // blokir jika tidak punya unit
-            }
+        if (!Auth::check()) {
+            return;
         }
+
+        $user = Auth::user();
+
+        // Admin & Superadmin boleh lihat semua
+        if ($user->is_admin ?? false || in_array($user->role ?? '', ['admin', 'superadmin'])) {
+            return;
+        }
+
+        // User biasa
+        if (empty($user->bimba_unit) && empty($user->no_cabang)) {
+            $builder->whereRaw('1 = 0');
+            return;
+        }
+
+        $unitName = trim($user->bimba_unit ?? '');
+        $noCabang = trim($user->no_cabang ?? '');
+
+        $builder->where(function ($q) use ($unitName, $noCabang) {
+            // Matching utama berdasarkan data user
+            if ($unitName) {
+                $q->where('bimba_unit', 'LIKE', "%{$unitName}%");
+            }
+            if ($noCabang) {
+                $q->orWhere('no_cabang', $noCabang);
+            }
+
+            // Unit khusus yang sudah diketahui
+            $q->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+              ->orWhere('no_cabang', '00340')
+              ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+              ->orWhere('no_cabang', '05141')
+              ->orWhere('bimba_unit', 'LIKE', '%05141%');
+        });
     });
 }
 
