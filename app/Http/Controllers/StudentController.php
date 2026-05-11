@@ -155,27 +155,20 @@ class StudentController extends Controller
     // -------------------------------------------------------------------------
     // INDEX
     // -------------------------------------------------------------------------
-   public function index(Request $request)
+  public function index(Request $request)
 {
     $q           = trim((string) $request->input('q', ''));
     $statusTrial = trim((string) $request->input('status_trial', ''));
     $user        = Auth::user();
 
-    // =========================
-    // 🏫 HANDLE UNIT
-    // =========================
-    if ($user && !in_array($user->role ?? '', ['admin', 'superadmin'])) {
+    $isAdmin = $user && in_array($user->role ?? '', ['admin', 'superadmin']);
+    $unitId  = $isAdmin ? $request->input('unit_id') : null;
 
-        // User biasa → paksa ke unit dia
-        $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
-
-        $unitId = $unit?->id;
-
-    } else {
-
-        // Admin → dari dropdown
-        $unitId = $request->input('unit_id');
-    }
+    Log::info('DEBUG INDEX MULAI', [
+        'user' => $user?->name,
+        'role' => $user?->role,
+        'user_bimba_unit' => $user?->bimba_unit ?? '-'
+    ]);
 
     // =========================
     // QUERY UTAMA
@@ -184,20 +177,15 @@ class StudentController extends Controller
         ->with('muridTrial')
         ->latest('id');
 
-    // =========================
-    // 🔍 SEARCH
-    // =========================
+    // Search
     if ($q !== '') {
         $query->where(function ($w) use ($q) {
-            $w->where('nim', $q)
-              ->orWhere('nim', 'like', "%{$q}%")
+            $w->where('nim', 'like', "%{$q}%")
               ->orWhere('nama', 'like', "%{$q}%");
         });
     }
 
-    // =========================
-    // 🎯 STATUS TRIAL
-    // =========================
+    // Status Trial
     if ($statusTrial !== '') {
         $key = strtolower($statusTrial);
         if ($key === 'bukan trial') $key = 'tanpa trial';
@@ -220,36 +208,42 @@ class StudentController extends Controller
     }
 
     // =========================
-    // 🏫 FILTER UNIT (PENTING)
+    // FILTER UNIT
     // =========================
-    if ($unitId) {
+    if (!$isAdmin) {
+        $query->where(function ($qry) {
+            $qry->where('no_cabang', '05141')
+                ->orWhere('bimba_unit', 'LIKE', '%05141%')
+                ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+                ->orWhere('bimba_unit', 'LIKE', '%PESONA MADANI%');
+        });
+    } elseif ($unitId) {
         $unit = Unit::find($unitId);
-
         if ($unit) {
-            $query->where('no_cabang', $unit->no_cabang)
-                  ->where('bimba_unit', $unit->biMBA_unit);
-        } else {
-            // jika unit tidak valid → kosongkan
-            $query->whereRaw('1 = 0');
+            $query->where('no_cabang', $unit->no_cabang);
         }
     }
 
-    // =========================
-    // PAGINATION
-    // =========================
     $students = $query->paginate(20)->withQueryString();
 
-    // =========================
-    // 🔽 DROPDOWN SEARCH (SUDAH FILTER UNIT)
-    // =========================
+    Log::info('DEBUG INDEX SELESAI', [
+        'total_data_ditemukan' => $students->total(),
+        'is_admin' => $isAdmin
+    ]);
+
+    // Student Options
     $studentOptionsQuery = Student::query();
 
-    if ($unitId) {
+    if (!$isAdmin) {
+        $studentOptionsQuery->where(function ($qry) {
+            $qry->where('no_cabang', '05141')
+                ->orWhere('bimba_unit', 'LIKE', '%05141%')
+                ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%');
+        });
+    } elseif ($unitId) {
         $unit = Unit::find($unitId);
-
         if ($unit) {
-            $studentOptionsQuery->where('no_cabang', $unit->no_cabang)
-                                ->where('bimba_unit', $unit->biMBA_unit);
+            $studentOptionsQuery->where('no_cabang', $unit->no_cabang);
         }
     }
 
@@ -264,26 +258,17 @@ class StudentController extends Controller
         ])
         ->toArray();
 
-    // =========================
-    // 🔽 DROPDOWN UNIT
-    // =========================
     $unitOptions = Unit::orderBy('no_cabang')
         ->get()
         ->map(fn($u) => [
             'value' => $u->id,
-            'label' => trim(($u->no_cabang ?? '') . ' - ' . ($u->biMBA_unit ?? '')),
+            'label' => trim(($u->no_cabang ?? '') . ' - ' . ($u->biMBA_unit ?? ''))
         ]);
 
     return view('students.index', compact(
-        'students',
-        'q',
-        'statusTrial',
-        'studentOptions',
-        'unitOptions',
-        'unitId'
+        'students', 'q', 'statusTrial', 'studentOptions', 'unitOptions', 'unitId'
     ));
 }
-
     // -------------------------------------------------------------------------
     // CREATE FORM
     // -------------------------------------------------------------------------
@@ -882,56 +867,83 @@ protected function fixAllNoCabang(): void
     // importFromSheet: panggil command dan lalu buat registrasi otomatis
     // serta pasca-import isi no_cabang secara deterministik
     // -------------------------------------------------------------------------
-   public function importFromSheet(Request $request)
-{
-    $sheet = $request->input('sheet', 'Registrasi');
+       public function importFromSheet(Request $request)
+    {
+        $sheet = $request->input('sheet', 'Registrasi');
+        $user  = Auth::user();
 
-    Log::info("Mulai import sheet: {$sheet}");
+        Log::info("Mulai import sheet via web", [
+            'sheet' => $sheet,
+            'user'  => $user?->name ?? 'unknown',
+            'role'  => $user?->role ?? 'unknown'
+        ]);
 
-    $exit = Artisan::call('forms:import-students', ['sheet' => $sheet]);
-    $output = trim(Artisan::output());
+        $unitFilter = null;
+        if ($user && !in_array($user->role ?? '', ['admin', 'superadmin'])) {
+            $unitFilter = $user->bimba_unit;
+        }
 
-    // === 1. Cek duplikat berdasarkan Nama + Tanggal Lahir atau NIM ===
-    $this->preventDuplicateStudents();
+        // Jalankan import command
+        $exitCode = Artisan::call('forms:import-students', [
+            'sheet'  => $sheet,
+            '--unit' => $unitFilter,
+        ]);
 
-    // === 2. Buat Registration otomatis ===
-    $directStudents = Student::where('source', 'direct')
-        ->whereDoesntHave('registrations', function ($q) {
-            $q->whereIn('status', ['pending', 'verified', 'accepted']);
-        })
-        ->get();
+        // Proses tambahan setelah import
+        $this->createPendingRegistrations();
+        $this->fixAllNoCabang();
 
-    foreach ($directStudents as $student) {
-        $hasActive = Registration::where('student_id', $student->id)
-            ->whereIn('status', ['pending', 'verified', 'accepted'])
-            ->exists();
+        $message = "✅ Import sheet '{$sheet}' selesai!";
+        if ($unitFilter) {
+            $message .= " (Hanya unit: {$unitFilter})";
+        }
 
-        if (!$hasActive) {
-            $payload = [
-                'student_id'     => $student->id,
-                'status'         => 'pending',
-                'tanggal_daftar' => now(),
-                'source'         => $student->source,
-                'created_by'     => Auth::id(),
-            ];
+        return back()->with('success', $message);
+    }
 
-            if (Schema::hasColumn('registrations', 'tahun_ajaran')) {
-                $payload['tahun_ajaran'] = Registration::currentAcademicYear() ?? null;
+/**
+     * Buat Registration otomatis untuk murid Direct (non-trial)
+     */
+    protected function createPendingRegistrations(): void
+    {
+        $directStudents = Student::where('source', 'direct')
+            ->whereDoesntHave('registrations', function ($q) {
+                $q->whereIn('status', ['pending', 'verified', 'accepted']);
+            })
+            ->get();
+
+        $created = 0;
+
+        foreach ($directStudents as $student) {
+            $hasActive = \App\Models\Registration::where('student_id', $student->id)
+                ->whereIn('status', ['pending', 'verified', 'accepted'])
+                ->exists();
+
+            if (!$hasActive) {
+                $payload = [
+                    'student_id'     => $student->id,
+                    'status'         => 'pending',
+                    'tanggal_daftar' => now(),
+                    'source'         => $student->source,
+                    'created_by'     => \Illuminate\Support\Facades\Auth::id() ?? null,
+                ];
+
+                // Tambahkan tahun ajaran jika kolom ada
+                if (\Illuminate\Support\Facades\Schema::hasColumn('registrations', 'tahun_ajaran')) {
+                    $payload['tahun_ajaran'] = \App\Models\Registration::currentAcademicYear() ?? null;
+                }
+
+                \App\Models\Registration::create(array_filter($payload));
+                $created++;
             }
+        }
 
-            Registration::create(array_filter($payload));
+        if ($created > 0) {
+            \Illuminate\Support\Facades\Log::info("createPendingRegistrations: {$created} registrasi baru dibuat.");
         }
     }
 
-    // === 3. Perbaiki no_cabang ===
-    $this->fixAllNoCabang();
 
-    $message = "Import sheet '{$sheet}' selesai! "
-             . "Registrasi dibuat: {$directStudents->count()}. "
-             . "Duplikat dicek & dicegah.";
-
-    return back()->with('success', $message);
-}
 protected function preventDuplicateStudents(): void
 {
     // Ambil semua student yang baru diimport (misal: yang belum punya NIM atau timestamp import baru)

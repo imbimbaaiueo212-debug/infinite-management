@@ -39,26 +39,32 @@ class Student extends Model
     // GLOBAL SCOPE: FILTER OTOMATIS BERDASARKAN UNIT USER YANG LOGIN
     // ===================================================================
     protected static function booted()
-    {
-        static::addGlobalScope('unit', function (Builder $builder) {
-            if (Auth::check()) {
-                $user = Auth::user();
+{
+    static::addGlobalScope('unit', function (Builder $builder) {
+        if (Auth::check()) {
+            $user = Auth::user();
 
-                // Admin / Pusat / Developer → boleh lihat semua murid dari semua unit
-                if ($user->is_admin) {
-                    return;
-                }
-
-                // User biasa → hanya boleh lihat murid dari unitnya sendiri
-                if ($user->bimba_unit) {
-                    $builder->where('bimba_unit', $user->bimba_unit);
-                } else {
-                    // Tidak punya unit → blokir total (keamanan ekstra)
-                    $builder->whereRaw('1 = 0');
-                }
+            // Admin / Superadmin → lihat semua data
+            if ($user->is_admin ?? false) {
+                return;
             }
-        });
-    }
+
+            // User biasa → filter unit dengan fleksibel
+            if (!empty($user->bimba_unit)) {
+                $unitName = trim($user->bimba_unit);
+
+                $builder->where(function ($q) use ($unitName) {
+                    $q->where('no_cabang', '05141')
+                      ->orWhere('bimba_unit', 'LIKE', "%{$unitName}%")
+                      ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+                      ->orWhere('bimba_unit', 'LIKE', '%05141%');
+                });
+            } else {
+                $builder->whereRaw('1 = 0'); // blokir jika tidak punya unit
+            }
+        }
+    });
+}
 
     /* =======================
        RELASI
