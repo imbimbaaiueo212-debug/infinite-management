@@ -81,97 +81,92 @@ class WheelController extends Controller
      * Periksa signature manual (hasValidSignature).
      */
     public function publicSpin(Request $request)
-    {
-        // Periksa signature dari query string
-        if (! $request->hasValidSignature()) {
-            Log::warning('Invalid signature in publicSpin', [
-                'url' => $request->fullUrl(),
-                'query' => $request->query(),
-                'body' => $request->all()
-            ]);
-            return response()->json(['error' => 'Invalid signature. Akses hanya melalui link resmi.'], 403);
-        }
-
-        $row_hash = $request->query('row_hash');
-        $v = Validator::make(['row_hash' => $row_hash], [
-            'row_hash' => ['required', 'string'],
-        ]);
-        if ($v->fails()) {
-            Log::warning('Invalid row_hash in publicSpin', ['row_hash' => $row_hash]);
-            return response()->json(['error' => 'Invalid request: row_hash missing or invalid'], 422);
-        }
-
-        $available = $this->fetchAvailableFromStudents();
-        $chosen = collect($available)->first(fn($x) => ($x['row_hash'] ?? '') === $row_hash);
-        if (! $chosen) {
-            Log::warning('Chosen not found in publicSpin', ['row_hash' => $row_hash]);
-            return response()->json(['error' => 'Nama tidak tersedia untuk undian (mungkin sudah pernah menang).'], 422);
-        }
-
-        $voucherIndex = random_int(0, count($this->vouchers) - 1);
-        $voucher = $this->vouchers[$voucherIndex];
-
-        try {
-            $winner = DB::transaction(function () use ($chosen, $voucher, $voucherIndex) {
-                $studentId = $chosen['student_id'] ?? null;
-                $rowHash = $chosen['row_hash'] ?? null;
-                $referrer = $chosen['referrer_name'] ?? '';
-                $brought = $chosen['brought_name'] ?? '';
-
-                $displayName = $referrer;
-                if ($brought) $displayName = strtoupper($referrer) . ' (' . $brought . ')';
-
-                if (!empty($rowHash) && WheelWinner::where('row_hash', $rowHash)->exists()) {
-                    throw new \RuntimeException('Item ini sudah dipakai sebagai pemenang (row_hash).');
-                }
-
-                if (WheelWinner::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($displayName))])->exists()) {
-                    throw new \RuntimeException('Nama ini sudah pernah menang.');
-                }
-
-                $w = new WheelWinner();
-                $w->name = $displayName;
-                $w->voucher = $voucher;
-                $w->voucher_index = $voucherIndex;
-                $w->row_hash = $rowHash;
-                $w->voucher_amount = $this->parseRpToInt($voucher);
-                if ($studentId) $w->student_id = $studentId;
-                $w->won_at = now();
-                $w->save();
-
-                return $w;
-            });
-        } catch (\Throwable $e) {
-            Log::error('Public spin failure: ' . $e->getMessage(), ['chosen' => $chosen ?? null, 'exception' => $e]);
-            return response()->json(['error' => 'Gagal menyimpan pemenang: ' . $e->getMessage()], 409);
-        }
-
-        // Setelah winner tersimpan, buat voucher di voucher_lama dan flash session (best-effort)
-        $createdOk = false;
-        try {
-            $createdOk = $this->createVouchersAndFlash($winner);
-            if (! $createdOk) {
-                Log::warning('publicSpin: winner saved but voucher rows not created', [
-                    'winner_id' => $winner->id ?? null,
-                    'row_hash' => $winner->row_hash ?? null,
-                    'voucher_amount' => $winner->voucher_amount ?? null,
-                ]);
-            }
-        } catch (\Throwable $e) {
-            // createVouchersAndFlash seharusnya menangkap sendiri, tapi just in case
-            Log::error('publicSpin: unexpected error while creating voucher rows: ' . $e->getMessage(), ['winner_id' => $winner->id ?? null]);
-        }
-
-        return response()->json([
-            'name' => $winner->name,
-            'voucher' => $winner->voucher,
-            'voucher_index' => (int) $winner->voucher_index,
-            'won_at' => optional($winner->won_at)->toDateTimeString(),
-            'voucher_amount' => $winner->voucher_amount,
-            'row_hash' => $winner->row_hash,
-            'voucher_created' => (bool) $createdOk,
-        ]);
+{
+    if (! $request->hasValidSignature()) {
+        return response()->json(['error' => 'Invalid signature.'], 403);
     }
+
+    $row_hash = $request->query('row_hash');
+    if (empty($row_hash)) {
+        return response()->json(['error' => 'row_hash is required'], 422);
+    }
+
+    $available = $this->fetchAvailableFromStudents();
+    $chosen = collect($available)->first(fn($x) => ($x['row_hash'] ?? '') === $row_hash);
+
+    if (!$chosen) {
+        return response()->json(['error' => 'Data tidak tersedia atau sudah digunakan.'], 422);
+    }
+
+    $voucherIndex = random_int(0, count($this->vouchers) - 1);
+    $voucher = $this->vouchers[$voucherIndex];
+
+    try {
+        $winner = DB::transaction(function () use ($chosen, $voucher, $voucherIndex) {
+
+            $studentId = $chosen['student_id'] ?? null;
+            $rowHash   = $chosen['row_hash'] ?? null;
+            $referrer  = $chosen['referrer_name'] ?? '';
+            $brought   = $chosen['brought_name'] ?? '';
+            $bimbaUnit = $chosen['bimba_unit'] ?? null;
+            $noCabang  = $chosen['no_cabang'] ?? null;
+
+            $displayName = $referrer;
+            if ($brought) {
+                $displayName = strtoupper($referrer) . ' (' . $brought . ')';
+            }
+
+            // Pengecekan hanya row_hash dan nama (tidak ada batas cabang lagi)
+            if (!empty($rowHash) && WheelWinner::where('row_hash', $rowHash)->exists()) {
+                throw new \RuntimeException('row_hash_duplicate');
+            }
+
+            if (WheelWinner::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($displayName))])->exists()) {
+                throw new \RuntimeException('name_duplicate');
+            }
+
+            $w = new WheelWinner();
+            $w->name           = $displayName;
+            $w->voucher        = $voucher;
+            $w->voucher_index  = $voucherIndex;
+            $w->row_hash       = $rowHash;
+            $w->voucher_amount = $this->parseRpToInt($voucher);
+            if ($studentId) $w->student_id = $studentId;
+            $w->bimba_unit     = $bimbaUnit;
+            $w->no_cabang      = $noCabang;
+            $w->won_at         = now();
+            $w->save();
+
+            return $w;
+        });
+    } catch (\Throwable $e) {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, 'row_hash_duplicate')) {
+            return response()->json(['error' => 'Data ini sudah pernah digunakan untuk spin.'], 409);
+        }
+
+        if (str_contains($msg, 'name_duplicate')) {
+            return response()->json(['error' => 'Nama ini sudah pernah menang sebelumnya.'], 409);
+        }
+
+        Log::error('Public spin failure: ' . $msg);
+        return response()->json(['error' => 'Gagal menyimpan pemenang. Silakan coba lagi.'], 409);
+    }
+
+    // Buat voucher
+    $createdOk = $this->createVouchersAndFlash($winner);
+
+    return response()->json([
+        'name' => $winner->name,
+        'voucher' => $winner->voucher,
+        'voucher_index' => (int) $winner->voucher_index,
+        'won_at' => optional($winner->won_at)->toDateTimeString(),
+        'voucher_amount' => $winner->voucher_amount,
+        'row_hash' => $winner->row_hash,
+        'voucher_created' => (bool) $createdOk,
+    ]);
+}
 
     public function index()
     {
@@ -408,23 +403,20 @@ class WheelController extends Controller
     return $out;
 }
 
-    /**
-     * Jalankan spin roda, simpan pemenang (admin)
-     */
-    public function spin(Request $request)
+  public function spin(Request $request)
 {
     $request->validate([
         'row_hash' => ['nullable', 'string'],
-        'name' => ['nullable', 'string'],
+        'name'     => ['nullable', 'string'],
     ]);
-
-    $rowHashReq = $request->input('row_hash');
-    $nameReq = trim((string) $request->input('name', ''));
 
     $available = $this->fetchAvailableFromStudents();
     if (empty($available)) {
         return response()->json(['error' => 'Tidak ada nama tersedia untuk undian.'], 422);
     }
+
+    $rowHashReq = $request->input('row_hash');
+    $nameReq    = trim((string) $request->input('name', ''));
 
     $chosen = null;
     if ($rowHashReq) {
@@ -432,11 +424,8 @@ class WheelController extends Controller
     }
     if (!$chosen && $nameReq !== '') {
         $chosen = collect($available)->first(function ($x) use ($nameReq) {
-            $ref = $x['referrer_name'] ?? '';
-            $brought = $x['brought_name'] ?? '';
-            $disp = $brought ? $ref . '(' . $brought . ')' : $ref;
-            return mb_strtolower(trim($disp)) === mb_strtolower(trim($nameReq))
-                || mb_strtolower(trim($ref)) === mb_strtolower(trim($nameReq));
+            $ref = trim($x['referrer_name'] ?? '');
+            return strcasecmp($ref, $nameReq) === 0;
         });
     }
     if (!$chosen) {
@@ -449,80 +438,60 @@ class WheelController extends Controller
     try {
         $winner = DB::transaction(function () use ($chosen, $voucher, $voucherIndex) {
 
-            $studentId  = $chosen['student_id']   ?? null;
-            $rowHash    = $chosen['row_hash']     ?? null;
-            $referrer   = $chosen['referrer_name'] ?? '';
-            $brought    = $chosen['brought_name']  ?? '';
-
-            // ⬇️ ambil unit & cabang dari $chosen (hasil fetchAvailableFromStudents)
-            $bimbaUnit  = $chosen['bimba_unit']   ?? null;
-            $noCabang   = $chosen['no_cabang']    ?? null;
-
-            $displayName = $referrer;
-            if ($brought) $displayName = strtoupper($referrer) . '(' . $brought . ')';
-
-            if (!empty($rowHash) && WheelWinner::where('row_hash', $rowHash)->exists()) {
-                throw new \RuntimeException('Item ini sudah dipakai sebagai pemenang (row_hash).');
+            $displayName = $chosen['referrer_name'] ?? '';
+            if (!empty($chosen['brought_name'])) {
+                $displayName = strtoupper($displayName) . ' (' . $chosen['brought_name'] . ')';
             }
 
-            if (WheelWinner::whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($displayName))])->exists()) {
-                throw new \RuntimeException('Nama ini sudah pernah menang.');
+            // Hanya cek row_hash (tidak cek no_cabang lagi)
+            if (!empty($chosen['row_hash']) && WheelWinner::where('row_hash', $chosen['row_hash'])->exists()) {
+                throw new \RuntimeException('row_hash_duplicate');
             }
 
-            $w = new WheelWinner();
-            $w->name           = $displayName;
-            $w->voucher        = $voucher;
-            $w->voucher_index  = $voucherIndex;
-            $w->row_hash       = $rowHash;
-            $w->voucher_amount = $this->parseRpToInt($voucher);
-            if ($studentId) {
-                $w->student_id = $studentId;
-            }
-
-            // ⬇️ SET ke kolom baru
-            $w->bimba_unit = $bimbaUnit;
-            $w->no_cabang  = $noCabang;
-
-            $w->won_at = now();
-            $w->save();
+            $w = WheelWinner::create([
+                'name'           => $displayName,
+                'voucher'        => $voucher,
+                'voucher_index'  => $voucherIndex,
+                'voucher_amount' => $this->parseRpToInt($voucher),
+                'row_hash'       => $chosen['row_hash'] ?? null,
+                'student_id'     => $chosen['student_id'] ?? null,
+                'bimba_unit'     => $chosen['bimba_unit'] ?? null,
+                'no_cabang'      => $chosen['no_cabang'] ?? null,
+                'won_at'         => now(),
+            ]);
 
             return $w;
-        }, 5);
+        });
     } catch (\Throwable $e) {
-        Log::warning('Spin failure: ' . $e->getMessage(), ['chosen' => $chosen ?? null]);
-        return response()->json(['error' => 'Gagal menyimpan pemenang: ' . $e->getMessage()], Response::HTTP_CONFLICT);
+        $msg = $e->getMessage();
+        Log::error('Spin Error', ['message' => $msg, 'chosen' => $chosen]);
+
+        if (str_contains($msg, 'row_hash_duplicate')) {
+            return response()->json(['error' => 'Data ini sudah pernah digunakan untuk spin.'], 409);
+        }
+
+        // Tangani error unique no_cabang dari database
+        if (str_contains($msg, 'no_cabang_unique') || str_contains($msg, 'Duplicate entry')) {
+            return response()->json([
+                'error' => 'Cabang ini sudah pernah menang. Sistem mengizinkan multiple win, tapi database masih ada batasan. Hubungi developer untuk hapus unique constraint.'
+            ], 409);
+        }
+
+        return response()->json(['error' => 'Gagal menyimpan pemenang. Silakan coba lagi.'], 409);
     }
 
-    // Buat voucher & flash
-    $createdOk = false;
-    try {
-        $createdOk = $this->createVouchersAndFlash($winner);
-        if (! $createdOk) {
-            Log::warning('spin: winner saved but voucher rows not created', [
-                'winner_id' => $winner->id ?? null,
-                'row_hash' => $winner->row_hash ?? null,
-            ]);
-        }
-    } catch (\Throwable $e) {
-        Log::error('spin: unexpected error while creating voucher rows: ' . $e->getMessage(), ['winner_id' => $winner->id ?? null]);
-    }
+    $createdOk = $this->createVouchersAndFlash($winner);
 
     return response()->json([
         'name' => $winner->name,
         'voucher' => $winner->voucher,
         'voucher_index' => (int) $winner->voucher_index,
         'id' => $winner->id,
-        'student_id' => $winner->student_id ?? null,
-        'row_hash' => $winner->row_hash ?? null,
+        'row_hash' => $winner->row_hash,
+        'no_cabang' => $winner->no_cabang,
         'won_at' => optional($winner->won_at)->toDateTimeString(),
-        'referrer' => $chosen['referrer_name'] ?? null,
-        'brought' => $chosen['brought_name'] ?? null,
         'voucher_amount' => $winner->voucher_amount,
-        'voucher_count' => $winner->voucher_amount ? (int) max(1, round($winner->voucher_amount / 50000)) : 1,
         'voucher_created' => (bool) $createdOk,
-        // optional kalau mau dikirim ke frontend juga:
-        'bimba_unit' => $winner->bimba_unit,
-        'no_cabang'  => $winner->no_cabang,
     ]);
 }
 
@@ -556,137 +525,159 @@ protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
 {
     try {
         $nilaiPerVoucher = 50000;
-        $voucherAmount = (int) ($winner->voucher_amount ?? $this->parseRpToInt($winner->voucher ?? null) ?? 0);
-
-        if ($voucherAmount <= 0) {
-            $voucherAmount = $nilaiPerVoucher;
-        }
+        $voucherAmount = (int) ($winner->voucher_amount ?? $this->parseRpToInt($winner->voucher ?? null) ?? 50000);
 
         $voucherCount = max(1, intdiv($voucherAmount, $nilaiPerVoucher));
         $prefix = 'SPIN-' . date('Ymd');
         $voucherNumbers = $this->generateVoucherNumbers($voucherCount, $prefix);
 
-        Log::info('createVouchersAndFlash: mulai membuat voucher rows', [
-            'winner_id' => $winner->id ?? null,
-            'voucher_amount' => $voucherAmount,
-            'voucher_count' => $voucherCount,
-            'voucher_numbers_sample' => array_slice($voucherNumbers, 0, 3),
+        Log::info('createVouchersAndFlash started', [
+            'winner_id' => $winner->id,
+            'amount' => $voucherAmount,
+            'count' => $voucherCount
         ]);
 
-        $createdRows = [];
-        $nimHumas = null;
-        $tanggalNow = now()->toDateString();
-
-        // persiapkan data humas dari winner->name (ambil sebelum '(' jika ada)
         $rawName = (string) ($winner->name ?? '');
-        $referrerName = trim(preg_replace('/\s*\(.*$/u', '', $rawName));
-        if ($referrerName === '') $referrerName = $rawName;
+        $referrerName = trim(preg_replace('/\s*\(.*$/', '', $rawName)) ?: $rawName;
 
-        // cari data buku_induk (defensif)
-        $bukuIndukRecord = null;
-        try {
-            $bukuIndukRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($referrerName)])->first();
-            if (! $bukuIndukRecord) {
-                $bukuIndukRecord = \App\Models\BukuInduk::where('nama', 'like', '%' . $referrerName . '%')->first();
-            }
-        } catch (\Throwable $ex) {
-            Log::warning('createVouchersAndFlash: lookup BukuInduk gagal', ['err' => $ex->getMessage()]);
-            $bukuIndukRecord = null;
-        }
+        $bukuIndukRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($referrerName)])
+                            ->orWhere('nama', 'like', '%' . $referrerName . '%')
+                            ->first();
 
-        // ambil student jika ada
-        $student = null;
-        if (!empty($winner->student_id)) {
-            $student = \App\Models\Student::find($winner->student_id);
-        }
+        $student = !empty($winner->student_id) ? \App\Models\Student::find($winner->student_id) : null;
 
-        // Buat semua rows dalam satu transaksi
-        DB::transaction(function () use (&$createdRows, &$nimHumas, $voucherNumbers, $nilaiPerVoucher, $bukuIndukRecord, $student, $referrerName, $winner, $tanggalNow) {
+        $createdRows = [];
+
+        DB::transaction(function () use (&$createdRows, $voucherNumbers, $nilaiPerVoucher, $bukuIndukRecord, $student, $referrerName, $winner) {
             foreach ($voucherNumbers as $vnum) {
-                $nimForHumas = $bukuIndukRecord->nim ?? null;
-                $orangtuaForHumas = $bukuIndukRecord->orangtua ?? null;
-                $telpForHumas = $bukuIndukRecord->no_telp_hp ?? ($bukuIndukRecord->no_telp ?? null);
-
-                $nimMuridBaru = $student->nim ?? null;
-                $namaMuridBaru = $student->nama ?? ($student->name ?? null);
-                $orangtuaMuridBaru = $student->orangtua ?? ($student->parent_name ?? null);
-                $telpMuridBaru = $student->telp_hp ?? ($student->no_telp ?? $student->no_telp_hp ?? null);
-
-                // IMPORTANT: jangan isi tanggal_penyerahan di sini (biarkan null)
                 $row = \App\Models\VoucherLama::create([
-                    'voucher' => $vnum,
-                    'jumlah_voucher' => 1,
-                    'nominal' => $nilaiPerVoucher,
-                    'tanggal_penyerahan' => null,             // <-- tetap NULL setelah spin
-                    'tanggal' => $tanggalNow,                 // tanggal spin / pembuatan voucher
-                    'status' => 'belum_diserahkan',           // <-- awal: belum diserahkan
-                    'nim' => $nimForHumas,
-                    'nama_murid' => $referrerName,
-                    'orangtua' => $orangtuaForHumas,
-                    'telp_hp' => $telpForHumas,
-                    'nim_murid_baru' => $nimMuridBaru,
-                    'nama_murid_baru' => $namaMuridBaru,
-                    'orangtua_murid_baru' => $orangtuaMuridBaru,
-                    'telp_hp_murid_baru' => $telpMuridBaru,
-                    'source' => 'spin',
+                    'voucher'                => $vnum,
+                    'jumlah_voucher'         => 1,
+                    'nominal'                => $nilaiPerVoucher,
+                    'tanggal'                => now()->toDateString(),
+                    'tanggal_penyerahan'     => null,
+                    'status'                 => 'belum_diserahkan',
+                    'source'                 => 'spin',
 
-                    // ⬇️ Tambahan: isi UNIT & NO CABANG dari pemenang spin
-                    'bimba_unit'      => $winner->bimba_unit ?? null,   // kalau di DB kolomnya 'bimba_unit', ganti jadi 'bimba_unit' =>
-                    'no_cabang' => $winner->no_cabang ?? null,
+                    // Data Humas
+                    'nim'                    => $bukuIndukRecord->nim ?? null,
+                    'nama_murid'             => $referrerName,
+                    'orangtua'               => $bukuIndukRecord->orangtua ?? null,
+                    'telp_hp'                => $bukuIndukRecord->no_telp_hp ?? $bukuIndukRecord->no_telp ?? null,
+
+                    // Data Murid Baru
+                    'nim_murid_baru'         => $student->nim ?? null,
+                    'nama_murid_baru'        => $student->nama ?? ($student->name ?? null),
+                    'orangtua_murid_baru'    => $student->orangtua ?? ($student->parent_name ?? null),
+                    'telp_hp_murid_baru'     => $student->no_telp_hp ?? $student->telp_hp ?? null,
+
+                    // Unit & Cabang
+                    'bimba_unit'             => $winner->bimba_unit,
+                    'no_cabang'              => $winner->no_cabang,
                 ]);
 
-                $createdRows[] = $row->toArray();
-                if ($nimForHumas && ! $nimHumas) $nimHumas = $nimForHumas;
+                $createdRows[] = $row;
             }
         });
 
-        // flash ke session supaya tampil di index (sama struktur dengan yang view harapkan: spinResult)
+        // Flash ke session
         \Session::flash('spinResult', [
             'count' => count($createdRows),
             'nominal' => $voucherAmount,
             'nominal_formatted' => number_format($voucherAmount, 0, ',', '.'),
-            'rows' => collect($createdRows)->map(function ($r) use ($tanggalNow) {
-                return [
-                    'voucher' => $r['voucher'] ?? null,
-                    'nominal' => $r['nominal'] ?? 50000,
-                    'tanggal_spin' => $r['tanggal'] ?? $tanggalNow,
-                    'tanggal_penyerahan' => null,                    // pastikan null
-                    'status' => $r['status'] ?? 'belum_diserahkan',
-                    'nim' => $r['nim'] ?? null,
-                    'nama_murid' => $r['nama_murid'] ?? null,
-                    'nim_murid_baru' => $r['nim_murid_baru'] ?? null,
-                    'nama_murid_baru' => $r['nama_murid_baru'] ?? null,
-                    'orangtua_murid_baru' => $r['orangtua_murid_baru'] ?? null,
-                    'telp_hp_murid_baru' => $r['telp_hp_murid_baru'] ?? null,
-
-                    // ⬇️ supaya kalau view baca dari session juga dapat UNIT & CABANG
-                    'bimba_unit'      => $r['bimba_unit']      ?? null,
-                    'no_cabang' => $r['no_cabang'] ?? null,
-                ];
-            })->toArray(),
+            'rows' => collect($createdRows)->map(fn($r) => [
+                'voucher' => $r->voucher,
+                'nominal' => $r->nominal,
+                'tanggal_spin' => $r->tanggal,
+                'tanggal_penyerahan' => null,
+                'status' => $r->status,
+                'nim' => $r->nim,
+                'nama_murid' => $r->nama_murid,
+                'nim_murid_baru' => $r->nim_murid_baru,
+                'nama_murid_baru' => $r->nama_murid_baru,
+                'bimba_unit' => $r->bimba_unit,
+                'no_cabang' => $r->no_cabang,
+            ])->toArray(),
             'vouchers' => collect($createdRows)->pluck('voucher')->toArray(),
-            'nim_humas' => $nimHumas,
-            'tanggal' => $tanggalNow,
         ]);
 
-        Log::info('createVouchersAndFlash: selesai membuat voucher rows', [
-            'winner_id' => $winner->id ?? null,
-            'created_count' => count($createdRows),
-        ]);
+        Log::info('createVouchersAndFlash SUCCESS', ['count' => count($createdRows), 'winner_id' => $winner->id]);
 
         return true;
+
     } catch (\Throwable $e) {
-        // log error lengkap agar mudah didiagnosa
-        Log::error('Error creating voucher rows after wheel winner: ' . $e->getMessage(), [
+        Log::error('createVouchersAndFlash FAILED - Critical Error', [
             'winner_id' => $winner->id ?? null,
-            'exception' => get_class($e),
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
+            'error'     => $e->getMessage(),
+            'line'      => $e->getLine(),
+            'file'      => $e->getFile(),
+            'trace'     => $e->getTraceAsString()
         ]);
 
         return false;
     }
 }
 
+/**
+ * Generate Signed URL untuk Orang Tua
+ */
+public function getParentSpinLink(Request $request)
+{
+    $row_hash = $request->get('row_hash');
+    $child_name = $request->get('child_name');
 
+    if (empty($row_hash) && empty($child_name)) {
+        return response()->json([
+            'success' => false,
+            'error' => 'Parameter row_hash atau child_name diperlukan'
+        ], 422);
+    }
+
+    try {
+        $params = [];
+        if ($row_hash) {
+            $params['row_hash'] = $row_hash;
+        } else {
+            // Fallback logic jika pakai child_name
+            $available = $this->fetchAvailableFromStudents();
+            $found = collect($available)->first(fn($x) => 
+                strcasecmp(trim($x['brought_name'] ?? ''), trim($child_name)) === 0 ||
+                strcasecmp(trim($x['referrer_name'] ?? ''), trim($child_name)) === 0
+            );
+
+            if ($found && !empty($found['row_hash'])) {
+                $params['row_hash'] = $found['row_hash'];
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Data tidak ditemukan'
+                ], 404);
+            }
+        }
+
+        $signedUrl = URL::temporarySignedRoute(
+            'wheels.public.index',
+            now()->addDays(7),
+            $params
+        );
+
+        return response()->json([
+            'success' => true,
+            'url' => $signedUrl
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('getParentSpinLink Error', [
+            'row_hash' => $row_hash,
+            'child_name' => $child_name,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'error' => 'Internal error: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

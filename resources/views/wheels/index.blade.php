@@ -295,73 +295,62 @@
       function escapeHtml(s) { return (s === null || s === undefined) ? '' : (s + '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
       function renderNameList() {
-        if (!nameListEl) return;
-        if (!availableNames || !availableNames.length) {
-          nameListEl.innerHTML = '<div class="text-center text-muted py-4">Tidak ada nama tersedia.</div>';
-          disableSpin();
-          return;
-        }
-        nameListEl.innerHTML = '';
-
-        // sort alphabetically by referrer
-        const list = [...availableNames].sort((a,b) => {
-          const ar = (a.referrer_name||a.name||'').toString().toUpperCase();
-          const br = (b.referrer_name||b.name||'').toString().toUpperCase();
-          return ar.localeCompare(br);
-        });
-
-        for (const it of list) {
-          const rowHash = it.row_hash || it.rowHash || it.row || '';
-          const ref = (it.referrer_name || it.name || '').toString().trim();
-          const brought = (it.brought_name || it.student_name || it.brought || it.child_name || '').toString().trim();
-          const isNew = !!it.is_new_student;
-
-          const id = 'n_' + (rowHash || Math.random().toString(36).slice(2,9));
-          const div = document.createElement('div');
-          div.className = 'form-check';
-
-          // left area (radio + names)
-          const left = document.createElement('div');
-          left.style.display = 'flex';
-          left.style.alignItems = 'center';
-          left.style.gap = '10px';
-
-          const radio = document.createElement('input');
-          radio.className = 'form-check-input name-checkbox';
-          radio.type = 'radio';
-          radio.name = 'selected_name';
-          radio.id = id;
-          radio.dataset.row_hash = rowHash;
-          radio.dataset.ref = ref;
-          radio.dataset.brought = brought;
-          if (it.is_new_student) radio.dataset.is_new = '1';
-          radio.value = ref;
-
-          const label = document.createElement('label');
-          label.className = 'form-check-label';
-          label.setAttribute('for', id);
-
-          // Build lines exactly as requested:
-          const refLine = `<div class="referrer">${escapeHtml((ref || '').toString().toUpperCase())} (humas)</div>`;
-          const broughtLine = brought ? `<div class="brought">${escapeHtml(brought)}${isNew ? '(murid Baru)' : ''}</div>` : '';
-          label.innerHTML = refLine + broughtLine;
-
-          left.appendChild(radio);
-          left.appendChild(label);
-
-          const rowWrapper = document.createElement('div');
-          rowWrapper.style.display = 'flex';
-          rowWrapper.style.justifyContent = 'space-between';
-          rowWrapper.style.alignItems = 'center';
-          rowWrapper.appendChild(left);
-
-          div.appendChild(rowWrapper);
-          nameListEl.appendChild(div);
-        }
-
-        nameListEl.addEventListener('change', onNameChange);
+    if (!nameListEl) return;
+    if (!availableNames || !availableNames.length) {
+        nameListEl.innerHTML = '<div class="text-center text-muted py-4">Tidak ada nama tersedia.</div>';
         disableSpin();
-      }
+        return;
+    }
+    nameListEl.innerHTML = '';
+
+    const list = [...availableNames].sort((a,b) => {
+        const ar = (a.referrer_name||a.name||'').toString().toUpperCase();
+        const br = (b.referrer_name||b.name||'').toString().toUpperCase();
+        return ar.localeCompare(br);
+    });
+
+    for (const it of list) {
+        const rowHash   = it.row_hash || it.rowHash || '';
+        const ref       = (it.referrer_name || it.name || '').toString().trim();
+        const brought   = (it.brought_name || it.student_name || it.child_name || '').toString().trim();
+        const isNew     = !!it.is_new_student;
+
+        const id = 'n_' + (rowHash || Math.random().toString(36).slice(2,9));
+
+        const div = document.createElement('div');
+        div.className = 'form-check';
+
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input class="form-check-input name-checkbox" type="radio" name="selected_name" 
+                           id="${id}" 
+                           data-row_hash="${escapeHtml(rowHash)}"
+                           data-ref="${escapeHtml(ref)}"
+                           data-brought="${escapeHtml(brought)}"
+                           ${isNew ? 'data-is_new="1"' : ''}>
+                    <label class="form-check-label" for="${id}" style="cursor:pointer;">
+                        <div class="referrer fw-bold text-primary">${escapeHtml(ref.toUpperCase())} (Humas)</div>
+                        ${brought ? `<div class="brought fw-bold text-success">${escapeHtml(brought)}${isNew ? ' (Murid Baru)' : ''}</div>` : ''}
+                    </label>
+                </div>
+
+                <!-- Tombol Salin Link untuk Orang Tua -->
+                <button onclick="copyParentSpinLink('${escapeHtml(rowHash)}', '${escapeHtml(brought)}', '${escapeHtml(ref)}')" 
+                        class="btn btn-sm btn-outline-success" 
+                        title="Salin link spin untuk orang tua murid"
+                        style="font-size:0.8rem; padding:4px 8px;">
+                    📋 Link Orang Tua
+                </button>
+            </div>
+        `;
+
+        nameListEl.appendChild(div);
+    }
+
+    nameListEl.addEventListener('change', onNameChange);
+    disableSpin();
+}
 
       selectRandomBtn && selectRandomBtn.addEventListener('click', () => {
         const radios = document.querySelectorAll('.name-checkbox'); if (!radios.length) return;
@@ -540,9 +529,9 @@
             const broughtName = (data.brought || data.new_student?.nama || payload.brought || checked.dataset.brought || '').toString().trim();
             const isNew = !!(data.new_student || checked.dataset.is_new === '1' || checked.dataset.is_new === 'true' || checked.dataset.is_new === true);
 
-            let winnerHtml = `<div style="font-size:1.05rem;"><strong>${escapeHtml((refName || '').toUpperCase())} (humas)</strong></div>`;
+            let winnerHtml = `<div style="font-size:1.05rem;"><strong>${escapeHtml((refName || '').toUpperCase())} (Murid Humas)</strong></div>`;
             if (broughtName) {
-              winnerHtml += `<div style="font-size:0.95rem; margin-top:4px;">${escapeHtml(broughtName)}${isNew ? '(murid Baru)' : ''}</div>`;
+              winnerHtml += `<div style="font-size:0.95rem; margin-top:4px;">${escapeHtml(broughtName)}${isNew ? '(murid Baru)' : ''} (Murid Baru)</div>`;
             }
             winnerHtml += `<div style="margin-top:8px;">mendapatkan <strong>${escapeHtml(selectedVoucher)}</strong> 🎁</div>`;
 
@@ -592,5 +581,78 @@
       });
       if (backBtn) backBtn.addEventListener('click', () => window.history.back());
     })();
+
+
+    async function copyParentSpinLink(rowHash, childName, referrerName) {
+    try {
+        const params = new URLSearchParams();
+        if (rowHash) {
+            params.append('row_hash', rowHash);
+        } else if (childName) {
+            params.append('child_name', childName);
+        }
+
+        const baseUrl = `{{ route("wheels.parent.link") }}`;
+        if (!baseUrl || baseUrl.includes('{{')) {
+            throw new Error('Route belum ter-render');
+        }
+
+        const res = await fetch(`${baseUrl}?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+
+        if (!json.success || !json.url) {
+            throw new Error(json.error || 'Gagal membuat link');
+        }
+
+        // === Perbaikan Clipboard ===
+        const textToCopy = json.url;
+
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(textToCopy);
+            showSuccessToast(`✅ Link untuk ${referrerName || childName} berhasil disalin!`);
+        } else {
+            // Fallback untuk HTTP / localhost
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            showSuccessToast(`✅ Link untuk ${referrerName || childName} berhasil disalin! (Fallback)`);
+        }
+
+    } catch (err) {
+        console.error('copyParentSpinLink failed:', err);
+        
+        let message = '❌ Gagal membuat link. Coba refresh halaman.';
+        if (err.message.includes('Route')) {
+            message = '❌ Route copy link belum dikonfigurasi dengan benar.';
+        }
+        
+        showErrorToast(message);
+    }
+}
+
+// Helper Toast Sederhana (jika showCopiedToast tidak ada)
+function showSuccessToast(msg) {
+    alert(msg); // sementara, ganti dengan toast library Anda nanti
+    console.log(msg);
+}
+
+function showErrorToast(msg) {
+    alert(msg);
+    console.error(msg);
+}
   </script>
 @endpush

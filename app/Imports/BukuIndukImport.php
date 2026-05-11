@@ -144,9 +144,9 @@ class BukuIndukImport implements ToCollection, WithHeadingRow, WithStartRow
                 'alamat_murid'         => trim($row[9] ?? ''),
 
                 'tahap'              => trim($row[13] ?? ''),
-                'tgl_tahapan'       =>trim($row[14] ?? ''),
+                'tgl_tahapan'       => $this->convertExcelDate($row[14] ?? null)?->format('Y-m-d'),
                 'level'                => trim($row[26] ?? ''),
-                'tgl_level'            => trim($row[27] ?? ''),
+                'tgl_level'            => $this->convertExcelDate($row[27] ?? null)?->format('Y-m-d'),
                 'jenis_kbm'            => trim($row[28] ?? ''),
                 'kode_jadwal' => trim($row['jadwal'] ?? ''),
                 'hari_jam'             => trim($row[40] ?? ''),

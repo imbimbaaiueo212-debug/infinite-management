@@ -8,24 +8,33 @@ class WheelWinner extends Model
 {
     protected $table = 'wheel_winners';
 
-    // Tambahkan 2 kolom baru ini
     protected $fillable = [
         'name',
         'voucher',
         'voucher_index',
+        'voucher_amount',     // ← Penting! ini sering digunakan di controller
         'row_hash',
         'student_id',
-        'won_at',
-        'bimba_unit',      // baru
-        'no_cabang',  // baru
-    ];
-
-    protected $dates = [
+        'bimba_unit',
+        'no_cabang',
         'won_at',
     ];
 
-    // Optional: cast kalau perlu
     protected $casts = [
-        'won_at' => 'datetime',
+        'won_at'          => 'datetime',
+        'voucher_amount'  => 'integer',
+        'voucher_index'   => 'integer',
+        'student_id'      => 'integer',
     ];
+
+    // Optional: agar created_at & updated_at tetap otomatis
+    public $timestamps = true;
+
+    /**
+     * Scope untuk query pemenang terbaru
+     */
+    public function scopeLatestWon($query)
+    {
+        return $query->orderBy('won_at', 'desc');
+    }
 }

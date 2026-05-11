@@ -831,8 +831,9 @@ Route::get('/wheels/history', [WheelController::class, 'history'])->name('wheels
 |   either use the same signed route for POST or protect with a token.
 |
 */
-Route::get('/wheels/public/{row_hash}', [WheelController::class, 'publicIndex'])
-    ->name('wheels.public.index');   // temporarySignedRoute akan membutuhkan nama ini        // optional: middleware signed akan memeriksa signature
+// di routes/web.php atau wheels.php
+Route::get('/wheel/{row_hash}', [WheelController::class, 'publicIndex'])
+    ->name('wheels.public.index');
 
 // endpoint POST untuk spin dari halaman publik
 // jangan beri {row_hash} di path; publicSpin akan baca row_hash dari request (body/query)
@@ -841,6 +842,8 @@ Route::post('/wheels/public/spin', [WheelController::class, 'publicSpin'])
 
 Route::post('/wheels/history/clear', [WheelController::class, 'clearHistory'])
     ->name('wheels.history.clear');
+Route::get('/wheels/parent-link', [WheelController::class, 'getParentSpinLink'])
+     ->name('wheels.parent.link');
 
 
 Route::prefix('imbalan-rekap')->name('imbalan_rekap.')->group(function () {
