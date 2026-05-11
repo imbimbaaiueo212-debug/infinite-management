@@ -272,9 +272,16 @@ class ImportStudentsFromForms extends Command
             'bimba unit' => 'bimba_unit',
             'unit' => 'bimba_unit',
 
+            // FOTO KK
+            'upload kk (kartu keluarga)' => 'foto_kk',
             'upload kk' => 'foto_kk',
             'kartu keluarga' => 'foto_kk',
+            'foto kk' => 'foto_kk',
+
+            // FOTO MUTASI
             'upload surat mutasi' => 'foto_mutasi',
+            'surat mutasi' => 'foto_mutasi',
+            'foto mutasi' => 'foto_mutasi',
 
             'nama' => 'informasi_humas_nama',
         ];
@@ -520,10 +527,6 @@ class ImportStudentsFromForms extends Command
                 $resolved = $this->resolveNoCabangFromBimbaUnit($result['bimba_unit']);
                 if ($resolved) {
                     $result['no_cabang'] = $resolved;
-                } else {
-                    Log::info('IMPORT: belum ada mapping unit->no_cabang', [
-                        'bimba_unit' => $result['bimba_unit'],
-                    ]);
                 }
             } catch (\Throwable $e) {
                 Log::warning('IMPORT: gagal resolve no_cabang', [
@@ -533,14 +536,29 @@ class ImportStudentsFromForms extends Command
             }
         }
 
+        // ====================== KONVERSI GOOGLE DRIVE LINK ======================
+        foreach (['foto_kk', 'foto_mutasi'] as $field) {
+            if (!empty($result[$field])) {
+                $url = trim((string) $result[$field]);
+
+                // Jika link Google Drive biasa (open?id= atau file/d/)
+                if (str_contains($url, 'drive.google.com')) {
+                    preg_match('/[\/=]([a-zA-Z0-9_-]{25,})/', $url, $matches);
+                    if (!empty($matches[1])) {
+                        $fileId = $matches[1];
+                        $result[$field] = "https://drive.google.com/uc?id={$fileId}&export=view";
+                        Log::info("Google Drive link converted", [$field => $fileId]);
+                    }
+                }
+            }
+        }
+
         Log::debug('IMPORT: mapped essentials', [
             'nama' => $result['nama'] ?? null,
-            'informasi_bimba' => $result['informasi_bimba'] ?? null,
-            'informasi_humas_nama' => $result['informasi_humas_nama'] ?? null,
-            'hari' => $result['hari'] ?? null,
-            'jam' => $result['jam'] ?? null,
             'bimba_unit' => $result['bimba_unit'] ?? null,
             'no_cabang' => $result['no_cabang'] ?? null,
+            'foto_kk' => $result['foto_kk'] ?? null,
+            'foto_mutasi' => $result['foto_mutasi'] ?? null,
         ]);
 
         return $result;

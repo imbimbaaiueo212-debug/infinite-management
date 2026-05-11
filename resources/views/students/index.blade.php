@@ -327,33 +327,56 @@
 
                             <td>{{ optional($student->created_at)->format('d M Y') }}</td>
 
-                            <!-- TAMBAHAN BARU: KOLOM FOTO KK -->
-                            <td class="text-center">
-                                @if($student->foto_kk)
-                                    <a href="{{ $student->foto_kk }}" target="_blank" rel="noopener noreferrer"
-                                        class="btn btn-sm btn-success" title="Lihat Foto KK">
-                                        <i class="bi bi-file-image"></i> Ada
-                                    </a>
-                                @else
-                                    <span class="text-danger small" title="Belum ada foto KK">
-                                        <i class="bi bi-x-circle"></i> Belum
-                                    </span>
-                                @endif
-                            </td>
+                            <!-- FOTO KK -->
+<td class="text-center">
+    @if($student->foto_kk)
+        @php
+            $fotoUrl = $student->foto_kk;
+            // Konversi Google Drive link ke direct view
+            if (str_contains($fotoUrl, 'drive.google.com')) {
+                preg_match('/[\/=]([a-zA-Z0-9_-]{25,})/', $fotoUrl, $matches);
+                $fileId = $matches[1] ?? '';
+                if ($fileId) {
+                    $fotoUrl = "https://drive.google.com/uc?id={$fileId}&export=view";
+                }
+            }
+        @endphp
+        
+        <a href="{{ $fotoUrl }}" target="_blank" rel="noopener noreferrer" 
+           class="btn btn-sm btn-success" title="Lihat Foto KK">
+            <i class="bi bi-file-image"></i> Lihat
+        </a>
+    @else
+        <span class="text-danger small" title="Belum ada foto KK">
+            <i class="bi bi-x-circle"></i> Belum
+        </span>
+    @endif
+</td>
 
-                            <!-- TAMBAHAN BARU: KOLOM FOTO MUTASI -->
-                            <td class="text-center">
-                                @if($student->foto_mutasi)
-                                    <a href="{{ $student->foto_mutasi }}" target="_blank" rel="noopener noreferrer"
-                                        class="btn btn-sm btn-success" title="Lihat Foto Mutasi">
-                                        <i class="bi bi-file-image"></i> Ada
-                                    </a>
-                                @else
-                                    <span class="text-danger small" title="Belum ada foto Mutasi">
-                                        <i class="bi bi-x-circle"></i> Belum
-                                    </span>
-                                @endif
-                            </td>
+<!-- FOTO MUTASI -->
+<td class="text-center">
+    @if($student->foto_mutasi)
+        @php
+            $fotoUrl = $student->foto_mutasi;
+            if (str_contains($fotoUrl, 'drive.google.com')) {
+                preg_match('/[\/=]([a-zA-Z0-9_-]{25,})/', $fotoUrl, $matches);
+                $fileId = $matches[1] ?? '';
+                if ($fileId) {
+                    $fotoUrl = "https://drive.google.com/uc?id={$fileId}&export=view";
+                }
+            }
+        @endphp
+        
+        <a href="{{ $fotoUrl }}" target="_blank" rel="noopener noreferrer" 
+           class="btn btn-sm btn-success" title="Lihat Foto Mutasi">
+            <i class="bi bi-file-image"></i> Lihat
+        </a>
+    @else
+        <span class="text-danger small" title="Belum ada foto Mutasi">
+            <i class="bi bi-x-circle"></i> Belum
+        </span>
+    @endif
+</td>
 
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-info text-white me-1 btn-show-history"
