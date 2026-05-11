@@ -338,14 +338,6 @@
                                         <i class="bi bi-file-image"></i> Lihat KK
                                     </a>
                                     
-                                    <div>
-                                        <img src="{{ asset('public/storage/' . $student->foto_kk) }}" 
-                                            alt="Foto KK {{ $student->nama }}"
-                                            class="img-thumbnail shadow-sm"
-                                            style="max-width: 140px; max-height: 160px; object-fit: cover; border: 2px solid #ddd;"
-                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                        <span class="text-danger small" style="display:none;">Gagal memuat gambar</span>
-                                    </div>
                                 @else
                                     <span class="text-muted small">
                                         <i class="bi bi-x-circle"></i> Belum ada KK

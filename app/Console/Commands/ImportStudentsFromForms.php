@@ -686,24 +686,40 @@ private function getDirectGoogleDriveLink(string $url): string
     }
 
     protected function tryParseDate(?string $val): ?Carbon
-    {
-        if (!$val) {
-            return null;
-        }
-        try {
-            return Carbon::parse($val);
-        } catch (\Throwable $e) {
-        }
-
-        $formats = ['d/m/Y', 'd-m-Y', 'd.m.Y', 'm/d/Y', 'm-d-Y', 'Y/m/d', 'Y-m-d'];
-        foreach ($formats as $f) {
-            try {
-                return Carbon::createFromFormat($f, $val);
-            } catch (\Throwable $e) {
-            }
-        }
+{
+    if (empty($val)) {
         return null;
     }
+
+    $val = trim((string) $val);
+
+    // Prioritas tinggi untuk format Indonesia (DD/MM/YYYY)
+    $formats = [
+        'd/m/Y', 'd-m-Y', 'd.m.Y',     // Indonesia
+        'd/m/y', 'd-m-y', 'd.m.y',
+        'Y-m-d', 'Y/m/d',               // ISO
+        'm/d/Y', 'm-d-Y',               // US (cadangan)
+    ];
+
+    foreach ($formats as $format) {
+        try {
+            $date = Carbon::createFromFormat($format, $val);
+            if ($date) {
+                return $date->startOfDay(); // pastikan jam 00:00
+            }
+        } catch (\Throwable $e) {
+            continue;
+        }
+    }
+
+    // Fallback terakhir
+    try {
+        return Carbon::parse($val)->startOfDay();
+    } catch (\Throwable $e) {
+        Log::warning("Gagal parse tanggal: {$val}");
+        return null;
+    }
+}
 
     protected function tryParseDateTime(?string $val): ?Carbon
     {
