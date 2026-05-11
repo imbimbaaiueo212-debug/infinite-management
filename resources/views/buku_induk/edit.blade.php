@@ -711,12 +711,13 @@
 </div>
 @endsection
 
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
     // ==================== SELECT2 ====================
-    $('#gol, #kd, #kelas, #bimba_unit_select, #tahap_select, #level, #info_select, #petugas_trial, #guru, #jenis_kbm, #note, #note_garansi, #kategori_keluar, #kode_jadwal, #asal_modul, #perpanjang_garansi')
+    $('#gol, #kd, #kelas, #bimba_unit_select, #tahap_select, #level, #info_select, #petugas_trial, #guru, #jenis_kbm, #note, #note_garansi, #kategori_keluar, #kode_jadwal, #asal_modul, #perpanjang_garansi, #nama_humas_select')
         .select2({ 
             width: '100%', 
             placeholder: '-- Pilih --', 
