@@ -139,7 +139,7 @@
                 <th>Nominal (Rp)</th>
                 <th>Tanggal Spin</th>
                 <th>Status</th>
-                <th>NIM</th>
+                <th>NIM (Humas)</th>
                 <th>Nama Humas</th>
                 <th>NIM Murid Baru</th>
                 <th>Nama Murid Baru</th>
@@ -294,8 +294,8 @@
               <th>TANGGAL SPIN</th>
               <th>TANGGAL PENYERAHAN</th>
               <th>STATUS</th>
-              <th>NIM</th>
-              <th>NAMA MURID</th>
+              <th>NIM (Humas)</th>
+              <th>NAMA MURID (Humas)</th>
               <th>Bimba Unit</th>
               <th>No Cabang</th>
               <th>ORANGTUA</th>

@@ -521,35 +521,62 @@ class WheelController extends Controller
  * - status diset 'belum_diserahkan'
  * - flash menggunakan key 'spinResult' dan field 'tanggal_spin'
  */
+/**
+ * Helper: buat voucher rows di voucher_lama setelah spin
+ */
 protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
 {
     try {
         $nilaiPerVoucher = 50000;
         $voucherAmount = (int) ($winner->voucher_amount ?? $this->parseRpToInt($winner->voucher ?? null) ?? 50000);
-
         $voucherCount = max(1, intdiv($voucherAmount, $nilaiPerVoucher));
+
         $prefix = 'SPIN-' . date('Ymd');
         $voucherNumbers = $this->generateVoucherNumbers($voucherCount, $prefix);
 
-        Log::info('createVouchersAndFlash started', [
-            'winner_id' => $winner->id,
-            'amount' => $voucherAmount,
-            'count' => $voucherCount
-        ]);
-
         $rawName = (string) ($winner->name ?? '');
-        $referrerName = trim(preg_replace('/\s*\(.*$/', '', $rawName)) ?: $rawName;
+        $referrerName = trim(preg_replace('/\s*\(.*$/', '', $rawName)) ?: $rawName; // Nama Humas
 
-        $bukuIndukRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($referrerName)])
-                            ->orWhere('nama', 'like', '%' . $referrerName . '%')
-                            ->first();
+        // ================== CARI DATA MURID BARU ==================
+        $bukuIndukRecord = null;
+        $studentRecord = null;
 
-        $student = !empty($winner->student_id) ? \App\Models\Student::find($winner->student_id) : null;
+        // 1. Cari di Student dulu (jika ada student_id)
+        if (!empty($winner->student_id)) {
+            $studentRecord = \App\Models\Student::find($winner->student_id);
+        }
+
+        // 2. Cari di Buku Induk berdasarkan nama_humas
+        if (!$bukuIndukRecord) {
+            $bukuIndukRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama_humas)) = ?', 
+                [mb_strtolower($referrerName)])
+                ->orWhere('nama_humas', 'like', '%' . $referrerName . '%')
+                ->first();
+        }
+
+        Log::info('createVouchersAndFlash - Data Source', [
+            'winner_id'       => $winner->id,
+            'referrer_name'   => $referrerName,
+            'has_student'     => (bool)$studentRecord,
+            'has_buku_induk'  => (bool)$bukuIndukRecord,
+            'student_id'      => $winner->student_id,
+        ]);
 
         $createdRows = [];
 
-        DB::transaction(function () use (&$createdRows, $voucherNumbers, $nilaiPerVoucher, $bukuIndukRecord, $student, $referrerName, $winner) {
+        DB::transaction(function () use (&$createdRows, $voucherNumbers, $nilaiPerVoucher, $bukuIndukRecord, $studentRecord, $referrerName, $winner) {
             foreach ($voucherNumbers as $vnum) {
+
+                // ================== DATA MURID BARU ==================
+                $nimMuridBaru = $studentRecord?->nim 
+                             ?? $bukuIndukRecord?->nim 
+                             ?? null;
+
+                $namaMuridBaru = $studentRecord?->nama 
+                              ?? $studentRecord?->name 
+                              ?? $bukuIndukRecord?->nama 
+                              ?? null;
+
                 $row = \App\Models\VoucherLama::create([
                     'voucher'                => $vnum,
                     'jumlah_voucher'         => 1,
@@ -560,18 +587,23 @@ protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
                     'source'                 => 'spin',
 
                     // Data Humas
-                    'nim'                    => $bukuIndukRecord->nim ?? null,
+                    'nim'                    => $bukuIndukRecord?->nim ?? null,
                     'nama_murid'             => $referrerName,
-                    'orangtua'               => $bukuIndukRecord->orangtua ?? null,
-                    'telp_hp'                => $bukuIndukRecord->no_telp_hp ?? $bukuIndukRecord->no_telp ?? null,
+                    'orangtua'               => $bukuIndukRecord?->orangtua ?? null,
+                    'telp_hp'                => $bukuIndukRecord?->no_telp_hp ?? $bukuIndukRecord?->no_telp ?? null,
 
-                    // Data Murid Baru
-                    'nim_murid_baru'         => $student->nim ?? null,
-                    'nama_murid_baru'        => $student->nama ?? ($student->name ?? null),
-                    'orangtua_murid_baru'    => $student->orangtua ?? ($student->parent_name ?? null),
-                    'telp_hp_murid_baru'     => $student->no_telp_hp ?? $student->telp_hp ?? null,
+                    // === DATA MURID BARU (INI YANG PENTING) ===
+                    'nim_murid_baru'         => $nimMuridBaru,
+                    'nama_murid_baru'        => $namaMuridBaru,
+                    'orangtua_murid_baru'    => $studentRecord?->orangtua ?? 
+                                                $studentRecord?->parent_name ?? 
+                                                $bukuIndukRecord?->orangtua ?? null,
+                    'telp_hp_murid_baru'     => $studentRecord?->no_telp_hp ?? 
+                                                $studentRecord?->telp_hp ?? 
+                                                $bukuIndukRecord?->no_telp_hp ?? 
+                                                $bukuIndukRecord?->no_telp ?? null,
 
-                    // Unit & Cabang
+                    // Unit
                     'bimba_unit'             => $winner->bimba_unit,
                     'no_cabang'              => $winner->no_cabang,
                 ]);
@@ -586,31 +618,26 @@ protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
             'nominal' => $voucherAmount,
             'nominal_formatted' => number_format($voucherAmount, 0, ',', '.'),
             'rows' => collect($createdRows)->map(fn($r) => [
-                'voucher' => $r->voucher,
-                'nominal' => $r->nominal,
-                'tanggal_spin' => $r->tanggal,
-                'tanggal_penyerahan' => null,
-                'status' => $r->status,
-                'nim' => $r->nim,
-                'nama_murid' => $r->nama_murid,
-                'nim_murid_baru' => $r->nim_murid_baru,
+                'voucher'         => $r->voucher,
+                'nominal'         => $r->nominal,
+                'nim_murid_baru'  => $r->nim_murid_baru,
                 'nama_murid_baru' => $r->nama_murid_baru,
-                'bimba_unit' => $r->bimba_unit,
-                'no_cabang' => $r->no_cabang,
+                'nama_murid'      => $r->nama_murid,
             ])->toArray(),
             'vouchers' => collect($createdRows)->pluck('voucher')->toArray(),
         ]);
 
-        Log::info('createVouchersAndFlash SUCCESS', ['count' => count($createdRows), 'winner_id' => $winner->id]);
+        Log::info('createVouchersAndFlash SUCCESS', [
+            'count' => count($createdRows), 
+            'winner_id' => $winner->id
+        ]);
 
         return true;
 
     } catch (\Throwable $e) {
-        Log::error('createVouchersAndFlash FAILED - Critical Error', [
+        Log::error('createVouchersAndFlash FAILED', [
             'winner_id' => $winner->id ?? null,
             'error'     => $e->getMessage(),
-            'line'      => $e->getLine(),
-            'file'      => $e->getFile(),
             'trace'     => $e->getTraceAsString()
         ]);
 
