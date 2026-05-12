@@ -188,29 +188,45 @@ public function updateUkuranKaos(Request $request)
 
     // FUNGSI BARU: Mengambil daftar bulan yang sudah dibayar via AJAX
     public function getPaidMonths(Request $request)
-    {
-        // Ambil NIM dan Tahun dari request query
-        $nim = $request->query('nim');
-        $tahun = $request->query('tahun');
+{
+    $nim = $request->nim;
 
-        if (!$nim || !$tahun) {
-            // Jika NIM atau Tahun tidak ada, kembalikan array kosong
-            return response()->json([]);
+    $data = Penerimaan::where('nim', $nim)
+        ->whereNotNull('bulan_bayar')
+        ->whereNotNull('tahun_bayar')
+        ->get(['bulan_bayar', 'tahun_bayar']);
+
+    $result = [];
+
+    foreach ($data as $item) {
+
+        $bulanArray = is_array($item->bulan_bayar)
+            ? $item->bulan_bayar
+            : json_decode($item->bulan_bayar, true);
+
+        $tahunArray = is_array($item->tahun_bayar)
+            ? $item->tahun_bayar
+            : json_decode($item->tahun_bayar, true);
+
+        if (!$bulanArray || !$tahunArray) {
+            continue;
         }
 
-        // Cari semua bulan yang sudah dibayar untuk NIM dan Tahun tersebut
-        // Pastikan kita hanya melihat pembayaran SPP (spp > 0)
-        $paidMonths = Penerimaan::where('nim', $nim)
-            ->where('tahun', $tahun)
-            ->where('spp', '>', 0)
-            ->pluck('bulan') // Ambil hanya nama bulannya
-            ->unique()
-            ->toArray();
+        foreach ($bulanArray as $i => $bulan) {
 
-        // Catatan: Nama bulan disimpan di database dalam format Indonesia (misal: "Januari")
-        // JavaScript di frontend akan mencocokkan nilai ini.
-        return response()->json($paidMonths);
+            $tahun = $tahunArray[$i] ?? null;
+
+            if ($bulan && $tahun) {
+                $result[] = [
+                    'bulan' => trim($bulan),
+                    'tahun' => trim($tahun),
+                ];
+            }
+        }
     }
+
+    return response()->json($result);
+}
 
 
     public function create(Request $request)

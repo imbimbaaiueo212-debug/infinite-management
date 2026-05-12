@@ -26,30 +26,30 @@
       action="{{ route('murid_trials.index') }}">
     <input type="hidden" name="status" value="{{ request('status') }}">
 
-    <!-- Unit biMBA: paling kiri di md+ -->
-    <div class="col-md-3 order-md-1">
-        <label class="form-label">Unit biMBA</label>
+   <!-- Unit biMBA: paling kiri di md+ -->
+<div class="col-md-3 order-md-1">
+    <label class="form-label">Unit biMBA</label>
 
-        <select name="unit_id" id="unitSelect"
-            class="form-select select2-unit"
-            data-placeholder="Pilih Cabang - Unit"
-            {{ (!auth()->user()->isAdmin ?? true) ? 'disabled' : '' }}>
+    <select name="unit_id" id="unitSelect"
+        class="form-select select2-unit"
+        data-placeholder="Pilih Cabang - Unit"
+        {{ (!auth()->user()->is_admin ?? true) ? 'disabled' : '' }}>
 
-            <option value=""></option>
+        <option value=""></option>
 
-            @foreach(($unitOptions ?? []) as $opt)
-                <option value="{{ $opt['value'] }}"
-                    @selected(($selectedUnitId ?? request('unit_id')) == $opt['value'])>
-                    {{ $opt['label'] }}
-                </option>
-            @endforeach
-        </select>
+        @foreach(($unitOptions ?? []) as $opt)
+            <option value="{{ $opt['value'] }}"
+                @selected(request('unit_id') == $opt['value'])>
+                {{ $opt['label'] }}
+            </option>
+        @endforeach
+    </select>
 
-        {{-- ⛔ penting: kirim value saat disabled --}}
-        @if(!auth()->user()->isAdmin ?? true)
-            <input type="hidden" name="unit_id" value="{{ $selectedUnitId }}">
-        @endif
-    </div>
+    {{-- Kirim value saat disabled (untuk non-admin) --}}
+    @if(!auth()->user()->is_admin ?? true)
+        <input type="hidden" name="unit_id" value="{{ request('unit_id') }}">
+    @endif
+</div>
 
     <!-- Cari Nama / No HP / Unit: tengah (lebar lebih besar) -->
     <div class="col-md-6 col-lg-5 position-relative order-md-2">

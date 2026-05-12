@@ -370,9 +370,6 @@ Route::put('penerimaan/{id}/update-tahun', [PenerimaanController::class, 'update
     ->name('penerimaan.updateTahun')
     ->middleware('auth');
 
-Route::get('/penerimaan/paid-months', [PenerimaanController::class, 'getPaidMonths'])
-    ->name('penerimaan.paid-months')->middleware('auth');
-
 Route::get('/penerimaan/rbas', [PenerimaanController::class, 'rbas'])
     ->name('penerimaan.rbas')
     ->middleware('auth');

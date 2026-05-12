@@ -11,6 +11,7 @@ use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class MuridTrialController extends Controller
@@ -18,35 +19,86 @@ class MuridTrialController extends Controller
     public function index(Request $request)
 {
     $this->autoActivateTrial();
-    $status       = $request->get('status');
-    $rawQ         = $request->get('q');
-    $plainSearch  = trim((string) $request->get('search', ''));
-    $selectedUnitId = $request->get('unit_id'); // ⬅️ GANTI INI
-    $user = Auth::user();
 
-    // default
-    $selectedUnitId = $request->get('unit_id');
+    $status      = $request->get('status');
+    $plainSearch = trim((string) $request->get('search', ''));
+    $user        = Auth::user();
 
-    // kalau bukan admin → paksa unit dari user
-    if ($user && !in_array($user->role ?? '', ['admin','superadmin'])) {
+    $isAdmin = $user && in_array($user->role ?? '', ['admin', 'superadmin']);
 
-        $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
+    // Debug Log
+    Log::info('DEBUG MURID TRIAL INDEX', [
+        'user'            => $user?->name ?? '-',
+        'role'            => $user?->role ?? '-',
+        'user_bimba_unit' => $user?->bimba_unit ?? '-',
+        'is_admin'        => $isAdmin,
+        'search'          => $plainSearch,
+        'status'          => $status
+    ]);
 
-        if ($unit) {
-            $selectedUnitId = $unit->id;
+    // =============================================
+    // QUERY UTAMA
+    // =============================================
+    $query = MuridTrial::with('student')
+                       ->latest('waktu_submit');
+
+    // Search
+    if ($plainSearch !== '') {
+        $query->where(function ($q) use ($plainSearch) {
+            $q->where('nama', 'like', "%{$plainSearch}%")
+              ->orWhere('no_telp', 'like', "%{$plainSearch}%")
+              ->orWhere('bimba_unit', 'like', "%{$plainSearch}%")
+              ->orWhereHas('student', fn($s) => 
+                  $s->where('nama', 'like', "%{$plainSearch}%")
+              );
+        });
+    }
+
+    // Status Filter
+    if ($status !== '' && $status !== null) {
+        if ($status === 'kosong') {
+            $query->whereNull('status_trial');
+        } else {
+            $query->where('status_trial', $status);
         }
     }
 
-    $searchTerm = null;
-    if (!empty($rawQ)) {
-        $searchTerm = str_contains($rawQ, '||')
-            ? trim(explode('||', $rawQ)[0])
-            : trim($rawQ);
+    // ========================
+    // FILTER UNIT (NON-ADMIN)
+    // ========================
+    if (!$isAdmin) {
+        $userUnit     = trim($user->bimba_unit ?? '');
+        $userNoCabang = trim($user->no_cabang ?? '');
+
+        $query->where(function ($qry) use ($userUnit, $userNoCabang) {
+            // Filter berdasarkan data user login
+            if ($userUnit) {
+                $qry->where('bimba_unit', 'LIKE', "%{$userUnit}%");
+            }
+            if ($userNoCabang) {
+                $qry->orWhere('no_cabang', $userNoCabang);
+            }
+
+            // Unit-unit khusus yang diizinkan
+            $qry->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+                ->orWhere('no_cabang', '00340')
+                ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+                ->orWhere('no_cabang', '05141')
+                ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA IV%')
+                ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA 4%')
+                ->orWhere('no_cabang', '01045');
+        });
     }
 
-    // ===============================
-    // ✅ UNIT OPTIONS (CABANG + BIMBA)
-    // ===============================
+    $murid_trials = $query->paginate(25)->withQueryString();
+
+    Log::info('DEBUG MURID TRIAL SELESAI', [
+        'total_data_ditemukan' => $murid_trials->total()
+    ]);
+
+    // =============================================
+    // UNIT OPTIONS
+    // =============================================
     $unitOptions = Unit::orderBy('no_cabang')
         ->get()
         ->map(fn ($u) => [
@@ -54,130 +106,59 @@ class MuridTrialController extends Controller
             'label' => trim(($u->no_cabang ?? '') . ' - ' . ($u->biMBA_unit ?? '')),
         ]);
 
-    $murid_trials = MuridTrial::with('student')
+    // =============================================
+    // DAFTAR GURU + KEPALA UNIT
+    // =============================================
+    $daftarGuru = ['' => '- Pilih Guru -'];
 
-        // SEARCH UTAMA
-        ->when($searchTerm, fn($q) => $q->where(fn($sq) => $sq
-            ->where('nama', 'like', "%{$searchTerm}%")
-            ->orWhere('no_telp', 'like', "%{$searchTerm}%")
-            ->orWhereHas('student', fn($ssq) => $ssq
-                ->where('nama', 'like', "%{$searchTerm}%")
-                ->orWhere('hp_ayah', 'like', "%{$searchTerm}%")
-                ->orWhere('hp_ibu', 'like', "%{$searchTerm}%")
-            )
-        ))
+    $guruQuery = Profile::guru();
+    $kepalaUnitQuery = Profile::whereRaw('LOWER(jabatan) LIKE ?', ['%kepala unit%'])
+                        ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%kepala cabang%'])
+                        ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%kepsek%']);
 
-        // SEARCH BEBAS
-        ->when($plainSearch, fn($q) => $q->where(fn($sq) => $sq
-            ->where('nama', 'like', "%{$plainSearch}%")
-            ->orWhere('no_telp', 'like', "%{$plainSearch}%")
-            ->orWhere('bimba_unit', 'like', "%{$plainSearch}%")
-            ->orWhere('no_cabang', 'like', "%{$plainSearch}%")
-        ))
-
-        // ===============================
-        // ✅ FILTER UNIT (MASTER)
-        // ===============================
-        ->when($selectedUnitId, function ($q) use ($selectedUnitId) {
-            $unit = Unit::find($selectedUnitId);
-            if ($unit) {
-                $q->where('bimba_unit', $unit->biMBA_unit)
-                  ->where('no_cabang', $unit->no_cabang);
-            }
-        })
-
-        // STATUS
-        ->when($status, fn($q) =>
-            $status === 'kosong'
-                ? $q->whereNull('status_trial')
-                : $q->where('status_trial', $status)
-        )
-
-        ->latest('waktu_submit')
-        ->paginate(25)
-        ->withQueryString();
-
-    // ================================
-// GURU + KEPALA UNIT (dengan filter unit)
-// ================================
-
-$daftarGuru = ['' => '- Pilih Guru -'];
-
-// 1. Ambil guru biasa (tetap pakai scope guru())
-$guruQuery = Profile::guru();
-
-// 2. Ambil kepala unit berdasarkan jabatan saja (case-insensitive)
-$kepalaUnitQuery = Profile::whereRaw('LOWER(jabatan) LIKE ?', ['%kepala unit%'])
-                         ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%kepala cabang%'])
-                         ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%kepsek%']);  // tambah variasi jika perlu
-
-// Jika ada filter unit dari dropdown
-if ($selectedUnitId) {
-    $unit = Unit::find($selectedUnitId);
-    if ($unit) {
-        $guruQuery->where('bimba_unit', $unit->biMBA_unit);
-        $kepalaUnitQuery->where('bimba_unit', $unit->biMBA_unit);
-    }
-}
-// Jika user login adalah kepala unit → paksa filter ke unitnya sendiri
-// (cek berdasarkan jabatan user login, karena tidak ada kolom role)
-elseif (Auth::check()) {
-    $userProfile = Auth::user()->profile; // asumsi relasi user -> profile ada
-    $isKepalaUnit = $userProfile && str_contains(strtolower($userProfile->jabatan ?? ''), 'kepala unit');
-
-    if ($isKepalaUnit) {
-        $unitLogin = $userProfile->bimba_unit 
-                     ?? $userProfile->biMBA_unit 
-                     ?? null;
-        
-        if ($unitLogin) {
-            $guruQuery->where('bimba_unit', $unitLogin);
-            $kepalaUnitQuery->where('bimba_unit', $unitLogin);
+    // Filter guru sesuai unit user (non-admin)
+    if (!$isAdmin) {
+        $userUnit = trim($user->bimba_unit ?? '');
+        if ($userUnit) {
+            $guruQuery->where('bimba_unit', 'LIKE', "%{$userUnit}%");
+            $kepalaUnitQuery->where('bimba_unit', 'LIKE', "%{$userUnit}%");
         }
     }
-}
 
-// Eksekusi query
-$gurus = $guruQuery->get()->unique('nama')->sortBy('nama');
-$kepalaUnits = $kepalaUnitQuery->get()->unique('nama')->sortBy('nama');
+    $gurus       = $guruQuery->get()->unique('nama')->sortBy('nama');
+    $kepalaUnits = $kepalaUnitQuery->get()->unique('nama')->sortBy('nama');
 
-// 3. Gabung ke array dropdown
-foreach ($gurus as $g) {
-    $label = trim($g->nama);
-    if ($g->bimba_unit) {
-        $label .= ' - ' . $g->bimba_unit;
+    // Gabung ke dropdown
+    foreach ($gurus as $g) {
+        $label = trim($g->nama);
+        if ($g->bimba_unit) {
+            $label .= ' - ' . $g->bimba_unit;
+        }
+        $daftarGuru[$g->nama] = $label;
     }
-    $daftarGuru[$g->nama] = $label;
-}
 
-foreach ($kepalaUnits as $ku) {
-    $label = trim($ku->nama);
-    if ($ku->bimba_unit) {
-        $label .= ' - ' . $ku->bimba_unit;
-    }
-    $label .= ' (Kepala Unit)';
-    
-    // Hindari duplikat key
-    $key = $ku->nama;
-    if (isset($daftarGuru[$key])) {
-        $daftarGuru[$key] .= ' (Guru)';           // tambah penanda di yang sudah ada
-        $key .= ' (KU)';                          // buat key unik untuk kepala unit
-    }
-    $daftarGuru[$key] = $label;
-}
+    foreach ($kepalaUnits as $ku) {
+        $label = trim($ku->nama);
+        if ($ku->bimba_unit) {
+            $label .= ' - ' . $ku->bimba_unit;
+        }
+        $label .= ' (Kepala Unit)';
 
-// Urutkan ulang berdasarkan label
-asort($daftarGuru);
+        $key = $ku->nama;
+        if (isset($daftarGuru[$key])) {
+            $key .= ' (KU)';
+        }
+        $daftarGuru[$key] = $label;
+    }
+
+    asort($daftarGuru);
 
     return view('murid_trials.index', compact(
         'murid_trials',
         'daftarGuru',
-        'unitOptions'
-    ))->with(compact(
+        'unitOptions',
         'plainSearch',
-        'rawQ',
-        'status',
-        'selectedUnitId'
+        'status'
     ));
 }
 

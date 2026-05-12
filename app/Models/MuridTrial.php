@@ -55,7 +55,7 @@ class MuridTrial extends Model
     // ===================================================================
     // GLOBAL SCOPE: FILTER OTOMATIS BERDASARKAN UNIT USER YANG LOGIN
     // ===================================================================
-    protected static function booted()
+   protected static function booted()
 {
     static::creating(function ($model) {
         if (!$model->waktu_submit) {
@@ -64,19 +64,40 @@ class MuridTrial extends Model
     });
 
     static::addGlobalScope('unit', function (Builder $builder) {
-        if (Auth::check()) {
-            $user = Auth::user();
-
-            if ($user->is_admin) {
-                return;
-            }
-
-            if ($user->bimba_unit) {
-                $builder->where('bimba_unit', $user->bimba_unit);
-            } else {
-                $builder->whereRaw('1 = 0');
-            }
+        if (!Auth::check()) {
+            return;
         }
+
+        $user = Auth::user();
+
+        // Admin & Superadmin → lihat semua
+        if ($user->is_admin ?? false || in_array($user->role ?? '', ['admin', 'superadmin'])) {
+            return;
+        }
+
+        $userUnit     = trim($user->bimba_unit ?? '');
+        $userNoCabang = trim($user->no_cabang ?? '');
+
+        $builder->where(function ($q) use ($userUnit, $userNoCabang) {
+            // Filter utama berdasarkan unit user login
+            if ($userUnit) {
+                $q->where('bimba_unit', 'LIKE', "%{$userUnit}%");
+            }
+            if ($userNoCabang) {
+                $q->orWhere('no_cabang', $userNoCabang);
+            }
+
+            // === DAFTAR UNIT KHUSUS YANG DIIZINKAN (hardcoded) ===
+            $q->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+              ->orWhere('no_cabang', '00340')
+
+              ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+              ->orWhere('no_cabang', '05141')
+
+              ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA IV%')
+              ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA 4%')
+              ->orWhere('no_cabang', '01045');
+        });
     });
 }
 
