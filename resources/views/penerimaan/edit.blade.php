@@ -215,8 +215,8 @@
 
             <!-- TOTAL -->
             <div class="col-md-3 col-sm-6">
-                <label class="form-label fw-bold text-primary">TOTAL</label>
-                <input type="text" id="total" class="form-control bg-warning-subtle fw-bold fs-5 text-center"
+                <label class="form-label fw-bold text-primary">GRAND TOTAL</label>
+                <input type="text" id="total" class="form-control bg-warning fw-bold fs-5 text-center"
                        value="{{ number_format(old('total', $penerimaan->total ?? 0), 0, ',', '.') }}" readonly>
             </div>
         </div>

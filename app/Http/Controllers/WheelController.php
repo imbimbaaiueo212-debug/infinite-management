@@ -321,83 +321,82 @@ class WheelController extends Controller
     $humasCol = 'informasi_humas_nama';
     $studentNameCol = 'nama';
 
-    // ==================== 1. Dari Tabel Students (yang lama) ====================
+    // ==================== 1. DATA DARI STUDENTS ====================
     $fromStudents = DB::table('students')
-        ->join('registrations', function($join) {
+        ->join('registrations', function ($join) {
             $join->on('registrations.student_id', '=', 'students.id')
-                 ->where('registrations.status', '=', 'accepted');
+                ->where('registrations.status', '=', 'accepted');
         })
         ->whereNotNull($humasCol)
         ->whereRaw("TRIM({$humasCol}) <> ''")
         ->select([
             'students.id as student_id',
+            'students.nim as nim_murid',           // jelas murid
             DB::raw("TRIM({$humasCol}) as humas_name_raw"),
             DB::raw("TRIM({$studentNameCol}) as student_name"),
             'registrations.bimba_unit',
             'registrations.no_cabang',
-            DB::raw("'student' as source")   // penanda
+            DB::raw("'student' as source")
         ])
         ->orderBy('humas_name_raw')
         ->get();
 
-    // ==================== 2. Dari Tabel Buku Induk (yang baru) ====================
+    // ==================== 2. DATA DARI BUKU INDUK ====================
     $fromBukuInduk = DB::table('buku_induk')
         ->where('info', 'humas')
         ->whereNotNull('nama_humas')
         ->whereRaw("TRIM(nama_humas) <> ''")
         ->select([
             DB::raw('NULL as student_id'),
-            'nama_humas as humas_name_raw',
-            'nama as student_name',           // nama murid
+            'nim as nim_murid',                    // NIM murid
+            DB::raw('TRIM(nama_humas) as humas_name_raw'),
+            DB::raw('TRIM(nama) as student_name'),
             'bimba_unit',
             'no_cabang',
-            DB::raw("'buku_induk' as source") // penanda
+            DB::raw("'buku_induk' as source")
         ])
         ->get();
 
-    // Gabungkan kedua sumber
     $rows = $fromStudents->merge($fromBukuInduk);
 
-    // ==================== Filter yang sudah pernah menang ====================
-    $usedHashes = WheelWinner::pluck('row_hash')->filter()->map(fn($v) => (string) $v)->toArray();
-    $usedNamesLower = WheelWinner::pluck('name')
-        ->filter()
-        ->map(fn($n) => mb_strtolower(trim((string)$n)))
-        ->toArray();
+    // Filter yang sudah menang
+    $usedHashes = WheelWinner::pluck('row_hash')->filter()->map(fn($v) => (string)$v)->toArray();
+    $usedNamesLower = WheelWinner::pluck('name')->filter()->map(fn($n) => mb_strtolower(trim((string)$n)))->toArray();
 
     $out = [];
+
     foreach ($rows as $r) {
         $referrerRaw = trim((string) $r->humas_name_raw);
         if ($referrerRaw === '') continue;
 
-        $refLower = mb_strtolower($referrerRaw);
-
-        // Buat row_hash yang unik
-        if ($r->student_id) {
+        // Row hash berdasarkan humas + murid
+        if ($r->source === 'student') {
             $rowHash = md5('stu:' . $r->student_id);
         } else {
-            // Untuk data dari buku_induk
-            $rowHash = md5('buku:' . $referrerRaw . ($r->student_name ?? ''));
+            $rowHash = md5(json_encode([
+                $r->nim_murid,
+                $r->student_name,
+                $r->humas_name_raw,
+                $r->bimba_unit,
+            ]));
         }
 
-        // Skip jika sudah pernah menang
         if (in_array($rowHash, $usedHashes, true)) continue;
-        if (in_array($refLower, $usedNamesLower, true)) continue;
+        if (in_array(mb_strtolower($referrerRaw), $usedNamesLower, true)) continue;
 
         $out[] = [
             'student_id'    => $r->student_id,
-            'referrer_name' => $referrerRaw,
-            'brought_name'  => trim((string)$r->student_name),
+            'nim_murid'     => $r->nim_murid,           // ← simpan terpisah
+            'referrer_name' => $referrerRaw,            // Nama Humas
+            'brought_name'  => trim((string) $r->student_name),
             'name'          => $referrerRaw,
             'row_hash'      => $rowHash,
-            'is_new_student'=> false,
             'bimba_unit'    => $r->bimba_unit ?? null,
             'no_cabang'     => $r->no_cabang ?? null,
-            'source'        => $r->source,   // tambahan untuk debug
+            'source'        => $r->source,
         ];
     }
 
-    // Optional: sort by nama humas
     usort($out, fn($a, $b) => strcasecmp($a['referrer_name'], $b['referrer_name']));
 
     return $out;
@@ -535,75 +534,54 @@ protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
         $voucherNumbers = $this->generateVoucherNumbers($voucherCount, $prefix);
 
         $rawName = (string) ($winner->name ?? '');
-        $referrerName = trim(preg_replace('/\s*\(.*$/', '', $rawName)) ?: $rawName; // Nama Humas
+        $referrerName = trim(preg_replace('/\s*\(.*?\)$/', '', $rawName)); // Nama Humas → Chayra
+        $broughtName  = trim(preg_match('/\((.*?)\)/', $rawName, $m) ? $m[1] : ''); // Nama Murid Baru → Zahira
 
-        // ================== CARI DATA MURID BARU ==================
-        $bukuIndukRecord = null;
-        $studentRecord = null;
+        // === CARI DATA HUMAS (Chayra) ===
+        $humasRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama)) = ?', 
+            [mb_strtolower($referrerName)])
+            ->orWhereRaw('LOWER(TRIM(nama_humas)) = ?', [mb_strtolower($referrerName)])
+            ->first();
 
-        // 1. Cari di Student dulu (jika ada student_id)
-        if (!empty($winner->student_id)) {
-            $studentRecord = \App\Models\Student::find($winner->student_id);
-        }
+        // === CARI DATA MURID BARU (Zahira) ===
+        $muridRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama)) = ?', 
+            [mb_strtolower($broughtName)])
+            ->first();
 
-        // 2. Cari di Buku Induk berdasarkan nama_humas
-        if (!$bukuIndukRecord) {
-            $bukuIndukRecord = \App\Models\BukuInduk::whereRaw('LOWER(TRIM(nama_humas)) = ?', 
-                [mb_strtolower($referrerName)])
-                ->orWhere('nama_humas', 'like', '%' . $referrerName . '%')
-                ->first();
-        }
-
-        Log::info('createVouchersAndFlash - Data Source', [
-            'winner_id'       => $winner->id,
-            'referrer_name'   => $referrerName,
-            'has_student'     => (bool)$studentRecord,
-            'has_buku_induk'  => (bool)$bukuIndukRecord,
-            'student_id'      => $winner->student_id,
-        ]);
+        $nimHumas     = $humasRecord?->nim ?? null;
+        $nimMuridBaru = $muridRecord?->nim ?? $winner->student?->nim ?? null;
 
         $createdRows = [];
 
-        DB::transaction(function () use (&$createdRows, $voucherNumbers, $nilaiPerVoucher, $bukuIndukRecord, $studentRecord, $referrerName, $winner) {
+        DB::transaction(function () use (&$createdRows, $voucherNumbers, $nilaiPerVoucher, 
+            $humasRecord, $muridRecord, $referrerName, $broughtName, $nimHumas, $nimMuridBaru, $winner) {
+
             foreach ($voucherNumbers as $vnum) {
-
-                // ================== DATA MURID BARU ==================
-                $nimMuridBaru = $studentRecord?->nim 
-                             ?? $bukuIndukRecord?->nim 
-                             ?? null;
-
-                $namaMuridBaru = $studentRecord?->nama 
-                              ?? $studentRecord?->name 
-                              ?? $bukuIndukRecord?->nama 
-                              ?? null;
 
                 $row = \App\Models\VoucherLama::create([
                     'voucher'                => $vnum,
+                    'no_voucher'             => $vnum,
                     'jumlah_voucher'         => 1,
                     'nominal'                => $nilaiPerVoucher,
                     'tanggal'                => now()->toDateString(),
                     'tanggal_penyerahan'     => null,
                     'status'                 => 'belum_diserahkan',
                     'source'                 => 'spin',
+                    'tipe_voucher'           => 'regular',
 
-                    // Data Humas
-                    'nim'                    => $bukuIndukRecord?->nim ?? null,
-                    'nama_murid'             => $referrerName,
-                    'orangtua'               => $bukuIndukRecord?->orangtua ?? null,
-                    'telp_hp'                => $bukuIndukRecord?->no_telp_hp ?? $bukuIndukRecord?->no_telp ?? null,
+                    // === DATA HUMAS ===
+                    'nim'                    => $nimHumas,                    // NIM Chayra (jika ada)
+                    'nama_murid'             => $referrerName,               // Chayra Nadhifa
+                    'orangtua'               => $humasRecord?->orangtua,
+                    'telp_hp'                => $humasRecord?->no_telp_hp ?? $humasRecord?->no_telp,
 
-                    // === DATA MURID BARU (INI YANG PENTING) ===
-                    'nim_murid_baru'         => $nimMuridBaru,
-                    'nama_murid_baru'        => $namaMuridBaru,
-                    'orangtua_murid_baru'    => $studentRecord?->orangtua ?? 
-                                                $studentRecord?->parent_name ?? 
-                                                $bukuIndukRecord?->orangtua ?? null,
-                    'telp_hp_murid_baru'     => $studentRecord?->no_telp_hp ?? 
-                                                $studentRecord?->telp_hp ?? 
-                                                $bukuIndukRecord?->no_telp_hp ?? 
-                                                $bukuIndukRecord?->no_telp ?? null,
+                    // === DATA MURID BARU ===
+                    'nim_murid_baru'         => $nimMuridBaru,               // NIM Zahira
+                    'nama_murid_baru'        => $broughtName,                // Zahira Ceisya Habibah
+                    'orangtua_murid_baru'    => $muridRecord?->orangtua ?? $humasRecord?->orangtua,
+                    'telp_hp_murid_baru'     => $muridRecord?->no_telp_hp ?? $muridRecord?->no_telp ?? 
+                                                $humasRecord?->no_telp_hp,
 
-                    // Unit
                     'bimba_unit'             => $winner->bimba_unit,
                     'no_cabang'              => $winner->no_cabang,
                 ]);
@@ -612,35 +590,24 @@ protected function createVouchersAndFlash(\App\Models\WheelWinner $winner): bool
             }
         });
 
-        // Flash ke session
+        // Flash Result
         \Session::flash('spinResult', [
             'count' => count($createdRows),
             'nominal' => $voucherAmount,
             'nominal_formatted' => number_format($voucherAmount, 0, ',', '.'),
             'rows' => collect($createdRows)->map(fn($r) => [
                 'voucher'         => $r->voucher,
-                'nominal'         => $r->nominal,
+                'humas'           => $r->nama_murid,
+                'nim_humas'       => $r->nim,
                 'nim_murid_baru'  => $r->nim_murid_baru,
                 'nama_murid_baru' => $r->nama_murid_baru,
-                'nama_murid'      => $r->nama_murid,
             ])->toArray(),
-            'vouchers' => collect($createdRows)->pluck('voucher')->toArray(),
-        ]);
-
-        Log::info('createVouchersAndFlash SUCCESS', [
-            'count' => count($createdRows), 
-            'winner_id' => $winner->id
         ]);
 
         return true;
 
     } catch (\Throwable $e) {
-        Log::error('createVouchersAndFlash FAILED', [
-            'winner_id' => $winner->id ?? null,
-            'error'     => $e->getMessage(),
-            'trace'     => $e->getTraceAsString()
-        ]);
-
+        Log::error('createVouchersAndFlash FAILED', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         return false;
     }
 }

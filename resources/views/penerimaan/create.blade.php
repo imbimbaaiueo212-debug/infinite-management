@@ -163,11 +163,25 @@
 
         <h5 class="text-primary">Pembayaran SPP</h5>
         <div class="row g-3">
+            <!--Voucher-->
+            <div class="col-md-4 mt-3">
+                <label class="form-label">Voucher (bisa multi)</label>
+                <select id="voucher" name="voucher[]" class="form-select" multiple>
+                    <option value="">-- Tidak pakai voucher --</option>
+                    @foreach ($vouchers as $v)
+                        <option value="{{ $v->no_voucher ?? $v->id }}" data-nominal="50000">
+                            {{ $v->no_voucher ?? 'VCHR-'.$v->id }} - Rp 50.000 (sisa: {{ $v->jumlah_voucher }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <!--End-->
+
             <div class="col-md-4">
                 <label class="form-label text-danger fw-bold">
                     Jumlah Bulan <span class="text-danger">*</span>
                 </label>
-                <select name="spp" id="spp_dropdown" class="form-select fs-5 fw-bold text-end">
+                <select name="spp" id="spp_dropdown" class="form-select fs-5 fw-bold text-start">
                     <option value="">-- Pilih jumlah bulan --</option>
                 </select>
                 <small id="spp_info" class="text-muted">Harga per bulan muncul setelah pilih murid</small>
@@ -189,55 +203,93 @@
                         <button type="button" class="btn btn-success btn-sm btn-add-remove">Tambah</button>
                     </div>
                 </div>
+                
 
                 <button type="button" id="tambah-bulan-lagi" class="btn btn-link text-primary p-0 mt-1">
                     + Tambah bulan lain
                 </button>
 
                 <div id="info-bulan" class="mt-3 p-3 bg-light rounded small"></div>
+                 <div class="col-md-3">
+                    <label class="form-label fw-bold text-primary">TOTAL SPP</label>
+                    <input type="text"
+                        id="total_spp"
+                        class="form-control bg-success text-end fs-4 fw-bold text-white"
+                        readonly
+                        value="0">
+                </div>
             </div>
+            
         </div>
 
         <hr class="my-4">
 
-        <h5>Biaya Lain-lain</h5>
-        <div class="row g-3">
-          <div class="col-md-4">
-                <label class="form-label">Biaya Daftar</label>
-                
-                <select name="daftar_kode" id="daftar_select" class="form-select mb-1">
-                    <option value="">-- Pilih Biaya Daftar --</option>
-                    @foreach($daftarList as $item)
-                        <option value="{{ $item['kode'] }}" 
-                                data-harga-duafa="{{ $item['harga_duafa'] }}"
-                                data-harga-promo="{{ $item['harga_promo'] }}"
-                                data-harga-daftar="{{ $item['harga_daftar'] }}"
-                                data-harga-spesial="{{ $item['harga_spesial'] }}"
-                                data-harga-umum1="{{ $item['harga_umum1'] }}"
-                                data-harga-umum2="{{ $item['harga_umum2'] }}">
-                            {{ $item['nama'] }}
-                        </option>
-                    @endforeach
-                </select>
+            {{-- ================= BIAYA DAFTAR ================= --}}
+            <h5 class="text-primary">Biaya Daftar</h5>
 
-                <select name="daftar_tipe_harga" id="daftar_tipe_harga" class="form-select form-select-sm mb-2">
-                    <option value="harga_daftar">Daftar Ulang</option>
-                    <option value="harga_duafa">Dhuafa</option>
-                    <option value="harga_promo">Promo Khusus</option>
-                    <option value="harga_spesial">Spesial</option>
-                    <option value="harga_umum1">Umum 1</option>
-                    <option value="harga_umum2">Promo Gratis</option>
-                </select>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">Biaya Daftar</label>
 
-                <input type="number" id="daftar_qty" class="form-control text-center" value="0" min="0" style="width:80px; display:inline-block;">
-                <small class="text-muted">× Harga</small>
-                
-                <input type="hidden" name="daftar" id="daftar_hidden" value="0">
-                <div id="daftar-container" class="mt-2"></div>
+                    <select name="daftar_kode" id="daftar_select" class="form-select mb-1">
+                        <option value="">-- Pilih Biaya Daftar --</option>
+                        @foreach($daftarList as $item)
+                            <option value="{{ $item['kode'] }}" 
+                                    data-harga-duafa="{{ $item['harga_duafa'] }}"
+                                    data-harga-promo="{{ $item['harga_promo'] }}"
+                                    data-harga-daftar="{{ $item['harga_daftar'] }}"
+                                    data-harga-spesial="{{ $item['harga_spesial'] }}"
+                                    data-harga-umum1="{{ $item['harga_umum1'] }}"
+                                    data-harga-umum2="{{ $item['harga_umum2'] }}">
+                                {{ $item['nama'] }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <select name="daftar_tipe_harga" id="daftar_tipe_harga" class="form-select form-select-sm mb-2">
+                        <option value="harga_daftar">Daftar Ulang</option>
+                        <option value="harga_duafa">Dhuafa</option>
+                        <option value="harga_promo">Promo Khusus</option>
+                        <option value="harga_spesial">Spesial</option>
+                        <option value="harga_umum1">Umum 1</option>
+                        <option value="harga_umum2">Promo Gratis</option>
+                    </select>
+
+                    <div class="d-flex align-items-center gap-2 d-none">
+                        <input type="number"
+                            id="daftar_qty"
+                            class="form-control text-center"
+                            value="0"
+                            min="0"
+                            style="width:90px;">
+
+                        <small class="text-muted">× Harga</small>
+                    </div>
+
+                    <input type="hidden" name="daftar" id="daftar_hidden" value="0">
+
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-primary">TOTAL BIAYA PENDAFTARAN</label>
+                        <input type="text"
+                            id="total_daftar"
+                            class="form-control text-end bg-success fw-bold text-white"
+                            readonly
+                            value="0">
+                    </div>
+                </div>
             </div>
 
-            <!--- Kaos Pendek --->
-           <!-- KAOS PENDEK -->
+            <hr class="my-4">
+
+            {{-- ================= BIAYA LAIN-LAIN ================= --}}
+            <h5>Biaya Lain-lain</h5>
+
+            <div class="row g-3">
+
+                {{-- HAPUS BLOK BIAYA DAFTAR YANG LAMA DARI SINI --}}
+
+                <!-- KAOS PENDEK -->
             <div class="col-md-4">
                 <label class="form-label">Kaos Pendek</label>
                 <div id="kaos-pendek-container">
@@ -395,23 +447,24 @@
                 </select>
                 <input type="hidden" name="BCABS02" id="bcabs02_hidden" value="0">
                 <div id="bcabs02-info" class="mt-1 small"></div>
+            </div>            
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-primary">TOTAL LAIN-LAIN</label>
+                <input type="text"
+                    id="total_lain"
+                    class="form-control text-end bg-success fw-bold text-white"
+                    readonly
+                    value="0">
             </div>
 
-            <div class="col-md-4 mt-3">
-                <label class="form-label">Voucher (bisa multi)</label>
-                <select id="voucher" name="voucher[]" class="form-select" multiple>
-                    <option value="">-- Tidak pakai voucher --</option>
-                    @foreach ($vouchers as $v)
-                        <option value="{{ $v->no_voucher ?? $v->id }}" data-nominal="50000">
-                            {{ $v->no_voucher ?? 'VCHR-'.$v->id }} - Rp 50.000 (sisa: {{ $v->jumlah_voucher }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-4 mt-3">
-                <label class="form-label fw-bold">TOTAL</label>
-                <input type="text" id="total" class="form-control bg-warning text-end fs-5 fw-bold" readonly value="0">
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">GRAND TOTAL</label>
+                <input type="text"
+                    id="grand_total"
+                    class="form-control bg-warning text-end fs-4 fw-bold"
+                    readonly
+                    value="0">
             </div>
         </div>
 
@@ -1089,16 +1142,66 @@ function hitungDaftar() {
     let html = '';
 
     if (sppValue > 0 && count > 0) {
-        html = `<strong>${count} bulan</strong> × Rp ${formatRupiah(sppPerBulan)} = Rp ${formatRupiah(totalHarus)}<br>`;
-        const selisih = sppValue - totalHarus;
-        if (selisih > 0) html += `<span class="text-success fw-bold">Kelebihan Rp ${formatRupiah(selisih)} → deposit</span>`;
-        else if (selisih < 0) html += `<span class="text-danger fw-bold">Kurang Rp ${formatRupiah(-selisih)}</span>`;
-        else html += '<span class="text-info fw-bold">Sesuai tagihan</span>';
-    } else if (count > 0) {
-        html = `<span class="text-warning">Ada ${count} bulan tapi belum pilih jumlah SPP</span>`;
+
+    // Hitung voucher
+    let totalVoucher = 0;
+
+    $('#voucher :selected').each(function () {
+        totalVoucher += parseInt($(this).data('nominal') || 0);
+    });
+
+    // Total tagihan asli
+    const totalHarus = count * sppPerBulan;
+
+    // Setelah dipotong voucher
+    const totalSetelahVoucher = totalHarus - totalVoucher;
+
+    // Baris utama
+    html = `
+        <strong>${count} bulan</strong> × 
+        Rp ${formatRupiah(sppPerBulan)}
+    `;
+
+    // Jika ada voucher
+    if (totalVoucher > 0) {
+        html += `
+            - voucher = 
+            <strong>Rp ${formatRupiah(totalSetelahVoucher)}</strong>
+            <br>
+            <span class="text-primary fw-bold">
+                Voucher: - Rp ${formatRupiah(totalVoucher)}
+            </span>
+            <br>
+        `;
     } else {
-        html = '<span class="text-muted">Tidak ada pembayaran SPP</span>';
+        html += `
+            = <strong>Rp ${formatRupiah(totalHarus)}</strong><br>
+        `;
     }
+
+    // Cek selisih pembayaran dropdown vs tagihan
+    const selisih = sppValue - totalHarus;
+
+    if (selisih > 0) {
+        html += `
+            <span class="text-success fw-bold">
+                Kelebihan Rp ${formatRupiah(selisih)} → deposit
+            </span>
+        `;
+    } else if (selisih < 0) {
+        html += `
+            <span class="text-danger fw-bold">
+                Kurang Rp ${formatRupiah(Math.abs(selisih))}
+            </span>
+        `;
+    } else {
+        html += `
+            <span class="text-info fw-bold">
+                Sesuai tagihan
+            </span>
+        `;
+    }
+}
 
     $('#info-bulan').html(html);
     hitungTotal();
@@ -1106,31 +1209,69 @@ function hitungDaftar() {
 }
 
     function hitungTotal() {
-        let sum = parseInt($('#spp_dropdown').val()) || 0;
 
-        $('.biaya-lain').each(function() { 
-            sum += unformatRupiah($(this).val()); 
-        });
+    // =========================
+    // TOTAL SPP
+    // =========================
+    let totalSpp = parseInt($('#spp_dropdown').val()) || 0;
 
-        sum += unformatRupiah($('#daftar_hidden').val());
-        sum += unformatRupiah($('#kaos_pendek_hidden').val());
-        sum += unformatRupiah($('#kaos_panjang_hidden').val());
-        sum += unformatRupiah($('#kpk_hidden').val());
-        sum += unformatRupiah($('#tas_hidden').val());
-        sum += unformatRupiah($('#sertifikat_hidden').val());
-        sum += unformatRupiah($('#stpb_hidden').val());
-        sum += unformatRupiah($('#rbas_hidden').val());
-        sum += unformatRupiah($('#bcabs01_hidden').val());
-        sum += unformatRupiah($('#bcabs02_hidden').val());
+    // Voucher
+    let potonganVoucher = 0;
 
-        let potongan = 0;
-        $('#voucher :selected').each(function() { 
-            potongan += parseInt($(this).data('nominal') || 0); 
-        });
-        sum -= potongan;
+    $('#voucher :selected').each(function() {
+        potonganVoucher += parseInt($(this).data('nominal') || 0);
+    });
 
-        $('#total').val(formatRupiah(sum));
+    totalSpp -= potonganVoucher;
+
+    if (totalSpp < 0) {
+        totalSpp = 0;
     }
+
+    // =========================
+    // TOTAL BIAYA PENDAFTARAN
+    // =========================
+    let totalDaftar = 0;
+
+    totalDaftar += unformatRupiah($('#daftar_hidden').val());
+
+    // =========================
+    // TOTAL LAIN-LAIN
+    // =========================
+    let totalLain = 0;
+
+    totalLain += unformatRupiah($('#kaos_pendek_hidden').val());
+    totalLain += unformatRupiah($('#kaos_panjang_hidden').val());
+    totalLain += unformatRupiah($('#kpk_hidden').val());
+    totalLain += unformatRupiah($('#tas_hidden').val());
+    totalLain += unformatRupiah($('#sertifikat_hidden').val());
+    totalLain += unformatRupiah($('#stpb_hidden').val());
+    totalLain += unformatRupiah($('#rbas_hidden').val());
+    totalLain += unformatRupiah($('#bcabs01_hidden').val());
+    totalLain += unformatRupiah($('#bcabs02_hidden').val());
+
+    // Event & lain-lain manual
+    $('.biaya-lain').each(function() {
+        totalLain += unformatRupiah($(this).val());
+    });
+
+    // =========================
+    // GRAND TOTAL
+    // =========================
+    let grandTotal = totalSpp + totalDaftar + totalLain;
+
+    // =========================
+    // TAMPILKAN
+    // =========================
+    $('#total_spp').val(formatRupiah(totalSpp));
+    $('#total_daftar').val(formatRupiah(totalDaftar));
+    $('#total_lain').val(formatRupiah(totalLain));
+
+    $('#grand_total').val(formatRupiah(grandTotal));
+
+    // tetap support field lama
+    $('#total').val(formatRupiah(grandTotal));
+}
 
     // Event Bulan
     $(document).on('click', '.btn-add-remove', function() {

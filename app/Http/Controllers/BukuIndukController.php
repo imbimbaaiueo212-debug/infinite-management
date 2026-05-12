@@ -950,6 +950,29 @@ if (!empty($data['tgl_pengajuan_garansi'])) {
     $data['perpanjang_garansi']    = null;
 }
 
+    /* =====================================================
+     * KHUSUS HUMAS LOGIC
+     * ===================================================== */
+    if (strtolower($data['info'] ?? '') === 'humas') {
+        
+        // Pastikan nama_humas terisi (jika kosong, pakai nama murid)
+        if (empty($data['nama_humas'])) {
+            $data['nama_humas'] = $data['nama'];
+        }
+
+        // Optional: simpan juga informasi humas ke kolom lain jika perlu
+        // $data['keterangan_info'] = $data['keterangan_info'] ?? 'Humas untuk murid ini';
+
+    } else {
+        // Bukan humas → kosongkan field humas
+        $data['nama_humas'] = null;
+    }
+
+    // =====================================================
+    // PASTIKAN NIM SELALU NIM MURID
+    // =====================================================
+    // nim tetap milik murid (jangan diubah jadi nim humas)
+
     $bukuInduk->update($data);
     // === PINDAH GOLONGAN OTOMATIS DARI BUKU INDUK ===
     $this->createPindahGolonganFromBukuInduk($bukuInduk, $oldData, 'manual');

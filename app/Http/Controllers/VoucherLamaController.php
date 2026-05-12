@@ -299,17 +299,19 @@ public function store(Request $request)
 
     // ----------------------------------------------------------------------------- 
     // Update biasa / pemakaian
-    public function update(Request $request, $id)
+   public function update(Request $request, $id)
 {
     $voucher = VoucherLama::findOrFail($id);
 
     $request->validate([
-        'voucher' => [
-            'required',
-            'string',
-            'max:255',
-            Rule::unique('voucher_lama', 'voucher')->ignore($voucher->id)
-        ],
+        'no_voucher' => [
+    'required',
+    'string',
+    'max:255',
+    Rule::unique('voucher_lama', 'no_voucher')->ignore($voucher->id)
+],
+
+        'tipe_voucher' => 'required|in:regular,event,lainnya',
 
         'tanggal' => 'nullable|date',
         'tanggal_penyerahan' => 'nullable|date',
@@ -317,31 +319,20 @@ public function store(Request $request)
         'status' => 'nullable|in:penyerahan,pemakaian,Digunakan,belum_diserahkan',
         'tanggal_pemakaian' => 'nullable|date|required_if:status,pemakaian',
 
-        // 🔥 conditional (independent tidak wajib murid)
-        'nim' => Rule::requiredIf(!$request->boolean('is_independent')),
-        'nama_murid' => Rule::requiredIf(!$request->boolean('is_independent')),
+        'nim' => 'nullable|string',
+        'nama_murid' => 'nullable|string',
 
         'orangtua' => 'nullable|string|max:255',
         'telp_hp' => 'nullable|string|max:20',
 
-        'nim_murid_baru' => [
-            'nullable',
-            'string',
-            'max:255',
-            Rule::unique('voucher_lama', 'nim_murid_baru')->ignore($voucher->id, 'nim_murid_baru')
-                ->where(function ($query) {
-                    return $query->whereNotNull('nim_murid_baru');
-                })
-        ],
-
+        // ✅ PERBAIKAN UTAMA
+        'nim_murid_baru' => 'nullable|string|max:255',
         'nama_murid_baru' => 'nullable|string|max:255',
 
         'jumlah_voucher' => 'required|integer|min:0',
 
         'bukti_penyerahan' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
 
-        // 🔥 NEW FIELD
-        'tipe_voucher' => 'required|in:regular,event,lainnya',
         'is_independent' => 'nullable|boolean',
     ]);
 
@@ -350,20 +341,12 @@ public function store(Request $request)
 
     // ================= PEMAKAIAN =================
     $is_usage = (
-    $request->input('status') === 'pemakaian' &&
-    $voucher->status !== 'Digunakan' &&
-    $voucher->jumlah_voucher > 0
-);
-
-// 🚫 CEK STATUS DULU
-if ($request->input('status') === 'pemakaian' && $voucher->status === 'belum_diserahkan') {
-    return back()->withErrors([
-        'voucher' => 'Voucher belum diserahkan, tidak bisa digunakan.'
-    ]);
-}
+        $request->input('status') === 'pemakaian' &&
+        $voucher->status !== 'Digunakan' &&
+        $voucher->jumlah_voucher > 0
+    );
 
     if ($is_usage) {
-
         $voucher->decrement('jumlah_voucher', 1);
         $voucher->refresh();
 
@@ -372,11 +355,8 @@ if ($request->input('status') === 'pemakaian' && $voucher->status === 'belum_dis
             'voucher' => $voucher->voucher,
             'tanggal' => $voucher->tanggal,
             'tanggal_pemakaian' => $request->tanggal_pemakaian,
-
-            // 🔥 aman walaupun null
             'nim' => $voucher->nim,
             'nama_murid' => $voucher->nama_murid,
-
             'jumlah_voucher' => 1,
             'bukti_penggunaan_path' => $voucher->bukti_penyerahan_path ?? null,
         ]);
@@ -398,18 +378,15 @@ if ($request->input('status') === 'pemakaian' && $voucher->status === 'belum_dis
     }
 
     // ================= UPDATE BIASA =================
-    $tanggalPenyerahan = $request->has('tanggal_penyerahan')
+    $tanggalPenyerahan = $request->filled('tanggal_penyerahan')
         ? $request->input('tanggal_penyerahan')
         : $voucher->tanggal_penyerahan;
 
-    $tanggalPenyerahan = ($tanggalPenyerahan === '' || $tanggalPenyerahan === 'null')
-        ? null
-        : $tanggalPenyerahan;
+    $tanggalPenyerahan = in_array($tanggalPenyerahan, ['', 'null', null]) ? null : $tanggalPenyerahan;
 
-    // ================= STATUS =================
     if ((int)$request->jumlah_voucher <= 0) {
         $statusAuto = 'Digunakan';
-        $tanggalPemakaian = $voucher->tanggal_pemakaian ?? now()->toDateString();
+        $tanggalPemakaian = $request->tanggal_pemakaian ?? now()->toDateString();
     } elseif ($request->has('tanggal_penyerahan')) {
         $statusAuto = $this->statusFromTanggalPenyerahan($tanggalPenyerahan);
         $tanggalPemakaian = $request->tanggal_pemakaian ?? $voucher->tanggal_pemakaian;
@@ -418,7 +395,7 @@ if ($request->input('status') === 'pemakaian' && $voucher->status === 'belum_dis
         $tanggalPemakaian = $voucher->tanggal_pemakaian;
     }
 
-    // ================= FILE =================
+    // File Bukti
     if ($request->hasFile('bukti_penyerahan')) {
         $this->deleteBuktiPenyerahanFile($voucher->bukti_penyerahan_path);
         $newPath = $this->storeBuktiPenyerahanFile($request->file('bukti_penyerahan'));
@@ -426,36 +403,35 @@ if ($request->input('status') === 'pemakaian' && $voucher->status === 'belum_dis
         $newPath = $voucher->bukti_penyerahan_path;
     }
 
-    // ================= UPDATE =================
+    // Update Data
     $voucher->update([
-        'voucher' => $request->voucher,
-        'tanggal' => $request->input('tanggal', $voucher->tanggal),
+        'no_voucher' => $request->no_voucher,
+        'tanggal'                => $request->input('tanggal', $voucher->tanggal),
 
-        'status' => $statusAuto,
-        'tanggal_pemakaian' => $tanggalPemakaian,
-        'tanggal_penyerahan' => $tanggalPenyerahan ?: null,
+        'status'                 => $statusAuto,
+        'tanggal_pemakaian'      => $tanggalPemakaian,
+        'tanggal_penyerahan'     => $tanggalPenyerahan,
 
-        // 🔥 NEW CORE
-        'tipe_voucher' => $request->tipe_voucher,
-        'is_independent' => $isIndependent,
+        'tipe_voucher'           => $request->tipe_voucher,
+        'is_independent'         => $isIndependent,
 
-        // 🔥 SAFE FIELD
-        'nim' => $isIndependent ? null : $request->nim,
-        'nama_murid' => $isIndependent ? null : $request->nama_murid,
+        'nim'                    => $isIndependent ? null : $request->nim,
+        'nama_murid'             => $isIndependent ? null : $request->nama_murid,
 
-        'orangtua' => $request->orangtua,
-        'telp_hp' => $request->telp_hp,
+        'orangtua'               => $request->orangtua,
+        'telp_hp'                => $request->telp_hp,
 
-        'nim_murid_baru' => $request->nim_murid_baru,
-        'nama_murid_baru' => $request->nama_murid_baru,
+        'nim_murid_baru'         => $request->nim_murid_baru,
+        'nama_murid_baru'        => $request->nama_murid_baru,
+        'orangtua_murid_baru'    => $request->orangtua_murid_baru,
+        'telp_hp_murid_baru'     => $request->telp_hp_murid_baru,
 
-        'jumlah_voucher' => $request->jumlah_voucher,
-
-        'bukti_penyerahan_path' => $newPath,
+        'jumlah_voucher'         => $request->jumlah_voucher,
+        'bukti_penyerahan_path'  => $newPath,
     ]);
 
     return redirect()->route('voucher.index')
-        ->with('success', 'Voucher berhasil diperbarui.');
+        ->with('success', 'Voucher berhasil diperbarui!');
 }
 
     // ----------------------------------------------------------------------------- 

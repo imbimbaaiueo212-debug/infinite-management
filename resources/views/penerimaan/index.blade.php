@@ -213,7 +213,7 @@
                                 @php
                                     $rawBukti = $item->bukti_transfer_path ?? null;
                                     $cleanBukti = $rawBukti ? Str::startsWith($rawBukti, 'public/') ? Str::after($rawBukti, 'public/') : $rawBukti : null;
-                                    $buktiUrl = $cleanBukti ? asset('storage/' . $cleanBukti) : null;
+                                    $buktiUrl = $cleanBukti ? asset('public/storage/' . $cleanBukti) : null;
                                     $buktiExt = $cleanBukti ? strtolower(pathinfo($cleanBukti, PATHINFO_EXTENSION)) : null;
                                 @endphp
                                 <tr>
