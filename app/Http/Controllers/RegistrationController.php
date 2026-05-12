@@ -23,29 +23,27 @@ class RegistrationController extends Controller
     // ===== List + filter =====
     public function index(Request $request)
 {
-    $q        = trim((string) $request->get('q', ''));
-    $status   = trim((string) $request->get('status', ''));
-    $unitId   = $request->get('unit_id'); // ⬅️ dari dropdown
-    $user = Auth::user();
-        $unitId = $request->get('unit_id');
+    $q           = trim((string) $request->get('q', ''));
+    $status      = trim((string) $request->get('status', ''));
+    $unitId      = $request->get('unit_id');   // ← Tambahkan ini
+    $user        = Auth::user();
+    $isAdmin     = $user && in_array($user->role ?? '', ['admin', 'superadmin']);
 
-        // 🔒 paksa unit untuk non-admin
-        if ($user && !in_array($user->role ?? '', ['admin','superadmin'])) {
-
-            $unit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
-
-            if ($unit) {
-                $unitId = $unit->id;
-            }
-        }
+    Log::info('DEBUG REGISTRATION INDEX', [
+        'user'            => $user?->name ?? '-',
+        'role'            => $user?->role ?? '-',
+        'user_bimba_unit' => $user?->bimba_unit ?? '-',
+        'is_admin'        => $isAdmin,
+        'search'          => $q,
+        'status'          => $status,
+        'unit_id'         => $unitId
+    ]);
 
     $query = Registration::query()
         ->with(['student.bukuInduk'])
         ->latest('created_at');
 
-    // =========================
-    // FILTER NIM / NAMA
-    // =========================
+    // Search
     if ($q !== '') {
         $query->whereHas('student', function ($sq) use ($q) {
             $sq->where('nim', 'like', "%{$q}%")
@@ -53,41 +51,64 @@ class RegistrationController extends Controller
         });
     }
 
-    // =========================
-    // FILTER STATUS REGISTRASI
-    // =========================
+    // Filter Status
     if ($status !== '') {
         $query->where('status', $status);
     }
 
-    // =========================
-    // ✅ FILTER CABANG + BIMBA UNIT (DIGABUNG)
-    // =========================
-    if ($unitId) {
+    // ========================
+    // FILTER UNIT
+    // ========================
+    if (!$isAdmin) {
+        $userUnit     = trim($user->bimba_unit ?? '');
+        $userNoCabang = trim($user->no_cabang ?? '');
+
+        $query->where(function ($qry) use ($userUnit, $userNoCabang) {
+            if ($userUnit) {
+                $qry->where('bimba_unit', 'LIKE', "%{$userUnit}%")
+                    ->orWhereHas('student', fn($sq) => 
+                        $sq->where('bimba_unit', 'LIKE', "%{$userUnit}%")
+                    );
+            }
+
+            if ($userNoCabang) {
+                $qry->orWhere('no_cabang', $userNoCabang)
+                    ->orWhereHas('student', fn($sq) => 
+                        $sq->where('no_cabang', $userNoCabang)
+                    );
+            }
+
+            // Unit khusus yang diizinkan
+            $qry->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+                ->orWhere('no_cabang', '00340')
+                ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+                ->orWhere('no_cabang', '05141')
+                ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA IV%')
+                ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA 4%')
+                ->orWhere('no_cabang', '01045')
+
+                ->orWhereHas('student', function ($sq) {
+                    $sq->whereIn('no_cabang', ['00340', '05141', '01045'])
+                       ->orWhere('bimba_unit', 'LIKE', '%VILLA BEKASI INDAH 2%')
+                       ->orWhere('bimba_unit', 'LIKE', '%GRIYA PESONA MADANI%')
+                       ->orWhere('bimba_unit', 'LIKE', '%SAPTA TARUNA%');
+                });
+        });
+    } 
+    // Admin bisa filter manual
+    elseif ($unitId) {
         $unit = Unit::find($unitId);
         if ($unit) {
             $query->whereHas('student', function ($sq) use ($unit) {
                 $sq->where('no_cabang', $unit->no_cabang)
-                   ->where('bimba_unit', $unit->biMBA_unit);
+                   ->where('bimba_unit', 'LIKE', "%{$unit->biMBA_unit}%");
             });
         }
     }
 
     $regs = $query->paginate(25)->withQueryString();
 
-    // =========================
-    // OPTION STUDENT (JIKA DIPAKAI)
-    // =========================
-    $studentOptions = Student::orderBy('nama')
-        ->get(['id', 'nim', 'nama'])
-        ->mapWithKeys(fn ($s) => [
-            $s->id => "{$s->nim} - {$s->nama}"
-        ])
-        ->toArray();
-
-    // =========================
-    // ✅ OPTION UNIT (CABANG + UNIT DIGABUNG)
-    // =========================
+    // Unit Options untuk dropdown
     $unitOptions = Unit::orderBy('no_cabang')
         ->get()
         ->map(fn ($u) => [
@@ -98,11 +119,19 @@ class RegistrationController extends Controller
 
     return view('registrations.index', compact(
         'regs',
-        'studentOptions',
         'unitOptions',
-        'unitId'
-
+        'unitId',      // ← Ini yang diperbaiki
+        'q',
+        'status'
     ));
+}
+
+private function extractUkuran($nama)
+{
+    if (preg_match('/\((S|M|L|XL|XXL|XXXL)\)/i', $nama, $matches)) {
+        return strtoupper($matches[1]);
+    }
+    return 'Standar';
 }
 
     // ===== Create form =====
@@ -238,32 +267,218 @@ class RegistrationController extends Controller
             ?: ($bi->kd ?? null);
     }
 
+    $daftarList = HargaSaptataruna::whereIn('kode', ['bA', 'Eb'])
+    ->orWhere('nama', 'LIKE', '%biMBA-AIUEO%')
+    ->orWhere('nama', 'LIKE', '%English biMBA%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'          => $item->kode,
+            'nama'          => $item->nama,
+            'harga_duafa'   => (float)($item->duafa ?? 0),
+            'harga_promo'   => (float)($item->promo_2019 ?? 0),
+            'harga_daftar'  => (float)($item->daftar_ulang ?? 0),
+            'harga_spesial' => (float)($item->spesial ?? 0),
+            'harga_umum1'   => (float)($item->umum1 ?? 0),
+            'harga_umum2'   => (float)($item->umum2 ?? 0),
+        ];
+    });
+    // =====================
+// KAOS (Perbaikan Query)
+$hargaKaos = HargaSaptataruna::where('kategori', 'PENJUALAN')
+    ->where(function($q) {
+        $q->where('nama', 'LIKE', '%kaos%')
+          ->orWhere('nama', 'LIKE', '%KAS%')
+          ->orWhere('kode', 'LIKE', '%KAS%');
+    })
+    ->get();
+
+$kaosPendekList = $hargaKaos->filter(function ($item) {
+    $nama = strtolower($item->nama ?? '');
+    return strpos($nama, 'pendek') !== false || 
+           strpos($nama, 'lengan pendek') !== false ||
+           strpos($nama, 'pendek') !== false;
+})->map(function ($item) {
+    return [
+        'kode'   => $item->kode,
+        'nama'   => $item->nama,
+        'harga'  => (float)($item->harga ?? 0),
+    ];
+})->values();
+
+$kaosPanjangList = $hargaKaos->filter(function ($item) {
+    $nama = strtolower($item->nama ?? '');
+    return strpos($nama, 'panjang') !== false || 
+           strpos($nama, 'lengan panjang') !== false;
+})->map(function ($item) {
+    return [
+        'kode'   => $item->kode,
+        'nama'   => $item->nama,
+        'harga'  => (float)($item->harga ?? 0),
+    ];
+})->values();
+
+// =====================
+// KPK
+// =====================
+
+$kpkList = HargaSaptataruna::where('nama', 'LIKE', '%KPK%')
+    ->orWhere('kode', 'LIKE', '%KPK%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// TAS
+// =====================
+
+$tasList = HargaSaptataruna::where('nama', 'LIKE', '%TAS%')
+    ->orWhere('kode', 'LIKE', '%TAS%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// SERTIFIKAT
+// =====================
+
+$sertifikatList = HargaSaptataruna::where('nama', 'LIKE', '%SERTIFIKAT%')
+    ->orWhere('nama', 'LIKE', '%STF%')
+    ->orWhere('kode', 'LIKE', '%STF%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// STPB
+// =====================
+
+$stpbList = HargaSaptataruna::where('nama', 'LIKE', '%STPB%')
+    ->orWhere('kode', 'LIKE', '%STPB%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// RBAS
+// =====================
+
+$rbasList = HargaSaptataruna::where('nama', 'LIKE', '%RBAS%')
+    ->orWhere('kode', 'LIKE', '%RBAS%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// BCABS01
+// =====================
+
+$bcabs01List = HargaSaptataruna::where('kode', 'BCABS.01')
+    ->orWhere('kode', 'LIKE', '%BCABS01%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
+// =====================
+// BCABS02
+// =====================
+
+$bcabs02List = HargaSaptataruna::where('kode', 'BCABS.02')
+    ->orWhere('kode', 'LIKE', '%BCABS02%')
+    ->orderBy('nama')
+    ->get()
+    ->map(function ($item) {
+        return [
+            'kode'  => $item->kode,
+            'nama'  => $item->nama,
+            'harga' => (float)$item->harga,
+        ];
+    })
+    ->values();
+
     return view('registrations.create',compact(
 
-        'students',
-        'selectedStudentId',
+    'students',
+    'selectedStudentId',
 
-        'prefilledNim',
-        'prefilledNama',
-        'prefilledUnit',
-        'prefilledCabang',
+    'prefilledNim',
+    'prefilledNama',
+    'prefilledUnit',
+    'prefilledCabang',
 
-        'prefilledTglLahir',
-        'prefilledTmptLahir',
-        'prefilledOrangtua',
-        'prefilledInfo',
+    'prefilledTglLahir',
+    'prefilledTmptLahir',
+    'prefilledOrangtua',
+    'prefilledInfo',
 
-        'hargaSaptataruna',
-        'kdOptions',
-        'sppMapping',
-        'tahapanOptions',
-        'kelasOptions',
-        'guruOptions',
-        'kodeJadwalOptions',
-        'penerimaanPrefill',
-        'selectedStudent'
+    'hargaSaptataruna',
+    'kdOptions',
+    'sppMapping',
+    'tahapanOptions',
+    'kelasOptions',
+    'guruOptions',
+    'kodeJadwalOptions',
+    'penerimaanPrefill',
+    'selectedStudent',
 
-    ));
+    // =====================
+    // BIAYA
+    // =====================
+    'daftarList',
+    'kaosPendekList',
+    'kaosPanjangList',
+    'kpkList',
+    'tasList',
+    'sertifikatList',
+    'stpbList',
+    'rbasList',
+    'bcabs01List',
+    'bcabs02List'
+
+));
 }
 
 
@@ -271,276 +486,238 @@ class RegistrationController extends Controller
     public function store(Request $request)
 {
     $data = $request->validate([
-        'student_id'         => ['required','exists:students,id'],
-        'gelombang'          => ['nullable','string','max:100'],
-        'program'            => ['nullable','string','max:100'],
-        'status'             => ['required',Rule::in(['pending','verified','accepted','rejected'])],
-        'tanggal_daftar'     => ['nullable','date'],
-        'tanggal_penerimaan' => ['nullable','date'],
+        'student_id'         => 'required|exists:students,id',
+        'status'             => ['required', Rule::in(['pending','verified','accepted','rejected'])],
+        'tanggal_daftar'     => 'nullable|date',
+        'tanggal_penerimaan' => 'nullable|date',
+        'gelombang'          => 'nullable|string|max:100',
+        'program'            => 'nullable|string|max:100',
 
-        'bi' => ['array'],
-        'bi.nim'   => ['nullable','string'],
-        'bi.nama'  => ['nullable','string'],
-        'bi.tahap' => ['nullable','string','max:100'],
-        'bi.kelas' => ['nullable','string','max:100'],
-        'bi.gol'   => ['nullable','string','max:50'],
-        'bi.kd'    => ['nullable','string','max:10'],
-        'bi.guru'  => ['nullable','string','max:255'],
-        'bi.kode_jadwal' => ['nullable','string'],
-        'bi.hari_jam'    => ['nullable','string'],
-        'bi.spp'         => ['nullable'],
+        // BI Data
+        'bi.nim'             => 'nullable|string',
+        'bi.nama'            => 'nullable|string',
+        'bi.tahap'           => 'nullable|string',
+        'bi.kelas'           => 'nullable|string',
+        'bi.gol'             => 'nullable|string',
+        'bi.kd'              => 'nullable|string',
+        'bi.guru'            => 'nullable|string',
+        'bi.kode_jadwal'     => 'nullable|string',
+        'bi.hari_jam'        => 'nullable|string',
+        'bi.spp'             => 'nullable|string',
 
-        'penerimaan' => ['nullable','array'],
-        'attachment' => ['nullable','file','mimes:pdf,jpg,jpeg,png,webp','max:3072'],
+        // Biaya (Flat)
+        'daftar'             => 'nullable|string',
+        'voucher'            => 'nullable|string',
+        'spp_rp'             => 'nullable|string',
+        'kaos_pendek'        => 'nullable|string',
+        'kaos_panjang'       => 'nullable|string',
+        'kpk'                => 'nullable|string',
+        'tas'                => 'nullable|string',
+        'sertifikat'         => 'nullable|string',
+        'stpb'               => 'nullable|string',
+        'event'              => 'nullable|string',
+        'lain_lain'          => 'nullable|string',
+        'rbas'               => 'nullable|string',
+        'BCABS01'            => 'nullable|string',
+        'BCABS02'            => 'nullable|string',
+
+        'attachment'         => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:3072',
     ]);
 
-    $student = Student::with('muridTrial','bukuInduk')->findOrFail($data['student_id']);
+    $student = Student::with('muridTrial', 'bukuInduk')->findOrFail($data['student_id']);
 
-    $bimbaUnit = $student->bimba_unit;
-    $noCabang  = $student->no_cabang;
-
-    $data['tanggal_daftar'] = $data['tanggal_daftar'] ?? now();
-
-    if (Schema::hasColumn('registrations','tahun_ajaran')) {
-        $data['tahun_ajaran'] = Registration::currentAcademicYear();
-    }
-
-    $biInput = $request->input('bi',[]);
-
+    // ====================== BI DATA ======================
+    $biInput = $request->input('bi', []);
     $bi = [
-        'nim'   => $biInput['nim']  ?? $student->nim,
-        'nama'  => $biInput['nama'] ?? $student->nama,
-        'tahap' => $biInput['tahap'] ?? null,
-        'kelas' => $biInput['kelas'] ?? 'biMBA AIUEO',
-        'gol'   => $biInput['gol'] ?? '-',
-        'kd'    => strtoupper($biInput['kd'] ?? '-'),
-        'guru'  => $biInput['guru'] ?? '-',
+        'nim'         => $biInput['nim'] ?? $student->nim,
+        'nama'        => $biInput['nama'] ?? $student->nama,
+        'tahap'       => $biInput['tahap'] ?? null,
+        'kelas'       => $biInput['kelas'] ?? 'biMBA AIUEO',
+        'gol'         => strtoupper($biInput['gol'] ?? '-'),
+        'kd'          => strtoupper($biInput['kd'] ?? '-'),
+        'guru'        => $biInput['guru'] ?? '-',
         'kode_jadwal' => $biInput['kode_jadwal'] ?? null,
         'hari_jam'    => $biInput['hari_jam'] ?? null,
-        'spp' => null,
+        'spp'         => null,
     ];
 
-    $rawSpp = $biInput['spp'] ?? null;
-
-    if($rawSpp){
-        $bi['spp'] = (int) preg_replace('/\D/','',$rawSpp);
-    }else{
-        if(!empty($bi['gol']) && !empty($bi['kd'])){
-            $row = HargaSaptataruna::where('kode',$bi['gol'])->first();
-            $col = strtolower($bi['kd']);
-            $bi['spp'] = $row->$col ?? null;
-        }
+    // Hitung SPP
+    if (!empty($biInput['spp'])) {
+        $bi['spp'] = (int) preg_replace('/\D/', '', $biInput['spp']);
+    } elseif (!empty($bi['gol']) && !empty($bi['kd'])) {
+        $row = HargaSaptataruna::where('kode', $bi['gol'])->first();
+        $col = strtolower($bi['kd']);
+        $bi['spp'] = $row ? (int)($row->$col ?? 0) : null;
     }
 
-    $p = $request->input('penerimaan',[]);
-
+    // ====================== PENERIMAAN / BIAYA ======================
     $pay = [
-        'kwitansi' => $p['kwitansi'] ?? null,
-        'via'      => $p['via'] ?? null,
-        'bulan'    => $p['bulan'] ?? null,
-        'tahun'    => $p['tahun'] ?? null,
+        'kwitansi'   => $request->kwitansi ?? null,
+        'via'        => $request->via ?? null,
+        'bulan'      => $request->bulan ?? null,
+        'tahun'      => $request->tahun ?? null,
+        'tanggal_penerimaan' => $this->tryParseDateToYmd($request->tanggal_penerimaan ?? now()),
 
-        'tanggal_penerimaan' => $this->tryParseDateToYmd(
-            $request->input('tanggal_penerimaan')
-            ?? $p['tanggal']
-            ?? now()
-        ),
-
-        'daftar'     => $this->parseMoney($p['daftar'] ?? null),
-        'voucher'    => $this->parseMoney($p['voucher'] ?? null),
-        'spp_rp'     => $this->parseMoney($p['spp_rp'] ?? null),
-        'spp'        => $p['spp'] ?? null,
-        'kaos'       => $this->parseMoney($p['kaos'] ?? null),
-        'kpk'        => $this->parseMoney($p['kpk'] ?? null),
-        'sertifikat' => $this->parseMoney($p['sertifikat'] ?? null),
-        'stpb'       => $this->parseMoney($p['stpb'] ?? null),
-        'tas'        => $this->parseMoney($p['tas'] ?? null),
-        'event'      => $this->parseMoney($p['event'] ?? null),
-        'lain_lain'  => $this->parseMoney($p['lain_lain'] ?? null),
+        'daftar'     => $this->parseMoney($request->daftar ?? 0),
+        'voucher'    => $this->parseMoney($request->voucher ?? 0),
+        'spp_rp'     => $this->parseMoney($request->spp_rp ?? 0),
+        'kaos'       => $this->parseMoney(($request->kaos_pendek ?? 0) + ($request->kaos_panjang ?? 0)),
+        'kpk'        => $this->parseMoney($request->kpk ?? 0),
+        'tas'        => $this->parseMoney($request->tas ?? 0),
+        'sertifikat' => $this->parseMoney($request->sertifikat ?? 0),
+        'stpb'       => $this->parseMoney($request->stpb ?? 0),
+        'event'      => $this->parseMoney($request->event ?? 0),
+        'lain_lain'  => $this->parseMoney($request->lain_lain ?? 0),
     ];
 
-    $finalData = array_merge($data,[
+    // ====================== FINAL DATA ======================
+    $finalData = [
+        'student_id'         => $data['student_id'],
+        'gelombang'          => $data['gelombang'] ?? null,
+        'program'            => $data['program'] ?? null,
+        'status'             => $data['status'],
+        'tanggal_daftar'     => $data['tanggal_daftar'] ?? now()->format('Y-m-d'),
+        'tahun_ajaran'       => Registration::currentAcademicYear() ?? date('Y'),
+        
+        'bimba_unit'         => $student->bimba_unit,
+        'no_cabang'          => $student->no_cabang,
 
-        'bimba_unit'=>$bimbaUnit,
-        'no_cabang'=>$noCabang,
+        'tahap'              => $bi['tahap'],
+        'kelas'              => $bi['kelas'],
+        'gol'                => $bi['gol'],
+        'kd'                 => $bi['kd'],
+        'spp'                => $bi['spp'],
+        'guru'               => $bi['guru'],
+        'kode_jadwal'        => $bi['kode_jadwal'],
+        'hari_jam'           => $bi['hari_jam'],
 
-        'tahap'=>$bi['tahap'],
-        'kelas'=>$bi['kelas'],
-        'gol'=>$bi['gol'],
-        'kd'=>$bi['kd'],
-        'spp'=>$bi['spp'],
-        'guru'=>$bi['guru'],
-        'kode_jadwal'=>$bi['kode_jadwal'],
-        'hari_jam'=>$bi['hari_jam'],
+        'kwitansi'           => $pay['kwitansi'],
+        'via'                => $pay['via'],
+        'bulan'              => $pay['bulan'],
+        'tahun'              => $pay['tahun'],
+        'tanggal_penerimaan' => $pay['tanggal_penerimaan'],
+        'daftar'             => $pay['daftar'],
+        'voucher'            => $pay['voucher'],
+        'spp_rp'             => $pay['spp_rp'],
+        'spp_keterangan'     => $request->spp ?? null,
+        'kaos'               => $pay['kaos'],
+        'kpk'                => $pay['kpk'],
+        'sertifikat'         => $pay['sertifikat'],
+        'stpb'               => $pay['stpb'],
+        'tas'                => $pay['tas'],
+        'event'              => $pay['event'],
+        'lain_lain'          => $pay['lain_lain'],
+    ];
 
-        'kwitansi'=>$pay['kwitansi'],
-        'via'=>$pay['via'],
-        'bulan'=>$pay['bulan'],
-        'tahun'=>$pay['tahun'],
-        'tanggal_penerimaan'=>$pay['tanggal_penerimaan'],
-        'daftar'=>$pay['daftar'],
-        'voucher'=>$pay['voucher'],
-        'spp_rp'=>$pay['spp_rp'],
-        'spp_keterangan'=>$pay['spp'],
-        'kaos'=>$pay['kaos'],
-        'kpk'=>$pay['kpk'],
-        'sertifikat'=>$pay['sertifikat'],
-        'stpb'=>$pay['stpb'],
-        'tas'=>$pay['tas'],
-        'event'=>$pay['event'],
-        'lain_lain'=>$pay['lain_lain'],
-    ]);
-
-    if($request->hasFile('attachment')){
-        $finalData['attachment_path'] =
-        $request->file('attachment')->store('registrations','public');
+    if ($request->hasFile('attachment')) {
+        $finalData['attachment_path'] = $request->file('attachment')->store('registrations', 'public');
     }
 
-    DB::transaction(function() use ($student,$bi,$pay,$bimbaUnit,$noCabang,$finalData){
-
+    // ====================== SIMPAN ======================
+    DB::transaction(function () use ($finalData, $student, $bi, $pay, $data) {
         $reg = Registration::create($finalData);
 
-        if($reg->status === 'accepted'){
-    $bi['penerimaan'] = $pay;
-
-    $this->commitBukuIndukWithPayload(
-        $student,
-        $reg->status,
-        $bi,
-        $bimbaUnit,
-        $noCabang,
-        $reg->tanggal_daftar ?? $data['tanggal_daftar'] ?? now()->format('Y-m-d')  // kirim tanggal_daftar
-    );
-}
-
+        if ($reg->status === 'accepted') {
+            $this->commitBukuIndukWithPayload(
+                $student,
+                $reg->status,
+                array_merge($bi, ['penerimaan' => $pay]),
+                $student->bimba_unit,
+                $student->no_cabang,
+                $reg->tanggal_daftar
+            );
+        }
     });
 
     return redirect()
         ->route('registrations.index')
-        ->with('success','Registrasi berhasil disimpan!');
+        ->with('success', 'Registrasi berhasil disimpan!');
 }
 
     // ===== EDIT =====
     public function edit(Registration $registration)
-    {
-        $students = \App\Models\Student::orderBy('nama')->get(['id', 'nim', 'nama']);
+{
+    $students = \App\Models\Student::orderBy('nama')->get(['id', 'nim', 'nama']);
 
-        // Ambil BI master via NIM (kalau sudah ada di buku_induk)
-        $biMaster = optional($registration->student)->bukuInduk;
+    $biMaster = optional($registration->student)->bukuInduk;
 
-        // Harga + opsi KD untuk hitung SPP otomatis
-        $hargaSaptataruna = \App\Models\HargaSaptataruna::all();
-        $kdOptions = [];
-        if ($first = $hargaSaptataruna->first()) {
-            foreach ($first->getAttributes() as $key => $val) {
-                if (in_array($key, ['a', 'b', 'c', 'd', 'e', 'f']))
-                    $kdOptions[] = strtoupper($key);
-            }
+    $hargaSaptataruna = \App\Models\HargaSaptataruna::all();
+    $kdOptions = ['A','B','C','D','E','F'];
+
+    $sppMapping = [];
+    foreach ($hargaSaptataruna as $row) {
+        foreach ($kdOptions as $KD) {
+            $col = strtolower($KD);
+            $sppMapping[$row->kode][$KD] = (int) ($row->$col ?? 0);
         }
-        $sppMapping = [];
-        foreach ($hargaSaptataruna as $row) {
-            foreach ($kdOptions as $KD) {
-                $col = strtolower($KD);
-                $sppMapping[$row->kode][$KD] = (int) ($row->$col ?? 0);
-            }
-        }
-
-        // Opsi (samakan dengan create)
-        $tahapanOptions = ['Persiapan', 'Lanjutan'];
-        $kelasOptions = ['biMBA AIUEO', 'English biMBA'];
-
-        // === GURU OPTIONS: FILTER BERDASARKAN BIMBA UNIT MURID ===
-        $guruOptions = [];
-
-        $student = $registration->student;
-
-        if ($student && !empty($student->bimba_unit)) {
-            $guruOptions = Profile::where('bimba_unit', $student->bimba_unit)
-                ->whereIn('jabatan', ['Guru', 'Pengajar'])
-                ->orderBy('nama')
-                ->pluck('nama')
-                ->toArray();
-        } else {
-            $guruOptions = Profile::whereIn('jabatan', ['Guru', 'Pengajar'])
-                ->orderBy('nama')
-                ->pluck('nama')
-                ->toArray();
-        }
-        $kodeJadwalOptions = [
-            '108',
-            '109',
-            '110',
-            '111',
-            '112',
-            '113',
-            '114',
-            '115',
-            '116',
-            '208',
-            '209',
-            '210',
-            '211',
-            '308',
-            '309',
-            '310',
-            '311'
-        ];
-
-        // ⬇⬇⬇ PREFILL: ambil dulu dari registrations, fallback ke buku_induk
-        $biPrefill = [
-    'tahap' => $registration->tahap ?? ($biMaster->tahap ?? null),
-    'kelas' => $registration->kelas ?? ($biMaster->kelas ?? null),
-    'gol'   => $registration->gol   ?? ($biMaster->gol   ?? null),
-    'kd'    => $registration->kd    ?? ($biMaster->kd    ?? null),
-    'spp'   => $registration->spp   ?? ($biMaster->spp   ?? null),
-    'guru'        => $registration->guru ?? ($biMaster->guru ?? null),
-    'kode_jadwal' => $registration->kode_jadwal ?? ($biMaster->kode_jadwal ?? null),
-    'jam'         => $registration->hari_jam ?? ($biMaster->hari_jam ?? null),
-];
-
-
-        // prefill penerimaan jika ada di registration; jika tidak ada fallback ke buku_induk
-        $penerimaanPrefill = [
-            'kwitansi' => $registration->kwitansi ?? null,
-            'via' => $registration->via ?? null,
-            'bulan' => $registration->bulan ?? null,
-            'tahun' => $registration->tahun ?? null,
-            'tanggal' => optional($registration->tanggal_penerimaan)->format('Y-m-d') ?? null,
-            'daftar' => $registration->daftar ?? null,
-            'voucher' => $registration->voucher ?? null,
-            'spp_rp' => $registration->spp_rp ?? null,
-            'spp' => $registration->spp_keterangan ?? null,
-            'kaos' => $registration->kaos ?? null,
-            'kpk' => $registration->kpk ?? null,
-            'sertifikat' => $registration->sertifikat ?? null,
-            'stpb' => $registration->stpb ?? null,
-            'tas' => $registration->tas ?? null,
-            'event' => $registration->event ?? null,
-            'lain_lain' => $registration->lain_lain ?? null,
-        ];
-
-        // fallback spp dari buku_induk bila kosong
-        if (($penerimaanPrefill['spp_rp'] === null || $penerimaanPrefill['spp_rp'] === '') && $biMaster && !empty($biMaster->spp)) {
-            $penerimaanPrefill['spp_rp'] = (int) $biMaster->spp;
-        }
-        if (($penerimaanPrefill['spp'] === null || $penerimaanPrefill['spp'] === '') && $biMaster) {
-            $penerimaanPrefill['spp'] = trim(($biMaster->gol ? $biMaster->gol . '/' : '') . ($biMaster->kd ?? '')) ?: ($biMaster->kd ?? null);
-        }
-
-        return view('registrations.edit', compact(
-            'registration',
-            'students',
-            'hargaSaptataruna',
-            'kdOptions',
-            'sppMapping',
-            'tahapanOptions',
-            'kelasOptions',
-            'biPrefill',
-            'guruOptions',
-            'kodeJadwalOptions',
-            'penerimaanPrefill'
-        ));
     }
+
+    $tahapanOptions = ['Persiapan', 'Lanjutan'];
+    $kelasOptions   = ['biMBA AIUEO', 'English biMBA'];
+
+    // === GURU OPTIONS - Perbaikan ===
+    $student = $registration->student;
+    $guruOptions = [];
+
+    // Ambil semua guru dulu
+    $allGuru = Profile::whereIn('jabatan', ['Guru', 'Pengajar'])
+                ->orderBy('nama')
+                ->pluck('nama')
+                ->toArray();
+
+    // Jika ada bimba_unit, prioritaskan guru di unit tersebut
+    if ($student && !empty($student->bimba_unit)) {
+        $guruUnit = Profile::where('bimba_unit', $student->bimba_unit)
+                    ->whereIn('jabatan', ['Guru', 'Pengajar'])
+                    ->orderBy('nama')
+                    ->pluck('nama')
+                    ->toArray();
+
+        $guruOptions = $guruUnit;
+    } else {
+        $guruOptions = $allGuru;
+    }
+
+    // Pastikan guru yang sudah tersimpan tetap muncul
+    $savedGuru = $registration->guru ?? $biMaster?->guru;
+    if ($savedGuru && !in_array($savedGuru, $guruOptions)) {
+        $guruOptions[] = $savedGuru;
+    }
+
+    $kodeJadwalOptions = [
+        '108','109','110','111','112','113','114','115','116',
+        '208','209','210','211','308','309','310','311'
+    ];
+
+    $biPrefill = [
+        'tahap'       => $registration->tahap ?? ($biMaster->tahap ?? null),
+        'kelas'       => $registration->kelas ?? ($biMaster->kelas ?? null),
+        'gol'         => $registration->gol   ?? ($biMaster->gol   ?? null),
+        'kd'          => $registration->kd    ?? ($biMaster->kd    ?? null),
+        'spp'         => $registration->spp   ?? ($biMaster->spp   ?? null),
+        'guru'        => $registration->guru  ?? ($biMaster->guru ?? null),
+        'kode_jadwal' => $registration->kode_jadwal ?? ($biMaster->kode_jadwal ?? null),
+    ];
+
+    $isAdmin = auth()->check() && (
+        auth::user()->role === 'admin' || 
+        (auth::user()->is_admin ?? false)
+    );
+
+    return view('registrations.edit', compact(
+        'registration',
+        'students',
+        'hargaSaptataruna',
+        'kdOptions',
+        'sppMapping',
+        'tahapanOptions',
+        'kelasOptions',
+        'biPrefill',
+        'guruOptions',
+        'kodeJadwalOptions',
+        'isAdmin'
+    ));
+}
 
     // ===== UPDATE =====
     public function update(Request $request, Registration $registration)
