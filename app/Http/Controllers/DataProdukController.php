@@ -282,29 +282,14 @@ class DataProdukController extends Controller
                 $changed = true;
             }
 
-            if ($changed) {
+            // Selalu hitung ulang sld_akhir berdasarkan data terkini
+            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
 
-    /*
-    =====================================
-    UPDATE SELISIH TERIMA SAJA
-    =====================================
-    */
-
-    $selisihTerima = $baru - (int) $record->terima;
-
-    $record->terima = $baru;
-
-    /*
-    =====================================
-    TAMBAHKAN KE SLD_AKHIR SEKARANG
-    =====================================
-    */
-
-    $record->sld_akhir =
-        (int) $record->sld_akhir + $selisihTerima;
-
-    $record->saveQuietly();
-}
+            // Simpan jika ada perubahan pada terima ATAU sld_akhir tidak sesuai
+            if ($changed || $record->sld_akhir != $sldAkhirBaru) {
+                $record->sld_akhir = $sldAkhirBaru;
+                $record->saveQuietly();
+            }
         }
     });
 }
@@ -334,29 +319,14 @@ class DataProdukController extends Controller
                 $changed = true;
             }
 
-            if ($changed) {
+            // Selalu hitung ulang sld_akhir
+            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
 
-    /*
-    =====================================
-    HITUNG SELISIH PEMAKAIAN
-    =====================================
-    */
-
-    $selisihPakai = $baru - (int) $record->pakai;
-
-    $record->pakai = $baru;
-
-    /*
-    =====================================
-    KURANGI DARI SLD_AKHIR SEKARANG
-    =====================================
-    */
-
-    $record->sld_akhir =
-        (int) $record->sld_akhir - $selisihPakai;
-
-    $record->saveQuietly();
-}
+            // Simpan jika ada perubahan pada pakai ATAU sld_akhir tidak sesuai
+            if ($changed || $record->sld_akhir != $sldAkhirBaru) {
+                $record->sld_akhir = $sldAkhirBaru;
+                $record->saveQuietly();
+            }
         }
     });
 }
@@ -586,8 +556,11 @@ public function generateTemplate(Request $request)
  * Update sld_awal dari Opname + Hitung Selisih FISIK
  * Selisih = sld_awal (sebelum override) - opname
  */
-private function syncSldAwalFromOpname(string $periode, ?int $unitId = null)
-{
+private function syncSldAwalFromOpname(
+    string $periode,
+    ?int $unitId = null
+) {
+
     $query = DataProduk::where('periode', $periode)
         ->whereNotNull('opname');
 
@@ -599,30 +572,84 @@ private function syncSldAwalFromOpname(string $periode, ?int $unitId = null)
 
         foreach ($records as $record) {
 
+            /*
+            ==========================================
+            STOK FISIK HASIL OPNAME
+            ==========================================
+            */
+
+            $fisik = (int) $record->opname;
+
+            /*
+            ==========================================
+            STOK SISTEM SEBELUM OPNAME
+            ==========================================
+            */
+
             $stokSistem =
                 (int) $record->sld_awal
                 + (int) $record->terima
                 - (int) $record->pakai;
 
-            $fisik = (int) $record->opname;
+            /*
+            ==========================================
+            HITUNG SELISIH SEBELUM KOREKSI
+            ==========================================
+            */
 
-            $selisih = $fisik - $stokSistem;
+            $selisih =
+                $fisik - $stokSistem;
+
+            /*
+            ==========================================
+            NILAI SELISIH
+            ==========================================
+            */
+
+            $nilai =
+                abs($selisih)
+                * (int) $record->harga;
+
+            /*
+            ==========================================
+            OPNAME MENJADI STOK BARU
+            ==========================================
+
+            INI YANG PENTING
+
+            Setelah opname:
+            - saldo akhir ikut fisik
+            */
+
+            $record->sld_akhir = $fisik;
+
+            /*
+            ==========================================
+            SIMPAN SELISIH HISTORIS
+            ==========================================
+            */
 
             $record->selisih = $selisih;
 
-            $record->nilai = abs($selisih) * (int) $record->harga;
+            $record->nilai = $nilai;
 
-            // JANGAN overwrite stok sistem
-            // BIARKAN tetap
+            /*
+            ==========================================
+            STATUS
+            ==========================================
+            */
 
-            if ($selisih != 0) {
-
-                $record->adjustment_status = 'PENDING';
-
-            } else {
+            if ($selisih == 0) {
 
                 $record->adjustment_status = 'COCOK';
 
+            } elseif ($selisih > 0) {
+
+                $record->adjustment_status = 'LEBIH';
+
+            } else {
+
+                $record->adjustment_status = 'KURANG';
             }
 
             $record->saveQuietly();
@@ -647,82 +674,83 @@ public function adjustment(Request $request, $id)
         $jenis = $request->jenis_adjustment;
 
         /*
-        ==================================================
-        STOK SAAT INI
-        ==================================================
+        =====================================
+        STOK SISTEM TERKINI
+        =====================================
+
+        Gunakan sld_akhir karena:
+        - sudah termasuk adjustment sebelumnya
+        - lebih akurat daripada hitung ulang dari sld_awal
         */
 
-        // stok sistem sekarang
         $stokSistem = (int) $item->sld_akhir;
 
-        // stok fisik hasil opname
+        /*
+        =====================================
+        STOK FISIK HASIL OPNAME
+        =====================================
+        */
+
         $fisik = (int) $item->opname;
 
         /*
-        ==================================================
-        SIMPAN DATA SEBELUM
-        ==================================================
+        =====================================
+        SIMPAN NILAI SEBELUM
+        =====================================
         */
 
-        $stokSebelum  = $stokSistem;
-        $fisikSebelum = $fisik;
-        $selisihAwal  = $fisik - $stokSistem;
+        $stokSebelum   = $stokSistem;
+        $fisikSebelum  = $fisik;
+        $selisihAwal   = $fisik - $stokSistem;
 
         /*
-        ==================================================
-        LOGIKA ADJUSTMENT
-        ==================================================
-
-        CONTOH:
-
-        Sistem : 20
-        Fisik  : 15
-        Selisih: -5
-
-        Jika adjustment HILANG 5:
-        -> sistem turun jadi 15
-        -> fisik tetap 15
-        -> selisih jadi 0
-
-        Besok ditemukan kembali 5:
-        -> sistem naik jadi 20
-        -> fisik naik jadi 20
-        -> selisih jadi 0
+        =====================================
+        PROSES ADJUSTMENT
+        =====================================
         */
 
         switch ($jenis) {
 
             /*
-            ==========================================
+            =====================================
             BARANG HILANG / RUSAK / REJECT
-            ==========================================
+
+            Yang berubah:
+            - stok sistem turun
+
+            Yang TIDAK berubah:
+            - fisik
+
+            Karena fisik opname sudah mencerminkan
+            kondisi real di lapangan.
+            =====================================
             */
 
             case 'hilang':
             case 'rusak':
             case 'reject':
 
-                // stok sistem dikurangi
                 $stokSistem -= $qty;
-
-                // opname TETAP
-                // karena fisik sudah benar
 
                 break;
 
             /*
-            ==========================================
+            =====================================
             BARANG DITEMUKAN KEMBALI / SELIP
-            ==========================================
+
+            Yang berubah:
+            - stok sistem naik
+            - fisik ikut naik
+
+            Karena barang fisik memang ditemukan.
+            =====================================
             */
 
             case 'ditemukan_kembali':
             case 'selip':
 
-                // stok sistem naik lagi
                 $stokSistem += $qty;
 
-                // fisik ikut naik
                 $fisik += $qty;
 
                 break;
@@ -735,9 +763,9 @@ public function adjustment(Request $request, $id)
         }
 
         /*
-        ==================================================
-        CEGAH MINUS
-        ==================================================
+        =====================================
+        CEGAH NILAI MINUS
+        =====================================
         */
 
         if ($stokSistem < 0) {
@@ -749,26 +777,26 @@ public function adjustment(Request $request, $id)
         }
 
         /*
-        ==================================================
-        HITUNG SELISIH BARU
-        ==================================================
+        =====================================
+        HITUNG ULANG SELISIH
+        =====================================
         */
 
         $selisihBaru = $fisik - $stokSistem;
 
         /*
-        ==================================================
+        =====================================
         HITUNG NILAI SELISIH
-        ==================================================
+        =====================================
         */
 
         $nilaiSelisih =
             abs($selisihBaru) * (int) $item->harga;
 
         /*
-        ==================================================
-        STATUS
-        ==================================================
+        =====================================
+        STATUS ADJUSTMENT
+        =====================================
         */
 
         if ($selisihBaru == 0) {
@@ -785,13 +813,14 @@ public function adjustment(Request $request, $id)
         }
 
         /*
-        ==================================================
+        =====================================
         UPDATE DATA PRODUK
-        ==================================================
-        */
+        =====================================
 
-        // sld_awal JANGAN DIUBAH
-        // karena histori awal bulan
+        NOTE:
+        - JANGAN ubah sld_awal
+        - karena itu histori awal bulan
+        */
 
         $item->sld_akhir = $stokSistem;
 
@@ -816,66 +845,69 @@ public function adjustment(Request $request, $id)
         $item->save();
 
         /*
-        ==================================================
-        SIMPAN HISTORY
-        ==================================================
+        =====================================
+        SIMPAN HISTORY ADJUSTMENT
+        =====================================
         */
 
-        // hanya insert jika tabel ada
-        if (Schema::hasTable('data_produk_adjustments')) {
+        DB::table('data_produk_adjustments')->insert([
 
-            DB::table('data_produk_adjustments')->insert([
+            'data_produk_id'   => $item->id,
 
-                'data_produk_id'   => $item->id,
+            'kode'             => $item->kode,
 
-                'kode'             => $item->kode,
+            'jenis_adjustment' => $jenis,
 
-                'jenis_adjustment' => $jenis,
+            'qty_adjustment'   => $qty,
 
-                'qty_adjustment'   => $qty,
+            /*
+            ===============================
+            DATA SEBELUM
+            ===============================
+            */
 
-                /*
-                ===========================
-                DATA SEBELUM
-                ===========================
-                */
+            'stok_sebelum'     => $stokSebelum,
 
-                'stok_sebelum'     => $stokSebelum,
+            'fisik_sebelum'    => $fisikSebelum,
 
-                'fisik_sebelum'    => $fisikSebelum,
+            'selisih_sebelum'  => $selisihAwal,
 
-                'selisih_sebelum'  => $selisihAwal,
+            /*
+            ===============================
+            DATA SESUDAH
+            ===============================
+            */
 
-                /*
-                ===========================
-                DATA SESUDAH
-                ===========================
-                */
+            'stok_sesudah'     => $stokSistem,
 
-                'stok_sesudah'     => $stokSistem,
+            'fisik_sesudah'    => $fisik,
 
-                'fisik_sesudah'    => $fisik,
+            'selisih_sesudah'  => $selisihBaru,
 
-                'selisih_sesudah'  => $selisihBaru,
+            /*
+            ===============================
+            INFO
+            ===============================
+            */
 
-                /*
-                ===========================
-                INFO
-                ===========================
-                */
+            'keterangan'       => $request->keterangan,
 
-                'keterangan'       => $request->keterangan,
+            'user_id'          => Auth::id(),
 
-                'user_id'          => Auth::id(),
+            'created_at'       => now(),
 
-                'created_at'       => now(),
+            'updated_at'       => now(),
+        ]);
 
-                'updated_at'       => now(),
-            ]);
-        }
+        /*
+        =====================================
+        COMMIT
+        =====================================
+        */
 
         DB::commit();
 
+        
         return back()->with(
             'success',
             'Adjustment berhasil. Selisih sekarang: ' . $selisihBaru

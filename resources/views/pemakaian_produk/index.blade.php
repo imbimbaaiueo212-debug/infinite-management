@@ -143,15 +143,20 @@
                                 <td x-text="item.gol"></td>
                                 <td x-text="item.guru || '-'"></td>
                                 <td>
-    <a :href="`/pemakaian-produk/${item.id}/edit`" class="btn btn-sm btn-warning">
+    <a :href="`/pemakaian_produk/${item.id}/edit`"
+       class="btn btn-sm btn-warning">
         <i class="fas fa-edit"></i>
     </a>
 
     @if (auth()->user()?->role === 'admin')
-        <form action="/pemakaian-produk/${item.id}" method="POST" class="d-inline"
-              @submit.prevent="if(confirm('Yakin hapus?')) $el.submit()">
+        <form :action="`/pemakaian_produk/${item.id}`"
+              method="POST"
+              class="d-inline"
+              @submit.prevent="if(confirm('Yakin hapus data ini?')) $el.submit()">
+
             @csrf
             @method('DELETE')
+
             <button type="submit" class="btn btn-sm btn-danger">
                 <i class="fas fa-trash"></i>
             </button>
