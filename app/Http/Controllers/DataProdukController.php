@@ -9,6 +9,7 @@ use App\Models\PenerimaanProduk;
 use App\Models\PemakaianProduk;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -73,7 +74,7 @@ class DataProdukController extends Controller
     // =====================================
     // SYNC OTOMATIS — URUTAN SANGAT PENTING!
     // =====================================
-    \Log::info("[SYNC START] periode: {$periode}, unit: {$unitId}");
+    Log::info("[SYNC START] periode: {$periode}, unit: {$unitId}");
 
     // 1. Sync saldo awal DARI BULAN SEBELUMNYA → harus paling dulu
     $this->syncSaldoAwalFromPrevious($periode, $unitId);
@@ -83,8 +84,10 @@ class DataProdukController extends Controller
 
     // 3. Sync pemakaian bulan ini
     $this->syncPakaiFromPemakaian($periode, $unitId);
+    // Tambahkan baris ini:
+    $this->syncSldAwalFromOpname($periode, $unitId);
 
-    \Log::info("[SYNC FINISH] periode: {$periode}, unit: {$unitId}");
+    Log::info("[SYNC FINISH] periode: {$periode}, unit: {$unitId}");
 
     // =====================================
     // Ambil data rekap untuk tampilan
@@ -222,6 +225,8 @@ class DataProdukController extends Controller
 
         $this->syncPakaiFromPemakaian($request->periode, $request->unit_id);
         $this->syncTerimaFromPenerimaan($request->periode, $request->unit_id);
+        // === TAMBAHKAN INI ===
+        $this->syncSldAwalFromOpname($request->periode, $request->unit_id);
 
         return redirect()->route('data_produk.index', [
             'periode' => $request->periode,
@@ -337,8 +342,8 @@ class DataProdukController extends Controller
         ->subMonth()
         ->format('Y-m');
 
-    \Log::info("=== MULAI SYNC SALDO AWAL ===");
-    \Log::info("Periode saat ini: {$periode} | Unit: " . ($unitId ?? 'ALL'));
+    Log::info("=== MULAI SYNC SALDO AWAL ===");
+    Log::info("Periode saat ini: {$periode} | Unit: " . ($unitId ?? 'ALL'));
 
     $prevQuery = DataProduk::where('periode', $prevPeriode);
     if ($unitId) $prevQuery->where('unit_id', $unitId);
@@ -356,11 +361,11 @@ class DataProdukController extends Controller
         });
 
     if ($prevData->isEmpty()) {
-        \Log::info("Tidak ada data di periode sebelumnya {$prevPeriode}. Saldo awal tetap 0.");
+        Log::info("Tidak ada data di periode sebelumnya {$prevPeriode}. Saldo awal tetap 0.");
         return;
     }
 
-    \Log::info("Nilai yang akan digunakan sebagai saldo awal (kode => nilai): " . json_encode($prevData->toArray()));
+    Log::info("Nilai yang akan digunakan sebagai saldo awal (kode => nilai): " . json_encode($prevData->toArray()));
 
     $currentQuery = DataProduk::where('periode', $periode);
     if ($unitId) $currentQuery->where('unit_id', $unitId);
@@ -378,13 +383,13 @@ class DataProdukController extends Controller
                 $record->saveQuietly();
                 $updated++;
                 
-                \Log::info("Update kode {$record->kode}: sld_awal & sld_akhir → {$nilaiBaru} (dari " . 
+                Log::info("Update kode {$record->kode}: sld_awal & sld_akhir → {$nilaiBaru} (dari " . 
                            ($record->opname ? 'opname' : 'sld_akhir') . " bulan sebelumnya)");
             }
         }
     });
 
-    \Log::info("Sync saldo awal selesai. Total record di-update: {$updated}");
+    Log::info("Sync saldo awal selesai. Total record di-update: {$updated}");
 }
 
     /**
@@ -392,16 +397,46 @@ class DataProdukController extends Controller
      * GENERATE TEMPLATE
      * ==============================
      */
-    public function generateTemplate(Request $request)
+    /**
+ * ==============================
+ * GENERATE TEMPLATE (Support User + Admin)
+ * ==============================
+ */
+/**
+ * ==============================
+ * GENERATE TEMPLATE (Support User + Admin)
+ * ==============================
+ */
+public function generateTemplate(Request $request)
 {
+    $user = Auth::user();
+
     $request->validate([
-        'unit_id' => 'required|exists:units,id',
-        'periode' => 'required|date_format:Y-m'
+        'unit_id'  => 'required|integer|exists:units,id',
+        'periode'  => 'required|date_format:Y-m'
     ]);
 
-    $unitId  = $request->unit_id;
+    $unitId  = (int) $request->unit_id;
     $periode = $request->periode;
 
+    // ======================
+    // AUTHORIZATION CHECK
+    // ======================
+    if (!$user->isAdminUser()) {
+        if (empty($user->bimba_unit)) {
+            return redirect()->back()->with('error', 'Unit Anda tidak terdeteksi. Silakan hubungi admin.');
+        }
+
+        $userUnit = Unit::where('biMBA_unit', $user->bimba_unit)->first();
+
+        if (!$userUnit || $userUnit->id !== $unitId) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk generate template unit ini.');
+        }
+    }
+
+    // ======================
+    // PROSES GENERATE
+    // ======================
     $produks = Produk::where('pendataan', 1)
         ->orderBy('kode')
         ->get();
@@ -410,25 +445,25 @@ class DataProdukController extends Controller
         return redirect()->back()->with('error', 'Tidak ada produk master yang diset untuk pendataan.');
     }
 
-    // 1. Paksa sync saldo awal dulu (dengan prioritas opname)
+    // 1. Sync saldo awal dari bulan sebelumnya
     $this->syncSaldoAwalFromPrevious($periode, $unitId);
 
     $updated = 0;
     $created = 0;
 
-    $prevPeriode = Carbon::createFromFormat('Y-m', $periode)->subMonth()->format('Y-m');
+    $prevPeriode = Carbon::createFromFormat('Y-m', $periode)
+                         ->subMonth()
+                         ->format('Y-m');
 
-    // 2. Ambil nilai starting point dengan prioritas: opname > sld_akhir
+    // Ambil data saldo awal dari periode sebelumnya
     $prevData = DataProduk::where('periode', $prevPeriode)
         ->where('unit_id', $unitId)
         ->get(['kode', 'opname', 'sld_akhir'])
         ->mapWithKeys(function ($item) {
-            // Jika ada opname yang valid (bukan null dan bukan 0), gunakan itu
-            if ($item->opname !== null && $item->opname != 0) {
-                return [$item->kode => (int) $item->opname];
-            }
-            // Jika tidak, gunakan sld_akhir (hitungan sistem)
-            return [$item->kode => (int) $item->sld_akhir];
+            $nilai = ($item->opname !== null && $item->opname != 0)
+                        ? (int) $item->opname 
+                        : (int) $item->sld_akhir;
+            return [$item->kode => $nilai];
         });
 
     foreach ($produks as $produk) {
@@ -438,48 +473,47 @@ class DataProdukController extends Controller
             'unit_id'  => $unitId,
         ]);
 
-        // Ambil nilai yang sudah mempertimbangkan opname
         $sldAwalBaru = $prevData->get($produk->kode, 0);
 
-        $record->sld_awal = $sldAwalBaru;
-        $record->sld_akhir = $sldAwalBaru;  // starting point sebelum transaksi bulan ini
-
         if ($record->exists) {
+            // Update existing record
             $record->jenis     = $produk->jenis;
             $record->label     = $produk->label;
             $record->satuan    = $produk->satuan;
             $record->harga     = $produk->harga;
-            $record->min_stok  = 10;
+            $record->min_stok  = $produk->min_stok ?? 10;   // Ambil dari master jika ada
+            $record->sld_awal  = $sldAwalBaru;
+            $record->sld_akhir = $sldAwalBaru;
             $record->saveQuietly();
             $updated++;
         } else {
+            // Create new record
             $record->fill([
                 'jenis'     => $produk->jenis,
                 'label'     => $produk->label,
                 'satuan'    => $produk->satuan,
                 'harga'     => $produk->harga,
-                'min_stok'  => 10,
-                'pakai'     => 0,
-                'terima'    => 0,
-                'opname'    => 0,
+                'min_stok'  => $produk->min_stok ?? 10,     // Ambil dari master
                 'sld_awal'  => $sldAwalBaru,
                 'sld_akhir' => $sldAwalBaru,
+                'terima'    => 0,
+                'pakai'     => 0,
+                'opname'    => 0,
             ]);
             $record->save();
             $created++;
         }
     }
 
-    // 3. Update transaksi bulan berjalan (ini akan mengubah sld_akhir lagi)
+    // 3. Sync transaksi bulan ini
     $this->syncTerimaFromPenerimaan($periode, $unitId);
     $this->syncPakaiFromPemakaian($periode, $unitId);
+    $this->syncSldAwalFromOpname($periode, $unitId);   // tambahkan
 
-    // Opsional: sync ulang saldo awal (untuk konsistensi maksimal, tapi biasanya sudah cukup dari langkah 1)
-    // $this->syncSaldoAwalFromPrevious($periode, $unitId);
-
-    $message = ($created + $updated) > 0
-        ? "Generate berhasil: {$created} produk baru dibuat, {$updated} di-update. Saldo awal menggunakan opname jika ada."
-        : "Semua produk sudah ada dan sinkron. Tidak ada perubahan.";
+    $total = $created + $updated;
+    $message = $total > 0 
+        ? "✅ Generate template berhasil. Baru: {$created}, Di-update: {$updated}." 
+        : "✅ Semua produk sudah ada dan telah disinkronkan.";
 
     return redirect()->route('data_produk.index', [
         'periode' => $periode,
@@ -517,4 +551,41 @@ class DataProdukController extends Controller
         return redirect()->route('data_produk.index', $request->only(['periode','unit_id']))
             ->with('success', 'Kolom PAKAI berhasil diperbarui!');
     }
+
+    /**
+ * Update sld_awal otomatis ketika ada Opname
+ * Dipanggil setiap kali opname disimpan
+ */
+private function syncSldAwalFromOpname(string $periode, ?int $unitId = null)
+{
+    Log::info("=== SYNC SLDAWAL DARI OPNAME === Periode: {$periode} | Unit: " . ($unitId ?? 'ALL'));
+
+    $query = DataProduk::where('periode', $periode)
+                       ->whereNotNull('opname')
+                       ->where('opname', '!=', 0);
+
+    if ($unitId) $query->where('unit_id', $unitId);
+
+    $updated = 0;
+
+    $query->chunkById(200, function ($records) use (&$updated) {
+        foreach ($records as $record) {
+            if ($record->sld_awal != $record->opname) {
+                $record->sld_awal = (int) $record->opname;
+
+                // Recalculate sld_akhir
+                $record->sld_akhir = $record->sld_awal + $record->terima - $record->pakai;
+
+                $record->saveQuietly();
+                $updated++;
+
+                Log::info("Opname override → Kode {$record->kode}: sld_awal diubah menjadi {$record->opname}");
+            }
+        }
+    });
+
+    if ($updated > 0) {
+        Log::info("Sync sld_awal dari opname selesai. Total updated: {$updated}");
+    }
+}
 }

@@ -113,44 +113,53 @@
     </div>
 
     {{-- Modal Generate Template --}}
-    <div class="modal fade" id="generateModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title">Generate Template Rekap Stok</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="generateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Generate Template Rekap Stok</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Aksi ini akan membuat entri kosong untuk <strong>semua produk</strong> pada:</p>
+                <div class="alert alert-info text-center py-3">
+                    <strong>{{ $periodeAktif->translatedFormat('F Y') }}</strong> 
+                    ({{ $periodeAktif->format('Y-m') }})
                 </div>
-                <div class="modal-body">
-                    <p>Aksi ini akan membuat entri kosong untuk <strong>semua produk</strong> pada:</p>
-                    <div class="alert alert-info text-center py-3">
-                        <strong>{{ $periodeAktif->translatedFormat('F Y') }}</strong> 
-                        ({{ $periodeAktif->format('Y-m') }})
-                    </div>
-                    @if(request('unit_id'))
-                        <p class="text-center mt-3">
-                            <strong>Unit: {{ $units->find(request('unit_id'))?->no_cabang }} | 
-                            {{ strtoupper($units->find(request('unit_id'))?->biMBA_unit) }}</strong>
-                        </p>
-                    @endif
-                    <ul class="small text-muted mt-3">
-                        <li>Produk yang sudah ada akan dilewati.</li>
-                        <li>Semua nilai diisi 0 (kecuali min_stok dari master).</li>
-                    </ul>
-                </div>
-                <div class="modal-footer">
-                    <form action="{{ route('data_produk.generate_template') }}" method="POST" class="d-inline">
-                        @csrf
-                        <input type="hidden" name="periode" value="{{ $periodeAktif->format('Y-m') }}">
-                        <input type="hidden" name="unit_id" value="{{ request('unit_id') }}">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-check me-1"></i> Ya, Generate
-                        </button>
-                    </form>
-                </div>
+
+                {{-- Tampilkan unit yang benar --}}
+                @php
+                    $currentUnitId = $unitId ?? request('unit_id');
+                    $currentUnit   = $units->find($currentUnitId);
+                @endphp
+
+                @if($currentUnitId && $currentUnit)
+                    <p class="text-center mt-3">
+                        <strong>Unit: {{ $currentUnit->no_cabang }} | 
+                        {{ strtoupper($currentUnit->biMBA_unit) }}</strong>
+                    </p>
+                @endif
+
+                <ul class="small text-muted mt-3">
+                    <li>Produk yang sudah ada akan dilewati.</li>
+                    <li>Semua nilai diisi 0 (kecuali min_stok dari master).</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <form action="{{ route('data_produk.generate_template') }}" method="POST" class="d-inline">
+                    @csrf
+                    <input type="hidden" name="periode" value="{{ $periodeAktif->format('Y-m') }}">
+                    <input type="hidden" name="unit_id" value="{{ $currentUnitId }}">
+                    
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check me-1"></i> Ya, Generate
+                    </button>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
     @if(!$hasData)
         <div class="card border-info shadow-sm">
@@ -311,23 +320,19 @@
     @endif
 </div>
 
-<!-- Select2 CSS & JS -->
+<!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<!-- jQuery (HARUS SEBELUM SELECT2) -->
+<script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+
+<!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<!-- Custom CSS untuk warna orange -->
-<style>
-    .text-orange {
-        color: #fd7e14 !important; /* warna orange yang cerah dan kontras baik */
-    }
-</style>
-
-<!-- Script Auto Filter + Select2 -->
+<!-- Custom Script -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('filterForm');
-
     // Inisialisasi Select2
     $('.produk-select').select2({
         theme: 'bootstrap-5',
@@ -343,12 +348,12 @@ document.addEventListener('DOMContentLoaded', function () {
         width: '100%'
     });
 
-    // Auto submit saat filter berubah
-    function submitForm() {
-        form.submit();
-    }
+    // Auto submit form saat filter berubah
+    const form = document.getElementById('filterForm');
 
-    $('.unit-select, .produk-select, .periode-input').on('change', submitForm);
+    $('.unit-select, .produk-select, .periode-input').on('change', function() {
+        form.submit();
+    });
 });
 </script>
 

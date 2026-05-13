@@ -313,8 +313,7 @@ public function createMulti(Request $request)
 
         /* ================= 1. ORDER MODUL ================= */
         $orders = OrderModul::where('unit_id', $selectedUnitId)
-            ->whereMonth('tanggal_order', $bulan)
-            ->whereYear('tanggal_order', $tahun)
+            ->where('status', 'accept')
             ->get();
 
         foreach ($orders as $order) {
@@ -340,8 +339,6 @@ public function createMulti(Request $request)
         /* ================= 2. KAOS MURID ================= */
         $pemesananKaosMurid = PemesananKaos::where('unit_id', $selectedUnitId)
             ->whereNotNull('tanggal')
-            ->whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
             ->get();
 
         foreach ($pemesananKaosMurid as $pesanan) {
@@ -391,8 +388,6 @@ public function createMulti(Request $request)
 
         /* ================= 3. PERLENGKAPAN UNIT ================= */
         $pemesananPerlengkapan = PemesananPerlengkapanUnit::where('unit_id', $selectedUnitId)
-            ->whereMonth('tanggal_pemesanan', $bulan)
-            ->whereYear('tanggal_pemesanan', $tahun)
             ->get();
 
         foreach ($pemesananPerlengkapan as $pesanan) {
@@ -417,8 +412,6 @@ public function createMulti(Request $request)
             if (!$sudahTerimaSTA) {
 
                 $sertifikatPending = PemesananSertifikat::where('no_cabang', $noCabang)
-                    ->whereMonth('tanggal_pemesanan', $bulan)
-                    ->whereYear('tanggal_pemesanan', $tahun)
                     ->orderBy('nama_murid')
                     ->get();
 
@@ -433,16 +426,12 @@ public function createMulti(Request $request)
 
         /* ================= 5. STPB ================= */
         $sudahTerimaSTPB = PenerimaanProduk::where('unit_id', $selectedUnitId)
-            ->whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
             ->where('label', 'STPB')
             ->exists();
 
         if (!$sudahTerimaSTPB) {
 
             $stpbPending = PemesananSTPB::where('unit_id', $selectedUnitId)
-                ->whereMonth('tgl_pemesanan', $bulan)
-                ->whereYear('tgl_pemesanan', $tahun)
                 ->orderBy('nama_murid')
                 ->get();
 
@@ -456,8 +445,6 @@ public function createMulti(Request $request)
 
         /* ================= SUDAH DITERIMA ================= */
         $receivedLabels = PenerimaanProduk::where('unit_id', $selectedUnitId)
-            ->whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
             ->pluck('label')
             ->map('trim')
             ->unique()

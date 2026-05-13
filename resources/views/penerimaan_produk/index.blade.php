@@ -82,7 +82,7 @@
                     <th>MINGGU</th>
                     <th>LABEL</th>
                     <th>JUMLAH PENERIMAAN</th>
-                    <th>JUMLAH SELURUH ORDERAN</th> <!-- KOLOM BARU YANG DIMINTA -->
+                    
                     <th>KATEGORI</th>
                     <th>JENIS</th>
                     <th>NAMA PRODUK</th>
@@ -118,8 +118,7 @@
                     <td>{{ $item->minggu }}</td>
                     <td>{{ $item->label ?? '-' }}</td>
                     <td class="text-end">{{ number_format($item->jumlah ?? 0, 0, ',', '.') }}</td>
-                    <td class="text-end fw-bold text-info">
-                        {{ number_format($item->jumlah_order ?? 0, 0, ',', '.') }} <!-- Nilai dari controller -->
+                    
                     </td>
                     <td>{{ $item->kategori ?? '-' }}</td>
                     <td>{{ $item->jenis ?? '-' }}</td>

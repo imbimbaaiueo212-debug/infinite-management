@@ -45,6 +45,31 @@
                     </select>
                 </div>
 
+                {{-- NIM & NAMA LENGKAP (Readonly + Hidden) - Sesuai Create --}}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">NIM</label>
+                        <input type="text" 
+                               class="form-control bg-light" 
+                               value="{{ $useOld ? old('bi.nim', $registration->nim ?? $biPrefill['nim'] ?? '') : ($registration->nim ?? $biPrefill['nim'] ?? '') }}"
+                               readonly>
+                        <input type="hidden" 
+                               name="bi[nim]" 
+                               value="{{ $useOld ? old('bi.nim', $registration->nim ?? $biPrefill['nim'] ?? '') : ($registration->nim ?? $biPrefill['nim'] ?? '') }}">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Nama Lengkap</label>
+                        <input type="text" 
+                               class="form-control bg-light" 
+                               value="{{ $useOld ? old('bi.nama', $registration->nama ?? $biPrefill['nama'] ?? '') : ($registration->nama ?? $biPrefill['nama'] ?? '') }}"
+                               readonly>
+                        <input type="hidden" 
+                               name="bi[nama]" 
+                               value="{{ $useOld ? old('bi.nama', $registration->nama ?? $biPrefill['nama'] ?? '') : ($registration->nama ?? $biPrefill['nama'] ?? '') }}">
+                    </div>
+                </div>
+
                 {{-- STATUS & TANGGAL DAFTAR --}}
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -59,7 +84,6 @@
                                 Verified
                             </option>
                             
-                            {{-- Hanya Admin yang boleh pilih Accepted --}}
                             @if ($isAdmin)
                                 <option value="accepted" 
                                     {{ ($useOld ? old('status') : $registration->status) === 'accepted' ? 'selected' : '' }}>
@@ -88,7 +112,6 @@
                     </div>
                 </div>
 
-                <!-- Bagian lain tetap sama (Data Buku Induk, Penerimaan, Attachment) -->
                 <hr class="my-4">
                 <h5 class="mb-3">Data Buku Induk</h5>
 
@@ -152,32 +175,26 @@
                     </div>
 
                     <div class="col-md-6 mb-3">
-    <label class="form-label">Guru</label>
-    <select name="bi[guru]" class="form-control">
-        <option value="">-- Pilih Guru --</option>
-        
-        {{-- Tampilkan semua guru yang tersedia --}}
-        @foreach ($guruOptions as $g)
-            <option value="{{ $g }}" 
-                {{ ($useOld ? old('bi.guru') : $biPrefill['guru']) == $g ? 'selected' : '' }}>
-                {{ $g }}
-            </option>
-        @endforeach
+                        <label class="form-label">Guru</label>
+                        <select name="bi[guru]" class="form-control">
+                            <option value="">-- Pilih Guru --</option>
+                            @foreach ($guruOptions as $g)
+                                <option value="{{ $g }}" 
+                                    {{ ($useOld ? old('bi.guru') : $biPrefill['guru']) == $g ? 'selected' : '' }}>
+                                    {{ $g }}
+                                </option>
+                            @endforeach
+                            @php
+                                $currentGuru = $useOld ? old('bi.guru') : $biPrefill['guru'];
+                            @endphp
+                            @if ($currentGuru && !in_array($currentGuru, $guruOptions))
+                                <option value="{{ $currentGuru }}" selected>
+                                    {{ $currentGuru }} (Data Lama)
+                                </option>
+                            @endif
+                        </select>
+                    </div>
 
-        {{-- Fallback: Jika guru yang tersimpan tidak ada di list, tetap tampilkan --}}
-        @php
-            $currentGuru = $useOld ? old('bi.guru') : $biPrefill['guru'];
-        @endphp
-        @if ($currentGuru && !in_array($currentGuru, $guruOptions))
-            <option value="{{ $currentGuru }}" selected>
-                {{ $currentGuru }} (Data Lama)
-            </option>
-        @endif
-    </select>
-    @if (!$guruOptions)
-        <small class="text-muted">Tidak ada data guru. Silakan tambahkan guru terlebih dahulu.</small>
-    @endif
-</div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Kode Jadwal</label>
                         <select name="bi[kode_jadwal]" class="form-control">
@@ -195,6 +212,7 @@
                 <h5 class="mb-3">Penerimaan / Kwitansi</h5>
 
                 <div class="row g-3">
+                    <!-- Penerimaan fields tetap sama seperti sebelumnya -->
                     <div class="col-md-4">
                         <label class="form-label">No. Kwitansi</label>
                         <input type="text" name="kwitansi" class="form-control"

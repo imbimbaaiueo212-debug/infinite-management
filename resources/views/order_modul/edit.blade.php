@@ -11,14 +11,14 @@
 
         {{-- TANGGAL --}}
         <div class="mb-3">
-            <label>Tanggal</label>
+            <label class="form-label fw-bold">Tanggal</label>
             <input type="date" name="tanggal_order" class="form-control"
                    value="{{ $order->tanggal_order->format('Y-m-d') }}">
         </div>
 
         {{-- UNIT --}}
         <div class="mb-3">
-            <label>Unit</label>
+            <label class="form-label fw-bold">Unit</label>
             <select name="unit_id" class="form-control">
                 @foreach($units as $u)
                     <option value="{{ $u->id }}"
@@ -28,6 +28,19 @@
                 @endforeach
             </select>
         </div>
+
+        {{-- STATUS / APPROVAL --}}
+            <div class="mb-3">
+                <label class="form-label fw-bold">Approval / Status</label>
+                <select name="status" class="form-control">
+                    <option value="pending"  {{ old('status', $order->status) === 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="accept"   {{ old('status', $order->status) === 'accept' ? 'selected' : '' }}>Disetujui</option>
+                    <option value="reject"   {{ old('status', $order->status) === 'reject' ? 'selected' : '' }}>Ditolak</option>
+                    
+                    {{-- Tambahan jika ada nilai "Kurang" di database --}}
+                    <option value="Kurang"   {{ old('status', $order->status) === 'Kurang' ? 'selected' : '' }}>Kurang</option>
+                </select>
+            </div>
 
         <hr>
 
@@ -74,20 +87,14 @@
 
         </div>
 
-        <button type="button" id="addRow" class="btn btn-primary mb-3">
-            + Tambah Produk
-        </button>
-
-        <br>
-
-        <button class="btn btn-success">Update</button>
+        <button type="submit" class="btn btn-success">Update</button>
         <a href="{{ route('order_modul.index') }}" class="btn btn-secondary">Kembali</a>
 
     </form>
 
 </div>
 
-{{-- JS --}}
+{{-- JAVASCRIPT (Diperbaiki & Dipercantik) --}}
 <script>
 function formatRupiah(angka) {
     return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -96,13 +103,13 @@ function formatRupiah(angka) {
 function updateRow(row){
     let harga = parseInt(row.find('.produk-select option:selected').data('harga')) || 0;
     let jumlah = parseInt(row.find('.jumlah').val()) || 0;
-
     let total = harga * jumlah;
 
     row.find('.harga').val(formatRupiah(harga));
     row.find('.total').val(formatRupiah(total));
 }
 
+// Event Listeners
 $(document).on('change', '.produk-select', function(){
     updateRow($(this).closest('.produk-item'));
 });
@@ -140,8 +147,8 @@ $('#addRow').click(function(){
         <div class="col-md-2">
             <button type="button" class="btn btn-danger remove">X</button>
         </div>
-    </div>
-    `;
+    </div>`;
+    
     $('#produk-wrapper').append(html);
 });
 

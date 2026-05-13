@@ -107,7 +107,7 @@
     <div class="table-responsive" style="overflow-x:auto;">
         <table class="table table-bordered table-hover align-middle mb-0" id="tabel-produk" style="min-width:1400px;">
             
-            <thead class="table-dark text-center">
+            <thead class="table-light text-center">
                 <tr>
                     <th style="min-width:220px">Produk</th>
                     <th style="min-width:120px">Jenis</th>

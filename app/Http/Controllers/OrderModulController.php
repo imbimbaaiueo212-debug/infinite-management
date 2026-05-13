@@ -210,6 +210,7 @@ class OrderModulController extends Controller
     $request->validate([
         'tanggal_order' => 'required|date',
         'unit_id'       => 'required|exists:units,id',
+        'status'        => 'required|in:pending,accept,reject,Kurang',  // tambahkan Kurang jika diperlukan
     ]);
 
     $hargaMap = \App\Models\Produk::pluck('harga', 'label')->toArray();
@@ -217,24 +218,24 @@ class OrderModulController extends Controller
     $data = [
         'tanggal_order' => $request->tanggal_order,
         'unit_id'       => $request->unit_id,
+        'status'        => $request->status,           // ← Ini yang penting
     ];
 
-    // reset semua slot
+    // Reset semua slot produk
     for ($i = 1; $i <= 5; $i++) {
         $data['kode'.$i] = null;
         $data['jml'.$i]  = 0;
         $data['hrg'.$i]  = 0;
     }
 
-    // mapping dari input ke slot
+    // Isi produk
     $produk = $request->produk ?? [];
     $jumlah = $request->jumlah ?? [];
 
     foreach ($produk as $i => $kode) {
-
         if ($i >= 5) break;
 
-        $jml = (int) ($jumlah[$i] ?? 0);
+        $jml   = (int) ($jumlah[$i] ?? 0);
         $harga = $hargaMap[$kode] ?? 0;
 
         $index = $i + 1;

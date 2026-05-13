@@ -15,6 +15,7 @@ class OrderModul extends Model
     protected $fillable = [
         'tanggal_order',
         'unit_id',
+        'status',
         'kode1', 'jml1', 'hrg1', 'sts1',
         'kode2', 'jml2', 'hrg2', 'sts2',
         'kode3', 'jml3', 'hrg3', 'sts3',
