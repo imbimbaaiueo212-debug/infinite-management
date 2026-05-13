@@ -283,7 +283,15 @@ class DataProdukController extends Controller
             }
 
             // Selalu hitung ulang sld_akhir berdasarkan data terkini
-            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
+            $stokDasar =
+    ($record->opname !== null && $record->opname > 0)
+        ? (int) $record->opname
+        : (int) $record->sld_awal;
+
+    $sldAkhirBaru =
+        $stokDasar
+        + $record->terima
+        - $record->pakai;
 
             // Simpan jika ada perubahan pada terima ATAU sld_akhir tidak sesuai
             if ($changed || $record->sld_akhir != $sldAkhirBaru) {
@@ -320,7 +328,15 @@ class DataProdukController extends Controller
             }
 
             // Selalu hitung ulang sld_akhir
-            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
+            $stokDasar =
+                ($record->opname !== null && $record->opname > 0)
+                    ? (int) $record->opname
+                    : (int) $record->sld_awal;
+
+                $sldAkhirBaru =
+                    $stokDasar
+                    + $record->terima
+                    - $record->pakai;
 
             // Simpan jika ada perubahan pada pakai ATAU sld_akhir tidak sesuai
             if ($changed || $record->sld_akhir != $sldAkhirBaru) {
@@ -561,8 +577,7 @@ private function syncSldAwalFromOpname(
     ?int $unitId = null
 ) {
 
-    $query = DataProduk::where('periode', $periode)
-        ->whereNotNull('opname');
+    $query = DataProduk::where('periode', $periode);
 
     if ($unitId) {
         $query->where('unit_id', $unitId);
@@ -574,16 +589,48 @@ private function syncSldAwalFromOpname(
 
             /*
             ==========================================
-            STOK FISIK HASIL OPNAME
+            TENTUKAN STOK DASAR
             ==========================================
+
+            Jika ada opname:
+            gunakan opname sebagai stok dasar.
+
+            Jika tidak ada opname:
+            gunakan saldo awal.
             */
 
-            $fisik = (int) $record->opname;
+            $stokDasar =
+                ($record->opname !== null && $record->opname > 0)
+                    ? (int) $record->opname
+                    : (int) $record->sld_awal;
 
             /*
             ==========================================
-            STOK SISTEM SEBELUM OPNAME
+            HITUNG STOK AKHIR
             ==========================================
+            */
+
+            $sldAkhir =
+                $stokDasar
+                + (int) $record->terima
+                - (int) $record->pakai;
+
+            /*
+            ==========================================
+            CEGAH MINUS
+            ==========================================
+            */
+
+            if ($sldAkhir < 0) {
+                $sldAkhir = 0;
+            }
+
+            /*
+            ==========================================
+            HITUNG SELISIH
+            ==========================================
+
+            Selisih fisik dibanding sistem
             */
 
             $stokSistem =
@@ -591,14 +638,12 @@ private function syncSldAwalFromOpname(
                 + (int) $record->terima
                 - (int) $record->pakai;
 
-            /*
-            ==========================================
-            HITUNG SELISIH SEBELUM KOREKSI
-            ==========================================
-            */
+            $fisik =
+                ($record->opname !== null)
+                    ? (int) $record->opname
+                    : $stokSistem;
 
-            $selisih =
-                $fisik - $stokSistem;
+            $selisih = $fisik - $stokSistem;
 
             /*
             ==========================================
@@ -612,45 +657,36 @@ private function syncSldAwalFromOpname(
 
             /*
             ==========================================
-            OPNAME MENJADI STOK BARU
-            ==========================================
-
-            INI YANG PENTING
-
-            Setelah opname:
-            - saldo akhir ikut fisik
-            */
-
-            $record->sld_akhir = $fisik;
-
-            /*
-            ==========================================
-            SIMPAN SELISIH HISTORIS
-            ==========================================
-            */
-
-            $record->selisih = $selisih;
-
-            $record->nilai = $nilai;
-
-            /*
-            ==========================================
             STATUS
             ==========================================
             */
 
             if ($selisih == 0) {
 
-                $record->adjustment_status = 'COCOK';
+                $status = 'COCOK';
 
             } elseif ($selisih > 0) {
 
-                $record->adjustment_status = 'LEBIH';
+                $status = 'LEBIH';
 
             } else {
 
-                $record->adjustment_status = 'KURANG';
+                $status = 'KURANG';
             }
+
+            /*
+            ==========================================
+            SIMPAN
+            ==========================================
+            */
+
+            $record->sld_akhir = $sldAkhir;
+
+            $record->selisih = $selisih;
+
+            $record->nilai = $nilai;
+
+            $record->adjustment_status = $status;
 
             $record->saveQuietly();
         }
