@@ -11510,3 +11510,43 @@ body[style*="overflow: hidden"] {
 
     
 }
+.table-sticky-wrapper {
+    max-height: 70vh;
+    overflow: auto;
+    position: relative;
+}
+
+/* Sticky untuk kedua baris header */
+.sticky-main-header th,
+.sticky-sub-header th {
+    position: sticky;
+    z-index: 20;
+    background: #f8f9fa;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Khusus untuk REKAPITULASI BULANAN */
+.sticky-rekap {
+    background: #0d6efd !important;
+    color: dark !important;
+    position: sticky;
+    top: 0;
+    z-index: 30;                    /* paling atas */
+}
+
+/* Sub header harus berada tepat di bawah baris pertama */
+.sticky-sub-header th {
+    top: 41px !important;           /* Sesuaikan dengan tinggi baris 1 */
+    z-index: 25;
+    background: #f8f9fa !important;
+}
+
+/* Border tambahan agar rapi */
+.sticky-main-header th {
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+/* Fix alignment */
+table {
+    border-collapse: collapse;
+}

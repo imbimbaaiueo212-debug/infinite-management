@@ -181,31 +181,37 @@
         </div>
     @else
         <div class="table-sticky-wrapper table-responsive">
-            <table class="table table-bordered table-striped table-hover align-middle text-center card-body">
-                <thead class="table-light">
-                    <tr>
-                        <th rowspan="2">NO</th>
-                        <th rowspan="2">KODE</th>
-                        <th rowspan="2">JENIS</th>
-                        <th rowspan="2">LABEL</th>
-                        <th rowspan="2">SATUAN</th>
-                        <th rowspan="2">HARGA (Rp)</th>
-                        <th rowspan="2">MIN STOK</th>
-                        <th colspan="5" class="bg-primary text-dark">REKAPITULASI BULANAN</th>
-                        <th rowspan="2">OPNAME</th>
-                        <th rowspan="2">NILAI</th>
-                        <th rowspan="2">SELISIH</th>
-                        
-                        <th rowspan="2">AKSI</th>
-                    </tr>
-                    <tr>
-                        <th>SLD AWAL</th>
-                        <th>TERIMA</th>
-                        <th>PAKAI</th>
-                        <th>SLD AKHIR</th>
-                        <th>STATUS</th>
-                    </tr>
-                </thead>
+    <table class="table table-bordered table-striped table-hover align-middle text-center" id="rekapTable">
+        <thead class="table-light">
+            <!-- Baris 1 (Header Utama) -->
+            <tr class="sticky-main-header">
+                <th rowspan="2">NO</th>
+                <th rowspan="2">KODE</th>
+                <th rowspan="2">JENIS</th>
+                <th rowspan="2">LABEL</th>
+                <th rowspan="2">SATUAN</th>
+                <th rowspan="2">HARGA (Rp)</th>
+                <th rowspan="2">MIN STOK</th>
+                
+                <th colspan="5" class="bg-primary text-dark text-center sticky-rekap">
+                    REKAPITULASI BULANAN
+                </th>
+                
+                <th rowspan="2">OPNAME</th>
+                <th rowspan="2">NILAI</th>
+                <th rowspan="2">SELISIH</th>
+                <th rowspan="2">AKSI</th>
+            </tr>
+            
+            <!-- Baris 2 (Sub Header) -->
+            <tr class="sticky-sub-header">
+                <th>SLD AWAL</th>
+                <th>TERIMA</th>
+                <th>PAKAI</th>
+                <th>SLD AKHIR</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
                 <tbody>
     @forelse($items as $index => $item)
         <tr>

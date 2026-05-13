@@ -102,7 +102,7 @@ class DataProdukController extends Controller
     }
 
     $items = $query->orderBy('kode', 'asc')
-                   ->paginate(20)
+                   ->paginate(500)
                    ->withQueryString();
 
     $hasData = $items->isNotEmpty();
