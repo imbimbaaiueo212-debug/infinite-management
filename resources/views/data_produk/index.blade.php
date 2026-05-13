@@ -287,21 +287,204 @@
             
 
             <!-- AKSI -->
-            <td>
-                <a href="{{ route('data_produk.edit', $item->id) }}" class="btn btn-sm btn-warning">
-                    <i class="fas fa-edit"></i>
-                </a>
-                @if (auth()->user()?->role === 'admin')
-                    <form action="{{ route('data_produk.destroy', $item->id) }}" method="POST" class="d-inline">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-danger" 
-                                onclick="return confirm('Yakin hapus?')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                @endif
-            </td>
+<td class="text-nowrap">
+
+    {{-- EDIT --}}
+    <a href="{{ route('data_produk.edit', $item->id) }}"
+       class="btn btn-sm btn-warning mb-1"
+       title="Edit">
+        <i class="fas fa-edit"></i>
+    </a>
+
+    {{-- ADJUSTMENT --}}
+    @if($item->opname > 0)
+
+        <button type="button"
+                class="btn btn-sm btn-info mb-1"
+                data-bs-toggle="modal"
+                data-bs-target="#adjustModal{{ $item->id }}"
+                title="Adjustment">
+            <i class="fas fa-balance-scale"></i>
+        </button>
+
+    @endif
+
+    {{-- DELETE --}}
+    @if(auth()->user()?->role === 'admin')
+
+        <form action="{{ route('data_produk.destroy', $item->id) }}"
+              method="POST"
+              class="d-inline">
+
+            @csrf
+            @method('DELETE')
+
+            <button type="submit"
+                    class="btn btn-sm btn-danger mb-1"
+                    onclick="return confirm('Yakin hapus data ini?')"
+                    title="Hapus">
+                <i class="fas fa-trash"></i>
+            </button>
+
+        </form>
+
+    @endif
+
+</td>
         </tr>
+        {{-- MODAL ADJUSTMENT --}}
+@if($item->opname > 0)
+
+<div class="modal fade"
+     id="adjustModal{{ $item->id }}"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <form action="{{ route('data_produk.adjustment', $item->id) }}"
+                  method="POST">
+
+                @csrf
+
+                <div class="modal-header bg-info text-white">
+
+                    <h5 class="modal-title">
+                        Adjustment Stok
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="alert alert-warning">
+
+                        <strong>{{ $item->label }}</strong>
+
+                        <hr>
+
+                        <div>
+                            Sistem :
+                            <strong>{{ $item->sld_akhir }}</strong>
+                        </div>
+
+                        <div>
+                            Fisik :
+                            <strong>{{ $item->opname }}</strong>
+                        </div>
+
+                        <div>
+                            Selisih :
+                            <strong class="{{ $item->selisih < 0 ? 'text-danger' : 'text-success' }}">
+                                {{ $item->selisih }}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    {{-- JENIS --}}
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Jenis Adjustment
+                        </label>
+
+                        <select name="jenis_adjustment"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                -- Pilih --
+                            </option>
+
+                            <option value="reject">
+                                Reject
+                            </option>
+
+                            <option value="hilang">
+                                Hilang
+                            </option>
+
+                            <option value="selip">
+                                Selip
+                            </option>
+
+                            <option value="rusak">
+                                Rusak
+                            </option>
+
+                            <option value="ditemukan_kembali">
+                                Ditemukan Kembali
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    {{-- JUMLAH --}}
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Jumlah Adjustment
+                        </label>
+
+                        <input type="number"
+                               name="qty_adjustment"
+                               class="form-control"
+                               required
+                               min="1">
+
+                    </div>
+
+                    {{-- KETERANGAN --}}
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Keterangan
+                        </label>
+
+                        <textarea name="keterangan"
+                                  class="form-control"
+                                  rows="3"></textarea>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Tutup
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-info">
+
+                        <i class="fas fa-save me-1"></i>
+                        Simpan Adjustment
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@endif
     @empty
         <tr>
             <td colspan="17" class="text-center py-5 text-muted">  <!-- ubah colspan jadi 17 -->
@@ -309,6 +492,7 @@
                 Tidak ada data yang sesuai filter.
             </td>
         </tr>
+        
     @endforelse
 </tbody>
             </table>

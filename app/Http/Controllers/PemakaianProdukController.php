@@ -8,6 +8,7 @@ use App\Models\Unit;
 use App\Models\DataProduk;
 use App\Models\BukuInduk;   // <-- Pastikan ini ada
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class PemakaianProdukController extends Controller
 {
@@ -216,18 +217,18 @@ public function getMuridByUnit($unitId)
         }
 
         // Query murid dari buku_induk berdasarkan bimba_unit atau no_cabang
-        $murid = BukuInduk::where('status', 'Aktif')
+        $murid = BukuInduk::whereIn('status', ['Aktif', 'Baru'])  // ← Perubahan utama
                           ->where(function ($q) use ($unit) {
                               $q->where('bimba_unit', $unit->biMBA_unit)
                                 ->orWhere('no_cabang', $unit->no_cabang);
                           })
-                          ->select('id', 'nama', 'nim', 'gol', 'guru')
+                          ->select('id', 'nama', 'nim', 'gol', 'guru', 'status') // tambahkan 'status' agar jelas
                           ->orderBy('nama', 'asc')
                           ->get();
 
         return response()->json($murid);
     } catch (\Exception $e) {
-        \Log::error('Error getMuridByUnit unit_id=' . $unitId . ': ' . $e->getMessage());
+        Log::error('Error getMuridByUnit unit_id=' . $unitId . ': ' . $e->getMessage());
 
         return response()->json([
             'error' => true,

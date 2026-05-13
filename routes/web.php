@@ -558,6 +558,10 @@ Route::post('/data-produk/generate-template', [DataProdukController::class, 'gen
     ->name('data_produk.generate_template');
 Route::post('data-produk/refresh-terima', [DataProdukController::class, 'refreshTerima'])
     ->name('data_produk.refresh_terima');
+Route::post(
+    '/data-produk/{id}/adjustment',
+    [DataProdukController::class, 'adjustment']
+)->name('data_produk.adjustment');
 
 Route::post('/produk/import', [ProdukController::class, 'import'])->name('produk.import')->middleware('auth');
 

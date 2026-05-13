@@ -282,14 +282,29 @@ class DataProdukController extends Controller
                 $changed = true;
             }
 
-            // Selalu hitung ulang sld_akhir berdasarkan data terkini
-            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
+            if ($changed) {
 
-            // Simpan jika ada perubahan pada terima ATAU sld_akhir tidak sesuai
-            if ($changed || $record->sld_akhir != $sldAkhirBaru) {
-                $record->sld_akhir = $sldAkhirBaru;
-                $record->saveQuietly();
-            }
+    /*
+    =====================================
+    UPDATE SELISIH TERIMA SAJA
+    =====================================
+    */
+
+    $selisihTerima = $baru - (int) $record->terima;
+
+    $record->terima = $baru;
+
+    /*
+    =====================================
+    TAMBAHKAN KE SLD_AKHIR SEKARANG
+    =====================================
+    */
+
+    $record->sld_akhir =
+        (int) $record->sld_akhir + $selisihTerima;
+
+    $record->saveQuietly();
+}
         }
     });
 }
@@ -319,14 +334,29 @@ class DataProdukController extends Controller
                 $changed = true;
             }
 
-            // Selalu hitung ulang sld_akhir
-            $sldAkhirBaru = $record->sld_awal + $record->terima - $record->pakai;
+            if ($changed) {
 
-            // Simpan jika ada perubahan pada pakai ATAU sld_akhir tidak sesuai
-            if ($changed || $record->sld_akhir != $sldAkhirBaru) {
-                $record->sld_akhir = $sldAkhirBaru;
-                $record->saveQuietly();
-            }
+    /*
+    =====================================
+    HITUNG SELISIH PEMAKAIAN
+    =====================================
+    */
+
+    $selisihPakai = $baru - (int) $record->pakai;
+
+    $record->pakai = $baru;
+
+    /*
+    =====================================
+    KURANGI DARI SLD_AKHIR SEKARANG
+    =====================================
+    */
+
+    $record->sld_akhir =
+        (int) $record->sld_akhir - $selisihPakai;
+
+    $record->saveQuietly();
+}
         }
     });
 }
@@ -552,40 +582,322 @@ public function generateTemplate(Request $request)
             ->with('success', 'Kolom PAKAI berhasil diperbarui!');
     }
 
-    /**
- * Update sld_awal otomatis ketika ada Opname
- * Dipanggil setiap kali opname disimpan
+   /**
+ * Update sld_awal dari Opname + Hitung Selisih FISIK
+ * Selisih = sld_awal (sebelum override) - opname
  */
 private function syncSldAwalFromOpname(string $periode, ?int $unitId = null)
 {
-    Log::info("=== SYNC SLDAWAL DARI OPNAME === Periode: {$periode} | Unit: " . ($unitId ?? 'ALL'));
-
     $query = DataProduk::where('periode', $periode)
-                       ->whereNotNull('opname')
-                       ->where('opname', '!=', 0);
+        ->whereNotNull('opname');
 
-    if ($unitId) $query->where('unit_id', $unitId);
+    if ($unitId) {
+        $query->where('unit_id', $unitId);
+    }
 
-    $updated = 0;
+    $query->chunkById(200, function ($records) {
 
-    $query->chunkById(200, function ($records) use (&$updated) {
         foreach ($records as $record) {
-            if ($record->sld_awal != $record->opname) {
-                $record->sld_awal = (int) $record->opname;
 
-                // Recalculate sld_akhir
-                $record->sld_akhir = $record->sld_awal + $record->terima - $record->pakai;
+            $stokSistem =
+                (int) $record->sld_awal
+                + (int) $record->terima
+                - (int) $record->pakai;
 
-                $record->saveQuietly();
-                $updated++;
+            $fisik = (int) $record->opname;
 
-                Log::info("Opname override → Kode {$record->kode}: sld_awal diubah menjadi {$record->opname}");
+            $selisih = $fisik - $stokSistem;
+
+            $record->selisih = $selisih;
+
+            $record->nilai = abs($selisih) * (int) $record->harga;
+
+            // JANGAN overwrite stok sistem
+            // BIARKAN tetap
+
+            if ($selisih != 0) {
+
+                $record->adjustment_status = 'PENDING';
+
+            } else {
+
+                $record->adjustment_status = 'COCOK';
+
             }
+
+            $record->saveQuietly();
         }
     });
+}
+public function adjustment(Request $request, $id)
+{
+    $request->validate([
+        'jenis_adjustment' => 'required|string',
+        'qty_adjustment'   => 'required|integer|min:1',
+        'keterangan'       => 'nullable|string',
+    ]);
 
-    if ($updated > 0) {
-        Log::info("Sync sld_awal dari opname selesai. Total updated: {$updated}");
+    DB::beginTransaction();
+
+    try {
+
+        $item = DataProduk::lockForUpdate()->findOrFail($id);
+
+        $qty   = (int) $request->qty_adjustment;
+        $jenis = $request->jenis_adjustment;
+
+        /*
+        ==================================================
+        STOK SAAT INI
+        ==================================================
+        */
+
+        // stok sistem sekarang
+        $stokSistem = (int) $item->sld_akhir;
+
+        // stok fisik hasil opname
+        $fisik = (int) $item->opname;
+
+        /*
+        ==================================================
+        SIMPAN DATA SEBELUM
+        ==================================================
+        */
+
+        $stokSebelum  = $stokSistem;
+        $fisikSebelum = $fisik;
+        $selisihAwal  = $fisik - $stokSistem;
+
+        /*
+        ==================================================
+        LOGIKA ADJUSTMENT
+        ==================================================
+
+        CONTOH:
+
+        Sistem : 20
+        Fisik  : 15
+        Selisih: -5
+
+        Jika adjustment HILANG 5:
+        -> sistem turun jadi 15
+        -> fisik tetap 15
+        -> selisih jadi 0
+
+        Besok ditemukan kembali 5:
+        -> sistem naik jadi 20
+        -> fisik naik jadi 20
+        -> selisih jadi 0
+        */
+
+        switch ($jenis) {
+
+            /*
+            ==========================================
+            BARANG HILANG / RUSAK / REJECT
+            ==========================================
+            */
+
+            case 'hilang':
+            case 'rusak':
+            case 'reject':
+
+                // stok sistem dikurangi
+                $stokSistem -= $qty;
+
+                // opname TETAP
+                // karena fisik sudah benar
+
+                break;
+
+            /*
+            ==========================================
+            BARANG DITEMUKAN KEMBALI / SELIP
+            ==========================================
+            */
+
+            case 'ditemukan_kembali':
+            case 'selip':
+
+                // stok sistem naik lagi
+                $stokSistem += $qty;
+
+                // fisik ikut naik
+                $fisik += $qty;
+
+                break;
+
+            default:
+
+                throw new \Exception(
+                    'Jenis adjustment tidak valid.'
+                );
+        }
+
+        /*
+        ==================================================
+        CEGAH MINUS
+        ==================================================
+        */
+
+        if ($stokSistem < 0) {
+            $stokSistem = 0;
+        }
+
+        if ($fisik < 0) {
+            $fisik = 0;
+        }
+
+        /*
+        ==================================================
+        HITUNG SELISIH BARU
+        ==================================================
+        */
+
+        $selisihBaru = $fisik - $stokSistem;
+
+        /*
+        ==================================================
+        HITUNG NILAI SELISIH
+        ==================================================
+        */
+
+        $nilaiSelisih =
+            abs($selisihBaru) * (int) $item->harga;
+
+        /*
+        ==================================================
+        STATUS
+        ==================================================
+        */
+
+        if ($selisihBaru == 0) {
+
+            $status = 'COCOK';
+
+        } elseif ($selisihBaru > 0) {
+
+            $status = 'LEBIH';
+
+        } else {
+
+            $status = 'KURANG';
+        }
+
+        /*
+        ==================================================
+        UPDATE DATA PRODUK
+        ==================================================
+        */
+
+        // sld_awal JANGAN DIUBAH
+        // karena histori awal bulan
+
+        $item->sld_akhir = $stokSistem;
+
+        $item->opname = $fisik;
+
+        $item->selisih = $selisihBaru;
+
+        $item->nilai = $nilaiSelisih;
+
+        $item->adjustment_status = $status;
+
+        $item->adjustment_qty = $qty;
+
+        $item->adjustment_type = $jenis;
+
+        $item->adjustment_note = $request->keterangan;
+
+        $item->adjustment_at = now();
+
+        $item->adjustment_by = Auth::id();
+
+        $item->save();
+
+        /*
+        ==================================================
+        SIMPAN HISTORY
+        ==================================================
+        */
+
+        // hanya insert jika tabel ada
+        if (Schema::hasTable('data_produk_adjustments')) {
+
+            DB::table('data_produk_adjustments')->insert([
+
+                'data_produk_id'   => $item->id,
+
+                'kode'             => $item->kode,
+
+                'jenis_adjustment' => $jenis,
+
+                'qty_adjustment'   => $qty,
+
+                /*
+                ===========================
+                DATA SEBELUM
+                ===========================
+                */
+
+                'stok_sebelum'     => $stokSebelum,
+
+                'fisik_sebelum'    => $fisikSebelum,
+
+                'selisih_sebelum'  => $selisihAwal,
+
+                /*
+                ===========================
+                DATA SESUDAH
+                ===========================
+                */
+
+                'stok_sesudah'     => $stokSistem,
+
+                'fisik_sesudah'    => $fisik,
+
+                'selisih_sesudah'  => $selisihBaru,
+
+                /*
+                ===========================
+                INFO
+                ===========================
+                */
+
+                'keterangan'       => $request->keterangan,
+
+                'user_id'          => Auth::id(),
+
+                'created_at'       => now(),
+
+                'updated_at'       => now(),
+            ]);
+        }
+
+        DB::commit();
+
+        return back()->with(
+            'success',
+            'Adjustment berhasil. Selisih sekarang: ' . $selisihBaru
+        );
+
+    } catch (\Throwable $e) {
+
+        DB::rollBack();
+
+        Log::error('ERROR ADJUSTMENT', [
+
+            'message' => $e->getMessage(),
+
+            'line'    => $e->getLine(),
+
+            'file'    => $e->getFile(),
+        ]);
+
+        return back()->with(
+            'error',
+            'Adjustment gagal: ' . $e->getMessage()
+        );
     }
 }
 }

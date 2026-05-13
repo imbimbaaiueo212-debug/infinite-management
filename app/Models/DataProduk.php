@@ -16,38 +16,51 @@ class DataProduk extends Model
      * Kolom yang boleh diisi secara mass assignment
      */
     protected $fillable = [
-        'unit_id',       // Unit biMBA pemilik rekap ini
-        'periode',       // Format Y-m (contoh: 2026-01)
-        'kode',
-        'jenis',
-        'label',
-        'satuan',
-        'harga',
-        'min_stok',
-        'sld_awal',
-        'sld_akhir',     // Kolom ini DISIMPAN di database (bukan hanya calculated)
-        'terima',
-        'pakai',
-        'opname',
-        'selisih',
-        'nilai',
-    ];
+    'unit_id',
+    'periode',
+    'kode',
+    'jenis',
+    'label',
+    'satuan',
+    'harga',
+    'min_stok',
+    'sld_awal',
+    'sld_akhir',
+    'terima',
+    'pakai',
+    'opname',
+    'selisih',
+    'nilai',
+
+    // =========================
+    // ADJUSTMENT
+    // =========================
+    'jenis_adjustment',
+    'qty_adjustment',
+    'keterangan_adjustment',
+    'adjusted_at',
+    'adjusted_by',
+];
 
     /**
      * Cast attribute agar tipe data sesuai
      */
-    protected $casts = [
-        'periode'   => 'date:Y-m',   // Membantu manipulasi periode dengan Carbon
-        'harga'     => 'integer',
-        'min_stok'  => 'integer',
-        'sld_awal'  => 'integer',
-        'terima'    => 'integer',
-        'pakai'     => 'integer',
-        'opname'    => 'integer',
-        'sld_akhir' => 'integer',
-        'selisih'   => 'integer',
-        'nilai'     => 'decimal:2',
-    ];
+   protected $casts = [
+    'periode'   => 'date:Y-m',
+    'harga'     => 'integer',
+    'min_stok'  => 'integer',
+    'sld_awal'  => 'integer',
+    'terima'    => 'integer',
+    'pakai'     => 'integer',
+    'opname'    => 'integer',
+    'sld_akhir' => 'integer',
+    'selisih'   => 'integer',
+    'nilai'     => 'decimal:2',
+
+    // adjustment
+    'qty_adjustment' => 'integer',
+    'adjusted_at'    => 'datetime',
+];
 
     // ========================================
     // RELASI
@@ -113,21 +126,21 @@ public function getStatusAttribute(): string
         return $this->opname * $this->harga;
     }
 
-    /**
-     * Selisih stok (opname - saldo akhir)
-     */
-    public function getSelisihAttribute(): int
-    {
-        return $this->opname - $this->calculateSldAkhir();
-    }
+/**
+ * Selisih stok (sld_awal sistem - opname)
+ */
+public function getSelisihAttribute(): int
+{
+    return (int) ($this->attributes['selisih'] ?? 0);
+}
 
-    /**
-     * Nilai selisih (selisih × harga)
-     */
-    public function getNilaiSelisihAttribute(): int
-    {
-        return $this->selisih * $this->harga;
-    }
+/**
+ * Nilai selisih (selisih × harga)
+ */
+public function getNilaiSelisihAttribute(): int
+{
+    return $this->selisih * ($this->harga ?? 0);
+}
 
     // ========================================
     // SCOPES
