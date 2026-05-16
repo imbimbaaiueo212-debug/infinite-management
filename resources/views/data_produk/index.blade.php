@@ -246,11 +246,14 @@
             <!-- STATUS -->
             <td class="status-cell text-center align-middle fw-bold">
                 @if($item->status === 'STOK AMAN')
-                    <span class="text-success">STOK AMAN</span>
+                    <span class="text-success" title="STOK AMAN">✔️</span>
+
                 @elseif($item->status === 'STOK KURANG')
-                    <span class="text-danger">STOK KURANG</span>
+                    <span class="text-danger" title="STOK KURANG">⚠️</span>
+
                 @elseif($item->status === 'HABIS_TOTAL')
-                    <span class="text-dark">HABIS TOTAL</span>
+                    <span class="text-dark" title="HABIS TOTAL">❌</span>
+
                 @else
                     <span class="text-muted">-</span>
                 @endif

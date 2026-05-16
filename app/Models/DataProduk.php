@@ -31,6 +31,7 @@ class DataProduk extends Model
     'opname',
     'selisih',
     'nilai',
+    'saldo_sistem',
 
     // =========================
     // ADJUSTMENT
@@ -55,6 +56,7 @@ class DataProduk extends Model
     'opname'    => 'integer',
     'sld_akhir' => 'integer',
     'selisih'   => 'integer',
+    'saldo_sistem' => 'integer',
     'nilai'     => 'decimal:2',
 
     // adjustment
@@ -91,10 +93,13 @@ class DataProduk extends Model
      * Digunakan di view/controller jika diperlukan
      * (tidak override attribute sld_akhir di database)
      */
-    public function calculateSldAkhir(): int
-    {
-        return $this->sld_awal + $this->terima - $this->pakai;
-    }
+    public function calculateSaldoSistem(): int
+{
+    return
+        (int)$this->sld_awal +
+        (int)$this->terima -
+        (int)$this->pakai;
+}
 
     // ========================================
     // ACCESSOR (hanya yang tidak bentrok dengan kolom DB)
@@ -105,26 +110,18 @@ class DataProduk extends Model
  */
 public function getStatusAttribute(): string
 {
-    $akhir = $this->calculateSldAkhir();
-    $min   = $this->min_stok ?? 0;
+    $akhir = (int) $this->sld_akhir;
+
+    $min = (int) ($this->min_stok ?? 0);
 
     if ($akhir <= 0) {
         return 'HABIS_TOTAL';
     }
 
-    if ($akhir >= $min) {
-        return 'STOK AMAN';
-    } else {
-        return 'STOK KURANG';
-    }
+    return $akhir >= $min
+        ? 'STOK AMAN'
+        : 'STOK KURANG';
 }
-    /**
-     * Nilai opname (opname × harga)
-     */
-    public function getNilaiAttribute(): int
-    {
-        return $this->opname * $this->harga;
-    }
 
 /**
  * Selisih stok (sld_awal sistem - opname)
@@ -176,20 +173,11 @@ public function getNilaiSelisihAttribute(): int
     {
         $this->attributes['selisih'] = ($value === '' || $value === null) 
             ? null 
-            : (float) $value;
+            : (int) $value;
     }
 
     /**
  * Mutator: Setiap kali opname di-set, hitung nilai otomatis
  */
-public function setOpnameAttribute($value)
-{
-    $this->attributes['opname'] = $value;
 
-    // Hitung nilai baru berdasarkan opname × harga
-    $harga = $this->harga ?? 0;
-    $opname = $value ?? 0;
-
-    $this->attributes['nilai'] = $opname * $harga;
-}
 }
