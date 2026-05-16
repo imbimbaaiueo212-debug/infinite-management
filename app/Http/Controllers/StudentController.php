@@ -1036,20 +1036,24 @@ protected function preventDuplicateStudents(): void
 
     // Jika belum ada → buat baru, dan PASTIKAN unit & cabang ikut
     $trial = MuridTrial::create([
-        'nama'         => $student->nama,
-        'status_trial' => $status,
-        'kelas'        => $student->kelas ?? null,
-        'tgl_lahir'    => $student->tgl_lahir ?? null,
-        'usia'         => $student->usia ?? null,
-        'orangtua'     => $student->orangtua ?? null,
-        'no_telp'      => $student->no_telp ?? null,
-        'alamat'       => $student->alamat ?? null,
-        'guru_trial'   => $student->guru_wali ?? null,
+    'nama'         => $student->nama,
+    'status_trial' => $status,
+    'kelas'        => $student->kelas ?? null,
+    'tgl_lahir'    => $student->tgl_lahir ?? null,
+    'usia'         => $student->usia ?? null,
+    'orangtua'     => $student->orangtua ?? null,
+    'no_telp'      => $student->no_telp ?? null,
+    'alamat'       => $student->alamat ?? null,
+    'guru_trial'   => $student->guru_wali ?? null,
 
-        // INI YANG WAJIB DITAMBAH: UNIT & CABANG!
-        'bimba_unit'   => $student->bimba_unit,
-        'no_cabang'    => $student->no_cabang,
-    ]);
+    'bimba_unit'   => $student->bimba_unit,
+    'no_cabang'    => $student->no_cabang,
+
+    // ambil dari student
+    'tanggal_trial_baru' => $student->tanggal_masuk
+        ?? $student->created_at
+        ?? now(),
+]);
 
     $student->murid_trial_id = $trial->id;
     $student->saveQuietly(); // gunakan saveQuietly agar tidak trigger event berulang

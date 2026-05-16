@@ -21,7 +21,7 @@ class Student extends Model
         'nama_ayah','agama_ayah','pekerjaan_ayah','alamat_kantor_ayah','telepon_kantor_ayah','hp_ayah',
         'nama_ibu','agama_ibu','pekerjaan_ibu','alamat_kantor_ibu','telepon_kantor_ibu','hp_ibu',
         'tanggal_masuk','biaya_pendaftaran','spp_bulanan','informasi_bimba','informasi_humas_nama','hari','jam',
-        'bimba_unit', 'no_cabang', 'foto_kk', 'foto_mutasi',
+        'bimba_unit', 'no_cabang', 'foto_kk', 'foto_mutasi', 'tanggal_trial_baru',
     ];
 
     protected $casts = [
@@ -31,6 +31,7 @@ class Student extends Model
         'promoted_at'       => 'datetime',
         'biaya_pendaftaran' => 'decimal:2',
         'spp_bulanan'       => 'decimal:2',
+            'tanggal_trial_baru' => 'date',
     ];
 
     protected $appends = ['status_trial_label', 'telepon_utama'];

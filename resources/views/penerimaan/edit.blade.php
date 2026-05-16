@@ -176,50 +176,60 @@
 
         <h5 class="mb-3 fw-bold">Komponen Biaya</h5>
 
-        <div class="row g-3">
-            @php
-                $components = [
-                    'daftar', 'voucher', 'spp', 'kpk', 'sertifikat', 'stpb', 'tas', 'event', 'lain_lain',
-                    'RBAS', 'BCABS01', 'BCABS02'
-                ];
-            @endphp
+<div class="row g-3">
 
-            @foreach ($components as $field)
-                <div class="col-md-3 col-sm-6">
-                    <label class="form-label fw-semibold">
-                        {{ strtoupper(str_replace('_', ' ', $field)) }}
-                    </label>
-                    <input type="number" min="0" step="1"
-                           name="{{ $field }}"
-                           class="form-control biaya-field"
-                           value="{{ old($field, $penerimaan->$field ?? 0) }}"
-                           {{ in_array($field, ['spp']) ? 'readonly' : '' }}>
-                </div>
-            @endforeach
+    <!-- VOUCHER (Multi Select - Sama seperti Create) -->
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Voucher (bisa multi)</label>
+        <select id="voucher" name="voucher[]" class="form-select" multiple>
+            <option value="">-- Tidak pakai voucher --</option>
+        </select>
+        <small class="text-muted">Voucher akan dimuat otomatis setelah memilih NIM</small>
+    </div>
 
-            <!-- Kaos Pendek -->
-            <div class="col-md-3 col-sm-6">
-                <label class="form-label fw-semibold">Kaos Lengan Pendek (Rp)</label>
-                <input type="text" name="kaos_pendek" id="kaos_pendek" class="form-control biaya-lain"
-                       value="{{ number_format(old('kaos_pendek', $penerimaan->kaos ?? 0), 0, ',', '.') }}">
-                <div id="ukuran-pendek-container" class="mt-2"></div>
-            </div>
+    @php
+        $components = [
+            'daftar', 'spp', 'kpk', 'sertifikat', 'stpb', 'tas', 'event', 'lain_lain',
+            'RBAS', 'BCABS01', 'BCABS02'
+        ];
+    @endphp
 
-            <!-- Kaos Panjang -->
-            <div class="col-md-3 col-sm-6">
-                <label class="form-label fw-semibold">Kaos Lengan Panjang (Rp)</label>
-                <input type="text" name="kaos_panjang" id="kaos_panjang" class="form-control biaya-lain"
-                       value="{{ number_format(old('kaos_panjang', $penerimaan->kaos_lengan_panjang ?? 0), 0, ',', '.') }}">
-                <div id="ukuran-panjang-container" class="mt-2"></div>
-            </div>
-
-            <!-- TOTAL -->
-            <div class="col-md-3 col-sm-6">
-                <label class="form-label fw-bold text-primary">GRAND TOTAL</label>
-                <input type="text" id="total" class="form-control bg-warning fw-bold fs-5 text-center"
-                       value="{{ number_format(old('total', $penerimaan->total ?? 0), 0, ',', '.') }}" readonly>
-            </div>
+    @foreach ($components as $field)
+        <div class="col-md-3 col-sm-6">
+            <label class="form-label fw-semibold">
+                {{ strtoupper(str_replace('_', ' ', $field)) }}
+            </label>
+            <input type="number" min="0" step="1"
+                   name="{{ $field }}"
+                   class="form-control biaya-field"
+                   value="{{ old($field, $penerimaan->$field ?? 0) }}"
+                   {{ in_array($field, ['spp']) ? 'readonly' : '' }}>
         </div>
+    @endforeach
+
+    <!-- Kaos Pendek -->
+    <div class="col-md-3 col-sm-6">
+        <label class="form-label fw-semibold">Kaos Lengan Pendek (Rp)</label>
+        <input type="text" name="kaos_pendek" id="kaos_pendek" class="form-control biaya-lain"
+               value="{{ number_format(old('kaos_pendek', $penerimaan->kaos ?? 0), 0, ',', '.') }}">
+        <div id="ukuran-pendek-container" class="mt-2"></div>
+    </div>
+
+    <!-- Kaos Panjang -->
+    <div class="col-md-3 col-sm-6">
+        <label class="form-label fw-semibold">Kaos Lengan Panjang (Rp)</label>
+        <input type="text" name="kaos_panjang" id="kaos_panjang" class="form-control biaya-lain"
+               value="{{ number_format(old('kaos_panjang', $penerimaan->kaos_lengan_panjang ?? 0), 0, ',', '.') }}">
+        <div id="ukuran-panjang-container" class="mt-2"></div>
+    </div>
+
+    <!-- TOTAL -->
+    <div class="col-md-3 col-sm-6">
+        <label class="form-label fw-bold text-primary">GRAND TOTAL</label>
+        <input type="text" id="total" class="form-control bg-warning fw-bold fs-5 text-center"
+               value="{{ number_format(old('total', $penerimaan->total ?? 0), 0, ',', '.') }}" readonly>
+    </div>
+</div>
 
         <hr class="my-4">
 
@@ -280,12 +290,24 @@
 
 <script>
 $(document).ready(function() {
-    // Select2 untuk NIM
+
+    // === Select2 untuk NIM ===
     $('#nimSelect').select2({
         placeholder: "-- Cari atau pilih NIM --",
         allowClear: true,
         width: '100%'
-    }).on('select2:select', function(e) {
+    });
+
+    // === Select2 untuk Voucher ===
+    $('#voucher').select2({
+        placeholder: "-- Pilih Voucher --",
+        allowClear: true,
+        width: '100%',
+        multiple: true
+    });
+
+    // Event saat NIM dipilih
+    $('#nimSelect').on('select2:select', function(e) {
         const selected = $(e.params.data.element);
         $('#namaMuridInput').val(selected.data('nama') || '');
         $('#kelasInput').val(selected.data('kelas') || '');
@@ -294,14 +316,87 @@ $(document).ready(function() {
         $('#statusInput').val(selected.data('status') || '');
         $('#guruInput').val(selected.data('guru') || '');
 
-        // Optional: update unit & cabang jika admin
         @if(!empty($isAdmin) && $isAdmin)
             $('#bimba_unit').val(selected.data('bimba_unit') || '');
             $('#no_cabang').val(selected.data('no_cabang') || '');
         @endif
 
-        hitungTotal();
+        loadVouchersByNim($(this).val());
     });
+
+    // ================================================
+    // LOAD VOUCHER via AJAX
+    // ================================================
+    function loadVouchersByNim(nim) {
+    const voucherSelect = $('#voucher');
+
+    voucherSelect.empty();
+
+    if (!nim) return;
+
+    $.ajax({
+        url: '{{ route("penerimaan.vouchers.by.nim") }}',
+        type: 'GET',
+        data: { nim: nim },
+        success: function(data) {
+
+            // =========================
+            // VOUCHER YANG SUDAH TERPAKAI
+            // =========================
+            let usedVouchers = [];
+
+            @if(old('voucher'))
+                usedVouchers = {!! json_encode(old('voucher')) !!};
+            @elseif(!empty($penerimaan->voucher))
+                usedVouchers = {!! json_encode([$penerimaan->voucher]) !!};
+            @endif
+
+            // =========================
+            // MASUKKAN VOUCHER LAMA DULU
+            // AGAR SELECT2 BISA TAMPIL
+            // =========================
+            usedVouchers.forEach(function(v) {
+                voucherSelect.append(
+                    `<option value="${v}" selected>
+                        ${v} - Rp 50.000
+                    </option>`
+                );
+            });
+
+            // =========================
+            // MASUKKAN DATA AJAX
+            // =========================
+            if (data.length > 0) {
+
+                $.each(data, function(i, v) {
+
+                    // skip jika sudah ada
+                    if (usedVouchers.includes(v.no_voucher)) {
+                        return;
+                    }
+
+                    voucherSelect.append(
+                        `<option value="${v.no_voucher}" data-nominal="50000">
+                            ${v.no_voucher} - Rp 50.000 (sisa: ${v.jumlah_voucher})
+                        </option>`
+                    );
+                });
+
+            } else if (usedVouchers.length === 0) {
+
+                voucherSelect.append(
+                    '<option value="" disabled>Tidak ada voucher tersedia</option>'
+                );
+            }
+
+            // refresh select2
+            voucherSelect.trigger('change');
+        },
+        error: function() {
+            console.error('Gagal load voucher');
+        }
+    });
+}
 
     // Format Rupiah
     function formatRupiah(angka) {
@@ -312,23 +407,35 @@ $(document).ready(function() {
         return parseInt((str || '0').replace(/\./g, '')) || 0;
     }
 
-    // Hitung total
+    // ================= HITUNG TOTAL KHUSUS EDIT =================
+    // Voucher HANYA untuk mencatat nomornya, TIDAK mengurangi total
     function hitungTotal() {
         let sum = 0;
+
         $('.biaya-field, .biaya-lain').each(function() {
-            sum += unformatRupiah($(this).val());
+            // JANGAN ikutkan voucher dalam perhitungan total
+            if (this.name !== 'voucher' && this.id !== 'voucher') {
+                sum += unformatRupiah($(this).val());
+            }
         });
+
         $('#total').val(formatRupiah(sum));
     }
 
-    // Format input biaya (kecuali kaos yang punya handler sendiri)
+    // Event Listeners
     $('.biaya-field').on('input', function() {
         let val = this.value.replace(/\D/g, '');
         this.value = formatRupiah(val);
         hitungTotal();
     });
 
-    // === Fitur Ukuran Kaos ===
+    // Voucher hanya untuk record (tidak mengubah total)
+    $('#voucher').on('change', function() {
+        console.log('Voucher diubah menjadi:', $(this).val());
+        // TIDAK memanggil hitungTotal()
+    });
+
+    // ================= KAOS HANDLER =================
     const ukuranOptions = ['KAS', 'KAM', 'KAL', 'KAXL', 'KAXXL', 'KAXXXL', 'KAXXXLS'];
     const hargaKaos = 70000;
 
@@ -336,9 +443,9 @@ $(document).ready(function() {
         const container = $(`#${containerId}`);
         container.empty();
 
-        if (jumlah <= 0) {
-            container.hide();
-            return;
+        if (jumlah <= 0) { 
+            container.hide(); 
+            return; 
         }
 
         container.show();
@@ -362,17 +469,16 @@ $(document).ready(function() {
         const pendek = unformatRupiah($('#kaos_pendek').val());
         const panjang = unformatRupiah($('#kaos_panjang').val());
 
-        const jmlPendek  = Math.floor(pendek  / hargaKaos);
+        const jmlPendek  = Math.floor(pendek / hargaKaos);
         const jmlPanjang = Math.floor(panjang / hargaKaos);
 
-        const existingPendek  = "{{ $penerimaan->ukuran_kaos_pendek  ?? '' }}".split(',').map(s => s.trim()).filter(Boolean);
+        const existingPendek  = "{{ $penerimaan->ukuran_kaos_pendek ?? '' }}".split(',').map(s => s.trim()).filter(Boolean);
         const existingPanjang = "{{ $penerimaan->ukuran_kaos_panjang ?? '' }}".split(',').map(s => s.trim()).filter(Boolean);
 
-        generateUkuranDropdowns('ukuran-pendek-container',  jmlPendek,  'pendek',  existingPendek);
+        generateUkuranDropdowns('ukuran-pendek-container', jmlPendek, 'pendek', existingPendek);
         generateUkuranDropdowns('ukuran-panjang-container', jmlPanjang, 'panjang', existingPanjang);
     }
 
-    // Handler khusus kaos
     $('#kaos_pendek, #kaos_panjang').on('input', function() {
         let val = this.value.replace(/\D/g, '');
         this.value = formatRupiah(val);
@@ -380,7 +486,13 @@ $(document).ready(function() {
         hitungTotal();
     });
 
-    // Init saat load
+    // ================= INISIALISASI AWAL =================
+    @if(old('nim') || $penerimaan->nim)
+        setTimeout(() => {
+            loadVouchersByNim('{{ old('nim', $penerimaan->nim) }}');
+        }, 600);
+    @endif
+
     updateUkuranFields();
     hitungTotal();
 });

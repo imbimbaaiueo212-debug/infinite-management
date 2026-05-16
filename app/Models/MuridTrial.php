@@ -185,4 +185,10 @@ public function getTanggalAktifFormattedAttribute(): ?string
     return $this->tanggal_aktif?->format('d/m/Y');
 }
 
+// Helper untuk Blade
+    public function getTanggalTbAttribute(): string
+    {
+        return $this->getTanggalTrialBaruFormattedAttribute();
+    }
+
 }

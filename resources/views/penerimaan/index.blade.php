@@ -237,7 +237,13 @@
                                     @endif
 
                                     <td>{{ number_format($item->daftar ?? 0, 0, ',', '.') }}</td>
-                                    <td>{{ number_format($item->voucher ?? 0, 0, ',', '.') }}</td>
+                                    <td>
+                                        @if($item->voucher)
+                                            {{ number_format(50000, 0, ',', '.') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td>{{ number_format($item->spp ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ number_format($item->kaos ?? 0, 0, ',', '.') }}</td>
                                     <td>{{ number_format($item->kaos_lengan_panjang ?? 0, 0, ',', '.') }}</td>

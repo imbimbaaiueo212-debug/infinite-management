@@ -176,6 +176,7 @@ class MuridTrialController extends Controller
         'tgl_mulai'  => 'nullable|date',
         'guru_trial' => 'nullable|string|max:255',
         'info'       => 'nullable|string',
+        'tanggal_trial_baru' => 'nullable|date', // tambahkan ini
     ];
 
     $data = $request->validate($rules);
@@ -183,10 +184,14 @@ class MuridTrialController extends Controller
     if (empty($data['usia'] ?? null) && $data['tgl_lahir'] ?? null) {
         $data['usia'] = Carbon::parse($data['tgl_lahir'])->age;
     }
+    if (empty($data['tanggal_trial_baru'])) {
+    $data['tanggal_trial_baru'] = now()->format('Y-m-d');
+}
 
     // 🔹 Tambahkan ini
     $data['waktu_submit'] = now();
-dd($data);
+
+    
     MuridTrial::create($data);
 
     return redirect()->route('murid_trials.index')
@@ -209,6 +214,7 @@ dd($data);
             'info'           => 'nullable|string',
             'tanggal_aktif'  => 'nullable|date', // hanya untuk status aktif
             'status_trial'   => 'required|in:aktif,batal,lanjut_daftar,baru',
+            'tanggal_trial_baru' => 'nullable|date', // tambahkan ini
         ]);
 
         if (empty($data['usia']) && $data['tgl_lahir']) {
@@ -252,32 +258,26 @@ dd($data);
     ];
 
     if ($statusBaru === 'aktif') {
-        if ($murid_trial->tanggal_aktif) {
-            return back()->with('warning', 'Tanggal aktif sudah diatur sebelumnya.');
-        }
         $updateData['tanggal_aktif'] = $request->filled('tanggal_aktif') 
             ? $request->tanggal_aktif 
             : now()->format('Y-m-d');
-        $updateData['tanggal_trial_baru'] = null;
+        
+        // 🔥 PERBAIKAN: JANGAN NULL-KAN tanggal_trial_baru saat status aktif
+        // $updateData['tanggal_trial_baru'] = null;   // ← BARIS INI DIHAPUS / DIKOMENTARI
 
-    } elseif ($statusBaru === 'baru') {
-        if ($murid_trial->tanggal_trial_baru) {
-            return back()->with('warning', 'Tanggal trial baru sudah diatur sebelumnya.');
-        }
+    } elseif ($statusBaru === 'baru' || $statusBaru === 'daftar_baru') {
+        
         $updateData['tanggal_trial_baru'] = $request->filled('tanggal_trial_baru') 
             ? $request->tanggal_trial_baru 
-            : now()->format('Y-m-d');
+            : ($murid_trial->tanggal_trial_baru ?? now()->format('Y-m-d'));
+        
         $updateData['tanggal_aktif'] = null;
 
     } else {
-        // Semua status lain (batal, lanjut_daftar, dll)
-        $updateData['tanggal_aktif']      = null;
-        $updateData['tanggal_trial_baru'] = null;
-
-        // 🔥 OTOMATIS KOSONGKAN NAMA GURU SAAT BATAL
-        if ($statusBaru === 'batal') {
-            $updateData['guru_trial'] = null;
-        }
+        // batal, lanjut_daftar, dll
+        $updateData['tanggal_aktif'] = null;
+        // Untuk status lain, kita pertahankan tanggal_trial_baru (jangan di-null)
+        // $updateData['tanggal_trial_baru'] = null;   // ← JANGAN AKTIFKAN
     }
 
     $murid_trial->update($updateData);
@@ -292,7 +292,7 @@ dd($data);
     $message = match ($statusBaru) {
         'batal'         => 'Status diubah menjadi BATAL dan nama guru telah dikosongkan otomatis.',
         'aktif'         => 'Status diubah menjadi AKTIF.',
-        'baru'          => 'Status diubah menjadi TRIAL BARU.',
+        'baru', 'daftar_baru' => 'Status diubah menjadi TRIAL BARU.',
         'lanjut_daftar' => 'Status diubah menjadi LANJUT DAFTAR.',
         default         => 'Status berhasil diubah.',
     };
@@ -386,6 +386,7 @@ dd($data);
                 'bimba_unit'     => $murid_trial->bimba_unit,
                 'no_cabang'      => $murid_trial->no_cabang,
                 'nim'            => null, // SELALU NULL — tidak masuk buku induk
+                'tanggal_trial_baru' => $murid_trial->tanggal_trial_baru,
             ]);
         });
     }
